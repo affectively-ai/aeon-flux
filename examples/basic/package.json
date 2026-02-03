@@ -1,0 +1,20 @@
+{
+  "name": "@affectively/aeon-pages-example-basic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "aeon dev",
+    "build": "aeon build",
+    "start": "aeon start"
+  },
+  "dependencies": {
+    "@affectively/aeon-pages": "workspace:*",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/react": "^18.0.0"
+  }
+}

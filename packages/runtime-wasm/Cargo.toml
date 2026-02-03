@@ -1,0 +1,29 @@
+[package]
+name = "aeon-pages-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "WASM runtime for @affectively/aeon-pages - lightweight page routing and hydration"
+license = "MIT"
+repository = "https://github.com/affectively/aeon-pages"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+# Optimize for size
+opt-level = "s"
+lto = true

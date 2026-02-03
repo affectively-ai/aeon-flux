@@ -1,0 +1,90 @@
+{
+  "name": "@affectively/aeon-flux",
+  "version": "0.2.0",
+  "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "main": "./packages/runtime/dist/index.js",
+  "types": "./packages/runtime/dist/index.d.ts",
+  "bin": {
+    "aeon": "./packages/cli/dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./packages/runtime/dist/index.js",
+      "types": "./packages/runtime/dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./packages/runtime/dist/server.js",
+      "types": "./packages/runtime/dist/server.d.ts"
+    },
+    "./react": {
+      "import": "./packages/react/dist/index.js",
+      "types": "./packages/react/dist/index.d.ts"
+    },
+    "./auth": {
+      "import": "@affectively/auth",
+      "types": "@affectively/auth"
+    },
+    "./directives": {
+      "import": "./packages/directives/dist/use-aeon.js",
+      "types": "./packages/directives/dist/use-aeon.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun run build:wasm && bun run build:ts",
+    "build:wasm": "cd packages/runtime-wasm && wasm-pack build --target web --out-dir ../runtime/wasm",
+    "build:ts": "bun run --filter='./packages/*' build",
+    "dev": "bun run packages/cli/src/dev.ts",
+    "test": "bun test",
+    "clean": "rm -rf packages/*/dist packages/runtime/wasm"
+  },
+  "dependencies": {
+    "@affectively/aeon": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest",
+    "@types/react": "^18.0.0",
+    "wasm-pack": "^0.13.0"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0",
+    "react": ">=18.0.0",
+    "@affectively/auth": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@affectively/auth": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/affectively-ai/aeon-flux"
+  },
+  "keywords": [
+    "aeon",
+    "flux",
+    "crdt",
+    "framework",
+    "collaborative",
+    "cms",
+    "real-time",
+    "bun",
+    "cloudflare",
+    "d1",
+    "durable-objects",
+    "wasm"
+  ],
+  "author": "AFFECTIVELY",
+  "homepage": "https://github.com/affectively-ai/aeon-flux#readme",
+  "bugs": {
+    "url": "https://github.com/affectively-ai/aeon-flux/issues"
+  }
+}

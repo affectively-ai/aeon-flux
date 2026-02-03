@@ -1,0 +1,50 @@
+{
+  "name": "@affectively/aeon-pages-runtime",
+  "version": "0.1.0",
+  "description": "Bun/Cloudflare runtime for @affectively/aeon-pages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./router": {
+      "import": "./dist/router.js",
+      "types": "./dist/router.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun --watch ./src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@affectively/aeon": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/affectively/aeon-pages"
+  },
+  "keywords": [
+    "aeon",
+    "pages",
+    "framework",
+    "collaborative",
+    "bun",
+    "cloudflare"
+  ]
+}
