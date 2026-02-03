@@ -3,11 +3,17 @@
  *
  * React bindings for Aeon Pages - collaborative editing with hooks.
  *
+ * The Aeon architecture is recursive (fractal):
+ * - Component = Aeon entity
+ * - Page = Aeon session
+ * - Site = Aeon of sessions (routes are collaborative)
+ * - Federation = Aeon of Aeons (cross-site sync)
+ *
  * @example
  * ```tsx
  * 'use aeon';
  *
- * import { useAeonPage, usePresence, useAeonData } from '@affectively/aeon-pages/react';
+ * import { Link, useAeonPage, usePresence, useAeonData } from '@affectively/aeon-pages/react';
  *
  * export default function Page() {
  *   const { presence, localUser, updateCursor } = usePresence();
@@ -19,6 +25,10 @@
  *         {title || 'Untitled'}
  *       </h1>
  *
+ *       <Link href="/about" prefetch="visible" showPresence>
+ *         About (3 viewing)
+ *       </Link>
+ *
  *       {presence.map((user) => (
  *         <Cursor key={user.userId} user={user} />
  *       ))}
@@ -27,6 +37,9 @@
  * }
  * ```
  */
+
+// Link component with prefetch/transitions/presence
+export { Link, type LinkProps, type TransitionType, type PrefetchStrategy, type PresenceRenderProps } from './Link';
 
 // Provider and main hook
 export {
@@ -39,8 +52,31 @@ export {
   type VersionInfo,
 } from './provider';
 
-// Convenience hooks
+// Convenience hooks (page-level editing)
 export { usePresence, useAeonSync, useAeonData } from './provider';
 
-// Re-export hooks file if it exists
+// Navigation hooks (route-level navigation)
+export {
+  useAeonNavigation,
+  useNavigationPrediction,
+  useLinkObserver,
+  useTotalPreload,
+  useRoutePresence,
+  AeonNavigationContext,
+  type AeonNavigationContextValue,
+} from './hooks/useAeonNavigation';
+
+// Service worker hooks (total preload)
+export {
+  useAeonServiceWorker,
+  usePreloadProgress,
+  useCacheStatus,
+  useManualPreload,
+  usePrefetchRoute,
+  useClearCache,
+  type PreloadProgress,
+  type CacheStatus,
+} from './hooks/useServiceWorker';
+
+// Re-export additional hooks
 export * from './hooks';

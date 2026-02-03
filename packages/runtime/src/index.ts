@@ -27,6 +27,43 @@ export { createAeonServer } from './server';
 export { AeonRouter } from './router';
 export { AeonRouteRegistry } from './registry';
 
+// Navigation engine (cutting-edge navigation)
+export {
+  AeonNavigationEngine,
+  getNavigator,
+  setNavigator,
+} from './navigation';
+export type {
+  NavigationOptions,
+  PrefetchOptions,
+  NavigationState,
+} from './navigation';
+
+// Navigation cache (total preload strategy)
+export {
+  NavigationCache,
+  getNavigationCache,
+  setNavigationCache,
+} from './cache';
+export type {
+  CachedSession,
+  CacheStats,
+  NavigationCacheOptions,
+} from './cache';
+
+// Navigation predictor (ML-based)
+export {
+  NavigationPredictor,
+  getPredictor,
+  setPredictor,
+} from './predictor';
+export type {
+  PredictedRoute,
+  NavigationRecord,
+  CommunityPattern,
+  PredictorConfig,
+} from './predictor';
+
 // Storage adapters
 export {
   createStorageAdapter,
@@ -61,6 +98,63 @@ export type {
   PresenceUser,
   AeonCapability,
 } from './types';
+
+// Personalized Router (hyperpersonalized routing)
+export {
+  DEFAULT_ROUTER_CONFIG,
+  DEFAULT_ESI_CONFIG,
+  HeuristicAdapter,
+  EdgeWorkersESIProcessor,
+  extractUserContext,
+  createContextMiddleware,
+  setContextCookies,
+  addSpeculationHeaders,
+  esiInfer,
+  esiEmbed,
+  esiEmotion,
+  esiVision,
+  esiWithContext,
+} from './router';
+export type {
+  // User context
+  EmotionState,
+  Viewport,
+  ConnectionType,
+  UserTier,
+  UserContext,
+  // Route decision
+  ThemeMode,
+  LayoutDensity,
+  LayoutType,
+  SkeletonHints,
+  RouteDecision,
+  // Component tree
+  ComponentNode,
+  ComponentTree,
+  ComponentTreeSchema,
+  // Router adapter
+  RouterAdapter,
+  // Adapter config
+  HeuristicAdapterConfig,
+  TierFeatures,
+  SignalProcessor,
+  ContextExtractorOptions,
+  // Configuration
+  AIRouterConfig,
+  SpeculationConfig,
+  PersonalizationConfig,
+  RouterConfig,
+  RouterConfigWithESI,
+  // ESI
+  ESIModel,
+  ESIContentType,
+  ESIParams,
+  ESIContent,
+  ESIDirective,
+  ESIResult,
+  ESIProcessor,
+  ESIConfig,
+} from './router';
 
 // Version
 export const VERSION = '0.1.0';

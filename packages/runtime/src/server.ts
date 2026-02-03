@@ -5,22 +5,89 @@
  * - Hot reload in development
  * - Collaborative route mutations via Aeon sync
  * - File system persistence
+ * - Personalized routing with speculation
  */
 
 import { AeonRouter } from './router';
 import { AeonRouteRegistry } from './registry';
+import {
+  HeuristicAdapter,
+  extractUserContext,
+  setContextCookies,
+  addSpeculationHeaders,
+} from './router/index';
 import type { AeonConfig } from './types';
+import type {
+  RouterAdapter,
+  RouterConfig,
+  RouteDecision,
+  ComponentTree,
+  ComponentNode,
+  UserContext,
+} from './router/types';
 
 export interface ServerOptions {
   config: AeonConfig;
+  /** Personalized router configuration */
+  router?: RouterConfig;
   onRouteChange?: (route: string, type: 'add' | 'update' | 'remove') => void;
+  onRouteDecision?: (decision: RouteDecision, context: UserContext) => void;
+}
+
+/**
+ * Create a minimal component tree for routing decisions
+ */
+function createMinimalTree(match: ReturnType<AeonRouter['match']>): ComponentTree {
+  const nodes = new Map<string, ComponentNode>();
+  const rootId = match?.componentId || 'root';
+
+  nodes.set(rootId, {
+    id: rootId,
+    type: 'page',
+    props: {},
+    children: [],
+  });
+
+  return {
+    rootId,
+    nodes,
+    getNode: (id) => nodes.get(id),
+    getChildren: () => [],
+    getSchema: () => ({
+      rootId,
+      nodeCount: nodes.size,
+      nodeTypes: ['page'],
+      depth: 1,
+    }),
+    clone: () => createMinimalTree(match),
+  };
+}
+
+/**
+ * Create the personalized router adapter
+ */
+function createRouterAdapter(routerConfig?: RouterConfig): RouterAdapter {
+  if (!routerConfig) {
+    return new HeuristicAdapter();
+  }
+
+  if (typeof routerConfig.adapter === 'object') {
+    return routerConfig.adapter;
+  }
+
+  switch (routerConfig.adapter) {
+    case 'heuristic':
+    default:
+      return new HeuristicAdapter();
+    // AI and hybrid adapters can be added here in the future
+  }
 }
 
 /**
  * Create an Aeon Pages server using Bun's native server
  */
 export async function createAeonServer(options: ServerOptions) {
-  const { config, onRouteChange } = options;
+  const { config, router: routerConfig, onRouteChange, onRouteDecision } = options;
 
   const router = new AeonRouter({
     routesDir: config.pagesDir,
@@ -31,6 +98,9 @@ export async function createAeonServer(options: ServerOptions) {
     syncMode: config.aeon?.sync?.mode ?? 'distributed',
     versioningEnabled: config.aeon?.versioning?.enabled ?? true,
   });
+
+  // Create personalized router adapter
+  const personalizedRouter = createRouterAdapter(routerConfig);
 
   // Watch for file changes in development
   if (config.runtime === 'bun' && process.env.NODE_ENV !== 'production') {
@@ -79,8 +149,32 @@ export async function createAeonServer(options: ServerOptions) {
         return new Response('Not Found', { status: 404 });
       }
 
-      // Render the matched route
-      return renderRoute(match, req, config);
+      // Extract user context for personalized routing
+      const userContext = await extractUserContext(req);
+
+      // Create component tree for routing decision
+      const tree = createMinimalTree(match);
+
+      // Get personalized route decision
+      const decision = await personalizedRouter.route(path, userContext, tree);
+
+      // Notify callback if provided
+      onRouteDecision?.(decision, userContext);
+
+      // Render the matched route with personalization
+      let response = await renderRoute(match, req, config, decision);
+
+      // Add context tracking cookies
+      response = setContextCookies(response, userContext, path);
+
+      // Add speculation headers for prefetching
+      response = addSpeculationHeaders(
+        response,
+        decision.prefetch || [],
+        decision.prerender || []
+      );
+
+      return response;
     },
 
     // WebSocket handling for Aeon sync
@@ -183,12 +277,13 @@ async function handleDynamicCreation(
 }
 
 /**
- * Render a matched route
+ * Render a matched route with personalization
  */
 async function renderRoute(
   match: ReturnType<AeonRouter['match']>,
   _req: Request,
-  config: AeonConfig
+  config: AeonConfig,
+  decision?: RouteDecision
 ): Promise<Response> {
   if (!match) {
     return new Response('Not Found', { status: 404 });
@@ -196,17 +291,64 @@ async function renderRoute(
 
   // For Aeon pages, we return the session data + hydration script
   if (match.isAeon) {
-    const html = generateAeonPageHtml(match, config);
+    const html = generateAeonPageHtml(match, config, decision);
     return new Response(html, {
       headers: { 'Content-Type': 'text/html' },
     });
   }
 
   // For non-Aeon pages, do standard SSR
-  const html = generateStaticPageHtml(match, config);
+  const html = generateStaticPageHtml(match, config, decision);
   return new Response(html, {
     headers: { 'Content-Type': 'text/html' },
   });
+}
+
+/**
+ * Generate speculation rules script for prefetching
+ */
+function generateSpeculationScript(decision?: RouteDecision): string {
+  if (!decision?.prefetch?.length && !decision?.prerender?.length) {
+    return '';
+  }
+
+  const rules: { prerender?: Array<{ urls: string[] }>; prefetch?: Array<{ urls: string[] }> } = {};
+
+  if (decision.prerender?.length) {
+    rules.prerender = [{ urls: decision.prerender }];
+  }
+
+  if (decision.prefetch?.length) {
+    rules.prefetch = [{ urls: decision.prefetch }];
+  }
+
+  return `<script type="speculationrules">${JSON.stringify(rules)}</script>`;
+}
+
+/**
+ * Generate personalization CSS variables
+ */
+function generatePersonalizationStyles(decision?: RouteDecision): string {
+  if (!decision) return '';
+
+  const vars: string[] = [];
+
+  if (decision.accent) {
+    vars.push(`--aeon-accent: ${decision.accent}`);
+  }
+
+  if (decision.theme) {
+    vars.push(`--aeon-theme: ${decision.theme}`);
+  }
+
+  if (decision.density) {
+    const spacingMap = { compact: '0.5rem', normal: '1rem', comfortable: '1.5rem' };
+    vars.push(`--aeon-spacing: ${spacingMap[decision.density]}`);
+  }
+
+  if (vars.length === 0) return '';
+
+  return `<style>:root { ${vars.join('; ')} }</style>`;
 }
 
 /**
@@ -214,16 +356,23 @@ async function renderRoute(
  */
 function generateAeonPageHtml(
   match: NonNullable<ReturnType<AeonRouter['match']>>,
-  config: AeonConfig
+  config: AeonConfig,
+  decision?: RouteDecision
 ): string {
   const { sessionId, params, componentId } = match;
 
+  // Determine color scheme from decision
+  const colorScheme = decision?.theme === 'dark' ? 'dark' : decision?.theme === 'light' ? 'light' : '';
+  const colorSchemeAttr = colorScheme ? ` data-theme="${colorScheme}"` : '';
+
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en"${colorSchemeAttr}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aeon Page</title>
+  ${generatePersonalizationStyles(decision)}
+  ${generateSpeculationScript(decision)}
   <script type="module">
     // Aeon hydration script
     import { hydrate, initAeonSync } from '/_aeon/runtime.js';
@@ -231,6 +380,7 @@ function generateAeonPageHtml(
     const sessionId = '${sessionId}';
     const params = ${JSON.stringify(params)};
     const componentId = '${componentId}';
+    const routeDecision = ${JSON.stringify(decision || {})};
 
     // Initialize Aeon sync
     const sync = await initAeonSync({
@@ -241,11 +391,19 @@ function generateAeonPageHtml(
 
     // Hydrate the page from session state
     const session = await sync.getSession(sessionId);
-    hydrate(session.tree, document.getElementById('root'));
+    hydrate(session.tree, document.getElementById('root'), {
+      componentOrder: routeDecision.componentOrder,
+      hiddenComponents: routeDecision.hiddenComponents,
+      featureFlags: routeDecision.featureFlags,
+    });
 
     // Subscribe to real-time updates
     sync.subscribe((update) => {
-      hydrate(update.tree, document.getElementById('root'));
+      hydrate(update.tree, document.getElementById('root'), {
+        componentOrder: routeDecision.componentOrder,
+        hiddenComponents: routeDecision.hiddenComponents,
+        featureFlags: routeDecision.featureFlags,
+      });
     });
   </script>
 </head>
@@ -263,14 +421,20 @@ function generateAeonPageHtml(
  */
 function generateStaticPageHtml(
   match: NonNullable<ReturnType<AeonRouter['match']>>,
-  _config: AeonConfig
+  _config: AeonConfig,
+  decision?: RouteDecision
 ): string {
+  const colorScheme = decision?.theme === 'dark' ? 'dark' : decision?.theme === 'light' ? 'light' : '';
+  const colorSchemeAttr = colorScheme ? ` data-theme="${colorScheme}"` : '';
+
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en"${colorSchemeAttr}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Static Page</title>
+  ${generatePersonalizationStyles(decision)}
+  ${generateSpeculationScript(decision)}
 </head>
 <body>
   <div id="root">
