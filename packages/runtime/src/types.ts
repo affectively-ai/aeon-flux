@@ -49,6 +49,29 @@ export interface AeonOptions {
 
   /** Allow dynamic route creation for unclaimed paths */
   dynamicRoutes?: boolean;
+
+  /** Zero-CLS Skeleton configuration */
+  skeleton?: SkeletonOptions;
+}
+
+export interface SkeletonOptions {
+  /** Enable automatic skeleton generation */
+  enabled: boolean;
+
+  /** Minimum confidence to generate skeletons (0-1) */
+  minConfidence?: number;
+
+  /** Enable fade animation when swapping content */
+  fadeAnimation?: boolean;
+
+  /** Fade animation duration in ms */
+  fadeDuration?: number;
+
+  /** Components that always need skeletons (dynamic content) */
+  alwaysDynamic?: string[];
+
+  /** Components that never need skeletons (static containers) */
+  neverDynamic?: string[];
 }
 
 export interface SyncOptions {

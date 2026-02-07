@@ -240,6 +240,7 @@ export type {
   OfflineOptions,
   PushOptions,
   InstallOptions,
+  SkeletonOptions,
   ComponentOptions,
   OutputOptions,
   // Route types
