@@ -24,11 +24,13 @@ import {
   getFontFaceCSS,
   type FontManifest,
 } from './font-manifest';
+import { compileSkeletonTree, getSkeletonStats } from './skeleton-compiler';
 import type {
   SerializedComponent,
   PageSession,
   PreRenderedPage,
   RenderContext,
+  SkeletonConfig,
 } from './types';
 
 export interface PreRenderOptions {
@@ -44,6 +46,33 @@ export interface PreRenderOptions {
   addHydrationScript?: boolean;
   /** Environment variables to embed */
   env?: Record<string, string>;
+  /** Skeleton generation configuration */
+  skeleton?: SkeletonConfig;
+  /** ESI state for global injection (personalization, tier gating, emotion state) */
+  esiState?: ESIStateConfig;
+}
+
+/**
+ * ESI State configuration for pre-rendering
+ * This is injected as window.__AEON_ESI_STATE__ in the <head>
+ */
+export interface ESIStateConfig {
+  /** Enable ESI state injection */
+  enabled: boolean;
+  /** Default user tier for anonymous users */
+  defaultTier?: 'free' | 'starter' | 'pro' | 'enterprise';
+  /** Include placeholder for runtime emotion state */
+  includeEmotionPlaceholder?: boolean;
+  /** Feature flags based on default tier */
+  defaultFeatures?: {
+    aiInference?: boolean;
+    emotionTracking?: boolean;
+    collaboration?: boolean;
+    advancedInsights?: boolean;
+    customThemes?: boolean;
+    voiceSynthesis?: boolean;
+    imageAnalysis?: boolean;
+  };
 }
 
 // HTML escape utility
@@ -241,13 +270,78 @@ export function prerenderPage(
   const title = (session.data.title as string) || 'AFFECTIVELY';
   const description = (session.data.description as string) || '';
 
-  const html = `<!DOCTYPE html>
+  // 10. Generate skeleton if enabled
+  const skeletonEnabled = options.skeleton?.enabled ?? false;
+  let skeletonHtml = '';
+  let skeletonCss = '';
+  let skeletonInitScript = '';
+
+  if (skeletonEnabled) {
+    // Compile skeleton metadata into tree
+    const treeWithSkeleton = compileSkeletonTree(resolvedTree, {
+      minConfidence: options.skeleton?.minConfidence ?? 0.3,
+      alwaysDynamic: options.skeleton?.alwaysDynamic,
+      neverDynamic: options.skeleton?.neverDynamic,
+    });
+
+    // Render skeleton HTML (simplified JS version - WASM version used at runtime)
+    skeletonHtml = renderSkeletonTree(treeWithSkeleton);
+    skeletonCss = generateSkeletonCSS();
+    skeletonInitScript = generateSkeletonInitScript();
+
+    // Log skeleton stats
+    const stats = getSkeletonStats(treeWithSkeleton);
+    if (stats.nodesWithSkeleton > 0) {
+      console.log(`   🦴 Skeleton: ${stats.nodesWithSkeleton}/${stats.totalNodes} nodes (${(stats.averageConfidence * 100).toFixed(0)}% avg confidence)`);
+    }
+  }
+
+  // 11. Generate ESI state script if enabled
+  const esiStateEnabled = options.esiState?.enabled ?? false;
+  const esiStateScript = esiStateEnabled ? generateESIStateScript(options.esiState!) : '';
+
+  // 12. Build final HTML document with or without skeleton
+  const html = skeletonEnabled
+    ? `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
   ${description ? `<meta name="description" content="${escapeHtml(description)}">` : ''}
+  <style>
+/* Skeleton CSS */
+${skeletonCss}
+/* Content CSS */
+${fullCSS}
+  </style>
+  ${esiStateScript}
+  ${skeletonInitScript}
+</head>
+<body>
+  <div id="aeon-skeleton" aria-hidden="true">${skeletonHtml}</div>
+  <div id="root" style="display:none">${htmlContent}</div>
+  <script>
+    // Swap skeleton to content when DOM is ready
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',function(){
+        window.__AEON_SKELETON__&&window.__AEON_SKELETON__.swap({fade:${options.skeleton?.fadeAnimation !== false},duration:${options.skeleton?.fadeDuration ?? 150}});
+      });
+    }else{
+      window.__AEON_SKELETON__&&window.__AEON_SKELETON__.swap({fade:${options.skeleton?.fadeAnimation !== false},duration:${options.skeleton?.fadeDuration ?? 150}});
+    }
+  </script>
+  ${hydrationScript}
+</body>
+</html>`
+    : `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  ${description ? `<meta name="description" content="${escapeHtml(description)}">` : ''}
+  ${esiStateScript}
   <style>${fullCSS}</style>
 </head>
 <body>
@@ -264,7 +358,205 @@ export function prerenderPage(
     css: fullCSS,
     size: html.length,
     renderedAt: new Date().toISOString(),
+    ...(skeletonEnabled && { skeletonHtml, skeletonCss }),
   };
+}
+
+/**
+ * Render skeleton tree to HTML (JavaScript version for build time)
+ * The WASM version is faster but this works without WASM compilation
+ */
+function renderSkeletonTree(node: SerializedComponent): string {
+  const skeleton = (node as unknown as { _skeleton?: { isDynamic: boolean; shape: string; dimensions: Record<string, string>; lines?: number } })._skeleton;
+
+  if (!skeleton || !skeleton.isDynamic) {
+    // Not dynamic - render children skeletons only
+    return (node.children || [])
+      .filter((c): c is SerializedComponent => typeof c !== 'string')
+      .map(renderSkeletonTree)
+      .join('');
+  }
+
+  const style = buildSkeletonStyle(skeleton.dimensions, skeleton.shape);
+  const className = `aeon-skeleton aeon-skeleton--${skeleton.shape}`;
+
+  if (skeleton.shape === 'text-block') {
+    const lines = skeleton.lines || 3;
+    let html = `<div class="${className}" style="${style}" aria-hidden="true">`;
+    for (let i = 0; i < lines; i++) {
+      const lineWidth = i === lines - 1 ? '60%' : '100%';
+      html += `<div class="aeon-skeleton--line" style="width: ${lineWidth}; height: 1em; margin-bottom: 0.5em;"></div>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  if (skeleton.shape === 'container') {
+    const childrenHtml = (node.children || [])
+      .filter((c): c is SerializedComponent => typeof c !== 'string')
+      .map(renderSkeletonTree)
+      .join('');
+    return `<div class="${className}" style="${style}" aria-hidden="true">${childrenHtml}</div>`;
+  }
+
+  return `<div class="${className}" style="${style}" aria-hidden="true"></div>`;
+}
+
+/**
+ * Build inline style string for skeleton element
+ */
+function buildSkeletonStyle(dims: Record<string, string> = {}, shape: string): string {
+  const styles: string[] = [];
+
+  if (dims.width) styles.push(`width: ${dims.width}`);
+  if (dims.height) styles.push(`height: ${dims.height}`);
+  if (dims.minHeight) styles.push(`min-height: ${dims.minHeight}`);
+  if (dims.aspectRatio) styles.push(`aspect-ratio: ${dims.aspectRatio}`);
+  if (dims.padding) styles.push(`padding: ${dims.padding}`);
+  if (dims.margin) styles.push(`margin: ${dims.margin}`);
+  if (dims.gap) styles.push(`gap: ${dims.gap}`);
+
+  // Shape-specific border radius
+  const radius = dims.borderRadius || (shape === 'circle' ? '50%' : shape === 'rect' ? '0.25rem' : '0.125rem');
+  styles.push(`border-radius: ${radius}`);
+
+  if (shape === 'container') {
+    styles.push('display: flex');
+    styles.push('flex-direction: column');
+  }
+
+  return styles.join('; ');
+}
+
+/**
+ * Generate skeleton CSS
+ */
+function generateSkeletonCSS(): string {
+  return `/* Aeon Skeleton - Zero CLS */
+.aeon-skeleton {
+  background: linear-gradient(90deg, var(--aeon-skeleton-base, #e5e7eb) 0%, var(--aeon-skeleton-highlight, #f3f4f6) 50%, var(--aeon-skeleton-base, #e5e7eb) 100%);
+  background-size: 200% 100%;
+  animation: aeon-skeleton-pulse 1.5s ease-in-out infinite;
+}
+.aeon-skeleton--rect { display: block; }
+.aeon-skeleton--circle { display: block; }
+.aeon-skeleton--text-line { display: block; height: 1em; }
+.aeon-skeleton--text-block { display: flex; flex-direction: column; }
+.aeon-skeleton--line { background: inherit; background-size: inherit; animation: inherit; border-radius: 0.125rem; }
+.aeon-skeleton--container { background: transparent; animation: none; }
+@keyframes aeon-skeleton-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-color-scheme: dark) { :root { --aeon-skeleton-base: #374151; --aeon-skeleton-highlight: #4b5563; } }
+@media (prefers-reduced-motion: reduce) { .aeon-skeleton, .aeon-skeleton--line { animation: none; background-size: 100% 100%; } }`;
+}
+
+/**
+ * Generate inline skeleton init script
+ */
+function generateSkeletonInitScript(): string {
+  return `<script>
+(function(){
+  var s=document.getElementById('aeon-skeleton'),r=document.getElementById('root');
+  if(s&&r){r.style.display='none';s.style.display='block'}
+  window.__AEON_SKELETON__={
+    swap:function(o){
+      if(this.done)return;
+      o=o||{};
+      var f=o.fade!==false,d=o.duration||150;
+      if(f){
+        s.style.transition=r.style.transition='opacity '+d+'ms ease-out';
+        r.style.opacity='0';r.style.display='block';
+        void r.offsetHeight;
+        s.style.opacity='0';r.style.opacity='1';
+        setTimeout(function(){s.remove();o.onComplete&&o.onComplete()},d);
+      }else{
+        s.remove();r.style.display='block';o.onComplete&&o.onComplete();
+      }
+      this.done=true
+    },
+    isVisible:function(){return!this.done&&!!s},
+    done:false
+  };
+})();
+</script>`;
+}
+
+/**
+ * Generate ESI state injection script for <head>
+ * This provides global state to ESI components before React hydration
+ */
+function generateESIStateScript(config: ESIStateConfig): string {
+  const tier = config.defaultTier || 'free';
+
+  // Default features based on tier
+  const tierFeatures: Record<string, ESIStateConfig['defaultFeatures']> = {
+    free: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: false,
+      customThemes: false,
+      voiceSynthesis: false,
+      imageAnalysis: false,
+    },
+    starter: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: false,
+      imageAnalysis: false,
+    },
+    pro: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true,
+    },
+    enterprise: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true,
+    },
+  };
+
+  const features = config.defaultFeatures || tierFeatures[tier] || tierFeatures.free;
+
+  // Build initial ESI state (will be hydrated at runtime with actual user context)
+  const esiState = {
+    userTier: tier,
+    emotionState: config.includeEmotionPlaceholder ? null : undefined,
+    preferences: {
+      theme: 'auto',
+      reducedMotion: false,
+      language: undefined,
+    },
+    sessionId: undefined,
+    localHour: new Date().getHours(),
+    timezone: 'UTC',
+    features,
+    userId: undefined,
+    isNewSession: true,
+    recentPages: [],
+    viewport: { width: 1920, height: 1080 },
+    connection: '4g',
+  };
+
+  const stateJson = JSON.stringify(esiState);
+
+  return `<script>
+/* Aeon ESI State - Pre-rendered defaults, hydrated at runtime */
+window.__AEON_ESI_STATE__=${stateJson};
+window.__AEON_ESI_STATE__.update=function(o){Object.assign(this,o);this._listeners&&this._listeners.forEach(function(l){l(this)}.bind(this))};
+window.__AEON_ESI_STATE__.subscribe=function(l){this._listeners=this._listeners||[];this._listeners.push(l);return function(){this._listeners=this._listeners.filter(function(x){return x!==l})}.bind(this)};
+</script>`;
 }
 
 /**

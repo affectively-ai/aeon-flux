@@ -1,8 +1,8 @@
 [package]
 name = "aeon-pages-runtime"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-description = "WASM runtime for @affectively/aeon-pages - lightweight page routing and hydration"
+description = "WASM runtime for @affectively/aeon-pages - lightweight page routing, hydration, and zero-CLS skeleton rendering"
 license = "MIT"
 repository = "https://github.com/affectively/aeon-pages"
 

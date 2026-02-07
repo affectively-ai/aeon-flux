@@ -346,6 +346,49 @@ export default function Page() {
 | `useOfflineStatus()` | Offline awareness |
 | `useESI()` | ESI context |
 | `useESIInfer()` | Programmatic inference |
+| `useESITier()` | User tier for feature gating |
+| `useESIEmotionState()` | Current emotional context |
+| `useESIFeature(name)` | Check feature availability |
+| `useGlobalESIState()` | Full ESI state object |
+
+## ESI Global State Injection
+
+For zero-CLS tier-aware rendering, inject ESI state in the `<head>`:
+
+```html
+<script>
+  window.__AEON_ESI_STATE__ = {
+    userTier: 'pro',           // free | starter | pro | enterprise
+    emotionState: {
+      primary: 'focused',
+      valence: 0.3,
+      arousal: 0.6
+    },
+    preferences: {
+      theme: 'dark',
+      reducedMotion: false
+    },
+    sessionId: 'abc123',
+    localHour: 14,
+    timezone: 'America/New_York'
+  };
+</script>
+```
+
+Then use in components:
+
+```tsx
+import { useESITier } from '@affectively/aeon-flux/esi';
+
+function PremiumFeature() {
+  const tier = useESITier();
+
+  if (tier === 'free') {
+    return <UpgradePrompt />;
+  }
+
+  return <AdvancedAnalytics />;
+}
 
 ## Configuration
 
@@ -390,6 +433,10 @@ export default {
 
 | Package | Description |
 |---------|-------------|
+| `@affectively/aeon-flux` | Main package (npm) |
+| `@affectively/aeon-flux/esi` | ESI hooks for tier gating |
+| `@affectively/aeon-flux/react` | React bindings |
+| `@affectively/aeon-flux/server` | Server utilities |
 | `@affectively/aeon-pages-runtime` | Runtime (npm) |
 | `@affectively/aeon-pages-runtime/router` | Personalized routing + ESI |
 | `@affectively/aeon-pages-runtime/server` | Server utilities |

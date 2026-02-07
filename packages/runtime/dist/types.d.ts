@@ -28,8 +28,28 @@ export interface AeonOptions {
     presence?: PresenceOptions;
     /** Offline support configuration */
     offline?: OfflineOptions;
+    /** Push notification configuration */
+    push?: PushOptions;
+    /** PWA install prompt configuration */
+    install?: InstallOptions;
     /** Allow dynamic route creation for unclaimed paths */
     dynamicRoutes?: boolean;
+    /** Zero-CLS Skeleton configuration */
+    skeleton?: SkeletonOptions;
+}
+export interface SkeletonOptions {
+    /** Enable automatic skeleton generation */
+    enabled: boolean;
+    /** Minimum confidence to generate skeletons (0-1) */
+    minConfidence?: number;
+    /** Enable fade animation when swapping content */
+    fadeAnimation?: boolean;
+    /** Fade animation duration in ms */
+    fadeDuration?: number;
+    /** Components that always need skeletons (dynamic content) */
+    alwaysDynamic?: string[];
+    /** Components that never need skeletons (static containers) */
+    neverDynamic?: string[];
 }
 export interface SyncOptions {
     /** Sync mode: 'distributed' for multi-node, 'local' for single-node */
@@ -56,8 +76,55 @@ export interface PresenceOptions {
 export interface OfflineOptions {
     /** Enable offline support */
     enabled: boolean;
-    /** Maximum operations to queue offline */
+    /** Maximum operations to queue offline (default: 1000) */
     maxQueueSize?: number;
+    /** Encryption configuration for offline queue */
+    encryption?: {
+        /** Enable encryption for queued operations */
+        enabled: boolean;
+        /** Key derivation method: 'ucan' for UCAN-derived keys, 'session' for session-based */
+        keyDerivation?: 'ucan' | 'session';
+    };
+    /** Sync configuration */
+    sync?: {
+        /** Maximum operations per batch (default: 100) */
+        maxBatchSize?: number;
+        /** Maximum bytes per batch (default: 5MB) */
+        maxBatchBytes?: number;
+        /** Batch timeout in ms (default: 5000) */
+        batchTimeoutMs?: number;
+        /** Enable compression for batches (default: true) */
+        enableCompression?: boolean;
+        /** Enable delta sync (default: true) */
+        enableDeltaSync?: boolean;
+        /** Enable adaptive batch sizing based on network (default: true) */
+        adaptiveBatching?: boolean;
+    };
+    /** Storage configuration */
+    storage?: {
+        /** Maximum local storage capacity in bytes (default: 50MB) */
+        maxLocalCapacity?: number;
+        /** Interval for D1 sync in ms (default: 5 minutes) */
+        d1SyncInterval?: number;
+    };
+}
+/** Push notification configuration */
+export interface PushOptions {
+    /** Enable push notifications */
+    enabled: boolean;
+    /** VAPID public key for push subscription */
+    vapidPublicKey?: string;
+    /** Default notification icon */
+    defaultIcon?: string;
+    /** Default notification badge */
+    defaultBadge?: string;
+}
+/** PWA install prompt configuration */
+export interface InstallOptions {
+    /** Show install prompt when available */
+    showPrompt: boolean;
+    /** Show iOS-specific installation instructions */
+    iosInstructions: boolean;
 }
 export interface ComponentOptions {
     /** Auto-discover components from componentsDir */
@@ -113,11 +180,64 @@ export interface RouteOperation {
     timestamp: string;
     nodeId: string;
 }
+/** Shape types for skeleton rendering */
+export type SkeletonShape = 'rect' | 'circle' | 'text-line' | 'text-block' | 'container';
+/** Source of skeleton inference */
+export type SkeletonSource = 'tailwind' | 'prop-defaults' | 'hint' | 'measured';
+/** Skeleton dimensions extracted from Tailwind classes or props */
+export interface SkeletonDimensions {
+    /** Width CSS value: '256px', '100%', 'auto' */
+    width?: string;
+    /** Height CSS value: '48px', 'auto' */
+    height?: string;
+    /** Min height CSS value */
+    minHeight?: string;
+    /** Aspect ratio: '16/9', '1/1' */
+    aspectRatio?: string;
+    /** Padding CSS value */
+    padding?: string;
+    /** Margin CSS value */
+    margin?: string;
+    /** Border radius CSS value */
+    borderRadius?: string;
+    /** Gap for flex/grid containers */
+    gap?: string;
+}
+/** Skeleton metadata attached to component nodes */
+export interface SkeletonMetadata {
+    /** Computed dimensions from Tailwind/props/hints */
+    dimensions: SkeletonDimensions;
+    /** Shape hint for skeleton rendering */
+    shape: SkeletonShape;
+    /** Number of skeleton lines for text-block shape */
+    lines?: number;
+    /** Whether this node has dynamic content that needs skeleton */
+    isDynamic: boolean;
+    /** Confidence score (0-1) for inferred dimensions */
+    confidence: number;
+    /** Source of skeleton data */
+    source: SkeletonSource;
+}
+/** Skeleton hint parsed from data-skeleton-* attributes */
+export interface SkeletonHint {
+    /** Explicit shape override */
+    shape?: SkeletonShape;
+    /** Explicit width override */
+    width?: string;
+    /** Explicit height override */
+    height?: string;
+    /** Number of lines for text-block */
+    lines?: number;
+    /** Skip skeleton generation for this element */
+    ignore?: boolean;
+}
 /** Serialized component tree */
 export interface SerializedComponent {
     type: string;
     props?: Record<string, unknown>;
     children?: (SerializedComponent | string)[];
+    /** Skeleton metadata for zero-CLS rendering (computed at build time) */
+    _skeleton?: SkeletonMetadata;
 }
 /** Page session stored in Aeon */
 export interface PageSession {
@@ -191,3 +311,188 @@ export interface AeonCapability {
 }
 /** Alias for PresenceInfo - used by react package */
 export type PresenceUser = PresenceInfo;
+/** HTTP methods supported for API routes */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+/** Cloudflare Workers environment bindings */
+export interface AeonEnv {
+    /** Durable Object namespace for page sessions */
+    PAGE_SESSIONS?: DurableObjectNamespace;
+    /** Durable Object namespace for routes registry */
+    ROUTES_REGISTRY?: DurableObjectNamespace;
+    /** D1 Database binding */
+    DB?: D1Database;
+    /** Workers KV namespace for caching */
+    CACHE?: KVNamespace;
+    /** Workers AI binding */
+    AI?: Ai;
+    /** Environment name (development, staging, production) */
+    ENVIRONMENT?: string;
+    /** Allow additional custom bindings */
+    [key: string]: unknown;
+}
+/** D1 Database interface */
+export interface D1Database {
+    prepare(query: string): D1PreparedStatement;
+    exec(query: string): Promise<D1ExecResult>;
+    batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+    dump(): Promise<ArrayBuffer>;
+}
+export interface D1PreparedStatement {
+    bind(...values: unknown[]): D1PreparedStatement;
+    run(): Promise<D1Result>;
+    first<T = unknown>(colName?: string): Promise<T | null>;
+    all<T = unknown>(): Promise<D1Result<T>>;
+    raw<T = unknown>(): Promise<T[]>;
+}
+export interface D1Result<T = unknown> {
+    results?: T[];
+    success: boolean;
+    error?: string;
+    meta?: {
+        duration: number;
+        changes: number;
+        last_row_id: number;
+        served_by: string;
+    };
+}
+export interface D1ExecResult {
+    count: number;
+    duration: number;
+}
+/** KV Namespace interface */
+export interface KVNamespace {
+    get(key: string, options?: {
+        type?: 'text' | 'json' | 'arrayBuffer' | 'stream';
+    }): Promise<string | null>;
+    getWithMetadata<T = unknown>(key: string): Promise<{
+        value: string | null;
+        metadata: T | null;
+    }>;
+    put(key: string, value: string | ArrayBuffer | ReadableStream, options?: {
+        expirationTtl?: number;
+        metadata?: unknown;
+    }): Promise<void>;
+    delete(key: string): Promise<void>;
+    list(options?: {
+        prefix?: string;
+        limit?: number;
+        cursor?: string;
+    }): Promise<{
+        keys: {
+            name: string;
+        }[];
+        list_complete: boolean;
+        cursor?: string;
+    }>;
+}
+/** Durable Object Namespace interface */
+export interface DurableObjectNamespace {
+    idFromName(name: string): DurableObjectId;
+    idFromString(id: string): DurableObjectId;
+    newUniqueId(): DurableObjectId;
+    get(id: DurableObjectId): DurableObjectStub;
+}
+export interface DurableObjectId {
+    toString(): string;
+    equals(other: DurableObjectId): boolean;
+}
+export interface DurableObjectStub {
+    fetch(input: RequestInfo, init?: RequestInit): Promise<Response>;
+    id: DurableObjectId;
+}
+/** Workers AI interface */
+export interface Ai {
+    run<T = unknown>(model: string, inputs: unknown, options?: {
+        gateway?: {
+            id: string;
+        };
+    }): Promise<T>;
+}
+/** Context passed to API route handlers */
+export interface AeonContext<E extends AeonEnv = AeonEnv> {
+    /** The incoming request */
+    request: Request;
+    /** Environment bindings (D1, KV, AI, Durable Objects, etc.) */
+    env: E;
+    /** Extracted URL parameters from dynamic routes */
+    params: Record<string, string>;
+    /** The request URL parsed */
+    url: URL;
+    /** Execution context for waitUntil, etc. */
+    ctx: ExecutionContext;
+}
+/** Execution context for Cloudflare Workers */
+export interface ExecutionContext {
+    waitUntil(promise: Promise<unknown>): void;
+    passThroughOnException(): void;
+}
+/** API route handler function */
+export type ApiRouteHandler<E extends AeonEnv = AeonEnv> = (context: AeonContext<E>) => Response | Promise<Response>;
+/** API route module - exports handlers for each HTTP method */
+export interface ApiRouteModule<E extends AeonEnv = AeonEnv> {
+    GET?: ApiRouteHandler<E>;
+    POST?: ApiRouteHandler<E>;
+    PUT?: ApiRouteHandler<E>;
+    PATCH?: ApiRouteHandler<E>;
+    DELETE?: ApiRouteHandler<E>;
+    HEAD?: ApiRouteHandler<E>;
+    OPTIONS?: ApiRouteHandler<E>;
+    /** Catch-all handler for any method */
+    default?: ApiRouteHandler<E>;
+}
+/** Registered API route */
+export interface ApiRoute {
+    /** Route pattern (e.g., "/api/chat", "/api/users/[id]") */
+    pattern: string;
+    /** Parsed path segments for matching */
+    segments: ApiRouteSegment[];
+    /** The route module with handlers */
+    module: ApiRouteModule;
+}
+/** Segment of an API route pattern */
+export interface ApiRouteSegment {
+    /** The segment text */
+    value: string;
+    /** Is this a dynamic parameter? */
+    isDynamic: boolean;
+    /** Is this a catch-all segment? */
+    isCatchAll: boolean;
+}
+/** API route match result */
+export interface ApiRouteMatch {
+    /** The matched route */
+    route: ApiRoute;
+    /** Extracted parameters */
+    params: Record<string, string>;
+    /** The handler for the request method */
+    handler: ApiRouteHandler;
+}
+/** Server route module - for page-level server logic */
+export interface ServerRouteModule<E extends AeonEnv = AeonEnv> {
+    /** Called before page render - can return data or redirect */
+    loader?: (context: AeonContext<E>) => Promise<ServerLoaderResult>;
+    /** Called on form submission or POST to the page */
+    action?: (context: AeonContext<E>) => Promise<ServerActionResult>;
+}
+/** Result from a server loader */
+export interface ServerLoaderResult {
+    /** Data to pass to the page */
+    data?: Record<string, unknown>;
+    /** Redirect to another URL */
+    redirect?: string;
+    /** Response status code */
+    status?: number;
+    /** Additional headers */
+    headers?: Record<string, string>;
+}
+/** Result from a server action */
+export interface ServerActionResult {
+    /** Data to return */
+    data?: Record<string, unknown>;
+    /** Errors to display */
+    errors?: Record<string, string>;
+    /** Redirect after action */
+    redirect?: string;
+    /** Response status code */
+    status?: number;
+}

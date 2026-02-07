@@ -41,4 +41,6 @@ export declare function esiVision(base64Image: string, prompt: string, options?:
  * Automatically injects user context into the prompt
  */
 export declare function esiWithContext(prompt: string, signals?: ESIDirective['signals'], options?: Partial<ESIParams>): ESIDirective;
+export { esiContext, esiCyrano, esiHalo, evaluateTrigger, createExhaustEntry, getToolSuggestions, } from './esi-cyrano';
+export type { SessionContext, EmotionContext, BehaviorContext, EnvironmentContext, BiometricContext, CyranoWhisperConfig, CyranoIntent, CyranoTone, CyranoTrigger, HaloInsightConfig, HaloObservation, HaloAction, ChatExhaustType, ChatExhaustEntry, ESIWhisperResult, } from './esi-cyrano';
 export { ESIConfig, ESIDirective, ESIResult, ESIProcessor, ESIModel };

@@ -5,71 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2025-02-07
+## [1.1.2] - 2026-02-07
+
+### Documentation
+
+- Added ESI Global State injection pattern to README
+- Documented tier-based hooks (`useESITier`, `useESIEmotionState`, `useESIFeature`, `useGlobalESIState`)
+- Added `/esi` export path documentation
+
+## [1.1.1] - 2026-02-07
+
+### Fixed
+
+- CLI binary path corrected to `packages/cli/dist/index.js`
+
+## [1.1.0] - 2026-02-07
 
 ### Added
 
-#### Runtime Package (`@aeon-pages/runtime`)
+- **Edge Side Inference (ESI)** - AI inference at render time
+  - `<ESI.Infer>` - Basic inference with caching
+  - `<ESI.Structured>` - Zod schema validation for structured output
+  - `<ESI.If>` - Conditional rendering based on AI decisions
+  - `<ESI.Collaborative>` - Presence-aware inference
+  - `<ESI.Optimize>` - Self-improving content generation
+- **Tier-based feature gating** - Control features by user tier (free/starter/pro/enterprise)
+- **Global state injection** - `window.__AEON_ESI_STATE__` for zero-CLS personalization
 
-- **Offline Queue System**
-  - `offline/types.ts` - Type definitions for offline operations, queue config, sync, conflicts, network state
-  - `offline/encryption.ts` - AES-256-GCM encryption using Web Crypto API with UCAN or session-based key derivation
-  - `offline/encrypted-queue.ts` - Priority queuing (high/normal/low) with 50MB capacity, automatic compaction, retry logic
+## [1.0.0] - 2026-02-01
 
-- **Sync Coordination**
-  - `sync/coordinator.ts` - Network state tracking, bandwidth profiling, adaptive batch sizing
-  - `sync/conflict-resolver.ts` - Conflict detection with resolution strategies (local-wins, remote-wins, merge, last-modified, manual)
+### Core Features
 
-- **Push Notifications**
-  - `service-worker-push.ts` - Push notification handler with background sync support
-  - Integrated push handlers into main service worker
+- **Zero-Dependency Rendering** - Single HTML with inline CSS, assets, fonts
+- **Hyperpersonalized Routing** - Routes adapt based on user context
+- **~20KB WASM Runtime** - Rust-compiled WebAssembly for performance
+- **Multi-layer Caching** - KV (1ms) -> D1 (5ms) -> Session (50ms)
+- **Speculative Pre-rendering** - Zero-latency navigation via prediction
+- **Real-time Collaboration** - CRDT-based conflict-free editing
+- **GitHub PR Publishing** - Visual edits compile to TSX and create PRs
 
-- **Durable Object Sync Endpoints**
-  - `POST /sync-queue` - Receive offline queue batch
-  - `GET /queue-status` - Return pending operations and conflicts
-  - `POST /resolve-conflict` - Manual conflict resolution
+### Runtime
 
-- **Extended Configuration Types**
-  - `PushOptions` - Push notification configuration
-  - `InstallOptions` - PWA install prompt configuration
-  - Enhanced `OfflineOptions` with encryption, sync, and storage sub-configs
-
-#### React Package (`@aeon-pages/react`)
-
-- **Hooks**
-  - `useNetworkState` - Network state and bandwidth monitoring
-  - `useConflicts` - Conflict management with resolution methods
-
-- **Components**
-  - `InstallPrompt` - PWA install prompt with iOS detection (+ `useInstallPrompt` hook)
-  - `PushNotifications` - Push subscription management (+ `usePushNotifications` hook)
-  - `OfflineDiagnostics` - Composable diagnostic panels for network, service worker, cache, queue, and conflicts
-
-### Tests
-
-- Added comprehensive test suites for all new modules:
-  - `offline/encryption.test.ts` - 20 tests
-  - `offline/encrypted-queue.test.ts` - 35 tests
-  - `sync/conflict-resolver.test.ts` - 38 tests
-  - `sync/coordinator.test.ts` - 33 tests
-
-## [0.2.0] - 2025-01-15
-
-### Added
-
-- Initial release of core framework
-- Page session management with Durable Objects
-- Real-time collaboration via WebSocket
-- CRDT-based conflict resolution
+- Durable Objects for session management
+- WebSocket-based real-time sync
 - Service worker with total preload strategy
-- React integration with hooks and components
-- CLI for project scaffolding and builds
-- Build system with pre-rendering support
+- Speculation Rules API support
 
-## [0.1.0] - 2025-01-01
+### React Integration
 
-### Added
+- `useAeonPage()` - Full page context with presence and sync
+- `usePresence()` - Collaborative cursors and editing state
+- `useAeonData<T>()` - Typed collaborative data store
+- `useCollaborativeInput()` - Ready-to-use collaborative inputs
+- `useOfflineStatus()` - Network awareness
 
-- Project initialization
-- Basic architecture design
-- Proof of concept implementation
+### CLI
+
+- `aeon init` - Project scaffolding
+- `aeon dev` - Development server with hot reload
+- `aeon build` - Production build for Cloudflare Workers
+- `aeon start` - Production server
+
+### Offline Support
+
+- Encrypted offline queue with AES-256-GCM
+- Priority-based sync (high/normal/low)
+- Conflict resolution strategies (local-wins, remote-wins, merge, manual)
+- Push notifications with background sync
+
+### Performance
+
+| Metric | Value |
+|--------|-------|
+| Requests per page | 1 |
+| Bundle size | ~110KB |
+| TTFB | 50ms |
+| First Paint | <100ms |
+| TTI | <300ms |
+| CLS | 0 |

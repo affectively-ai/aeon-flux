@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-flux",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state and zero-CLS skeleton rendering.",
   "type": "module",
   "workspaces": [
@@ -9,7 +9,7 @@
   "main": "./packages/runtime/dist/index.js",
   "types": "./packages/runtime/dist/index.d.ts",
   "bin": {
-    "aeon": "./packages/cli/dist/bin.js"
+    "aeon": "packages/cli/dist/index.js"
   },
   "exports": {
     ".": {
@@ -66,7 +66,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/affectively-ai/aeon-flux"
+    "url": "git+https://github.com/affectively-ai/aeon-flux.git"
   },
   "keywords": [
     "aeon",

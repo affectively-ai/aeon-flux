@@ -28,7 +28,7 @@ var __export = (target, all) => {
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 var __require = import.meta.require;
 
-// ../../../../node_modules/react/cjs/react.development.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/cjs/react.development.js
 var require_react_development = __commonJS((exports, module) => {
   (function() {
     function defineDeprecationWarning(methodName, info) {
@@ -851,7 +851,7 @@ See https://react.dev/link/invalid-hook-call for tips about how to debug and fix
   })();
 });
 
-// ../../../../node_modules/react/index.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/index.js
 var require_react = __commonJS((exports, module) => {
   var react_development = __toESM(require_react_development());
   if (false) {} else {
@@ -859,7 +859,7 @@ var require_react = __commonJS((exports, module) => {
   }
 });
 
-// ../../../../node_modules/react/cjs/react-jsx-dev-runtime.development.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/cjs/react-jsx-dev-runtime.development.js
 var require_react_jsx_dev_runtime_development = __commonJS((exports) => {
   var React = __toESM(require_react());
   (function() {
@@ -1074,7 +1074,7 @@ React keys must be passed directly to JSX without using spread:
   })();
 });
 
-// ../../../../node_modules/react/jsx-dev-runtime.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/jsx-dev-runtime.js
 var require_jsx_dev_runtime = __commonJS((exports, module) => {
   var react_jsx_dev_runtime_development = __toESM(require_react_jsx_dev_runtime_development());
   if (false) {} else {
@@ -1082,7 +1082,7 @@ var require_jsx_dev_runtime = __commonJS((exports, module) => {
   }
 });
 
-// ../../../../node_modules/@affectively/aeon/node_modules/eventemitter3/index.js
+// ../../../../node_modules/.bun/eventemitter3@5.0.4/node_modules/eventemitter3/index.js
 var require_eventemitter3 = __commonJS((exports, module) => {
   var has = Object.prototype.hasOwnProperty;
   var prefix = "~";
@@ -1260,13 +1260,13 @@ var require_eventemitter3 = __commonJS((exports, module) => {
   }
 });
 
-// ../../../../node_modules/@affectively/aeon/node_modules/eventemitter3/index.mjs
+// ../../../../node_modules/.bun/eventemitter3@5.0.4/node_modules/eventemitter3/index.mjs
 var import__;
 var init_eventemitter3 = __esm(() => {
   import__ = __toESM(require_eventemitter3(), 1);
 });
 
-// ../../../../node_modules/@affectively/aeon/dist/index.js
+// ../../../aeon/dist/index.js
 var exports_dist = {};
 __export(exports_dist, {
   setLogger: () => setLogger,
@@ -1537,11 +1537,11 @@ var consoleLogger, noopLogger, currentLogger, logger, SchemaVersionManager = cla
     return `${version.major}.${version.minor}.${version.patch}`;
   }
   getVersionMetadata(version) {
-    const history = this.versionHistory;
-    const currentIndex = history.findIndex((v) => this.versionToString(v) === this.versionToString(version));
+    const history2 = this.versionHistory;
+    const currentIndex = history2.findIndex((v) => this.versionToString(v) === this.versionToString(version));
     return {
       version,
-      previousVersion: currentIndex > 0 ? history[currentIndex - 1] : undefined,
+      previousVersion: currentIndex > 0 ? history2[currentIndex - 1] : undefined,
       changes: [version.description],
       migrationsRequired: this.canMigrate(this.currentVersion || version, version) ? [this.versionToString(version)] : [],
       rollbackPossible: currentIndex > 0
@@ -5062,6 +5062,307 @@ var DEFAULT_ESI_CONFIG = {
     }
   }
 };
+// src/router/esi-cyrano.ts
+function esiContext(context, options = {}) {
+  const { emitExhaust = true, id } = options;
+  return {
+    id: id || `esi-context-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "custom",
+      custom: {
+        type: "context-drop",
+        emitExhaust
+      }
+    },
+    content: {
+      type: "json",
+      value: JSON.stringify(context)
+    },
+    contextAware: true,
+    signals: ["emotion", "preferences", "history", "time", "device"]
+  };
+}
+function esiCyrano(config, options = {}) {
+  const {
+    intent,
+    tone = "warm",
+    trigger = "always",
+    fallback,
+    suggestTool,
+    suggestRoute,
+    autoAcceptNavigation = false,
+    priority = 1,
+    maxTriggersPerSession,
+    cooldownSeconds,
+    speak = false,
+    showCaption = true,
+    requiredTier
+  } = config;
+  const systemPrompt = buildCyranoSystemPrompt(intent, tone);
+  return {
+    id: `esi-cyrano-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "llm",
+      system: systemPrompt,
+      temperature: 0.7,
+      maxTokens: 150,
+      fallback,
+      custom: {
+        type: "cyrano-whisper",
+        intent,
+        tone,
+        trigger,
+        suggestTool,
+        suggestRoute,
+        autoAcceptNavigation,
+        priority,
+        maxTriggersPerSession,
+        cooldownSeconds,
+        speak,
+        showCaption
+      },
+      ...options
+    },
+    content: {
+      type: "template",
+      value: buildCyranoPrompt(intent, trigger),
+      variables: {
+        intent,
+        tone,
+        trigger
+      }
+    },
+    contextAware: true,
+    signals: ["emotion", "preferences", "history", "time"],
+    requiredTier
+  };
+}
+function buildCyranoSystemPrompt(intent, tone) {
+  const toneGuide = {
+    warm: "Be warm, caring, and approachable. Use gentle language.",
+    calm: "Be calm, measured, and reassuring. Use a steady pace.",
+    encouraging: "Be supportive and uplifting. Celebrate small wins.",
+    playful: "Be light-hearted and fun. Use appropriate humor.",
+    professional: "Be clear and direct. Maintain professionalism.",
+    empathetic: "Show deep understanding. Validate feelings.",
+    neutral: "Be balanced and objective. Provide information."
+  };
+  const intentGuide = {
+    greeting: "Welcome the user. Make them feel at home.",
+    "proactive-check-in": "Check in gently. Ask how they are doing.",
+    "supportive-presence": "Simply acknowledge. Let them know you are here.",
+    "gentle-nudge": "Suggest an action softly. No pressure.",
+    "tool-suggestion": "Recommend a tool that might help.",
+    "navigation-hint": "Suggest exploring another area.",
+    intervention: "Step in supportively. Offer help.",
+    celebration: "Celebrate their progress. Be genuinely happy for them.",
+    reflection: "Invite them to reflect. Ask thoughtful questions.",
+    guidance: "Offer helpful guidance. Be a trusted advisor.",
+    farewell: "Wish them well. Leave the door open.",
+    custom: "Respond appropriately to the context."
+  };
+  return `You are Cyrano, an ambient AI companion. ${toneGuide[tone]} ${intentGuide[intent]}
+
+Keep responses brief (1-2 sentences). Be natural and conversational.
+Never start with "I" - use "You" or the situation as the subject.
+Never say "As an AI" or similar phrases.
+Respond to the emotional context provided.`;
+}
+function buildCyranoPrompt(intent, trigger) {
+  const prompts = {
+    greeting: "Generate a warm greeting based on the time of day and user context.",
+    "proactive-check-in": "Check in with the user based on their emotional state and behavior.",
+    "supportive-presence": "Acknowledge the user's presence and current activity.",
+    "gentle-nudge": "Gently suggest the user might benefit from a particular action.",
+    "tool-suggestion": "Suggest a specific tool that could help with the user's current state.",
+    "navigation-hint": "Suggest the user might want to explore a different area.",
+    intervention: "Offer supportive intervention based on detected stress or difficulty.",
+    celebration: "Celebrate the user's progress or achievement.",
+    reflection: "Invite the user to reflect on their current experience.",
+    guidance: "Offer helpful guidance for the user's current situation.",
+    farewell: "Say goodbye warmly, acknowledging the session.",
+    custom: "Respond appropriately to the context provided."
+  };
+  let prompt = prompts[intent] || prompts.custom;
+  if (trigger !== "always" && trigger !== "never") {
+    prompt += ` The trigger condition is: ${trigger}.`;
+  }
+  return prompt;
+}
+function esiHalo(config, options = {}) {
+  const {
+    observe,
+    window: window2 = "session",
+    action = "whisper-to-cyrano",
+    sensitivity = 0.5,
+    crisisLevel = false,
+    parameters = {}
+  } = config;
+  return {
+    id: `esi-halo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "custom",
+      custom: {
+        type: "halo-insight",
+        observe,
+        window: window2,
+        action,
+        sensitivity,
+        crisisLevel,
+        parameters
+      },
+      ...options
+    },
+    content: {
+      type: "json",
+      value: JSON.stringify({
+        observation: observe,
+        window: window2,
+        action,
+        sensitivity,
+        crisisLevel
+      })
+    },
+    contextAware: true,
+    signals: ["emotion", "history", "time"]
+  };
+}
+function evaluateTrigger(trigger, context, sessionContext) {
+  if (trigger === "always")
+    return true;
+  if (trigger === "never")
+    return false;
+  const [type, condition] = trigger.split(":");
+  switch (type) {
+    case "dwell": {
+      const match = condition?.match(/>(\d+)s/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10) * 1000;
+      const dwellTime = sessionContext?.behavior?.dwellTime || 0;
+      return dwellTime > threshold;
+    }
+    case "scroll": {
+      const match = condition?.match(/>(\d+\.?\d*)/);
+      if (!match)
+        return false;
+      const threshold = parseFloat(match[1]);
+      const scrollDepth = sessionContext?.behavior?.scrollDepth || 0;
+      return scrollDepth > threshold;
+    }
+    case "emotion": {
+      const targetEmotion = condition;
+      return sessionContext?.emotion?.primary === targetEmotion || context.emotionState?.primary === targetEmotion;
+    }
+    case "behavior": {
+      if (condition === "aimless") {
+        return sessionContext?.behavior?.isAimlessClicking === true;
+      }
+      if (condition === "hesitation") {
+        return sessionContext?.behavior?.hesitationDetected === true;
+      }
+      return false;
+    }
+    case "hrv": {
+      const match = condition?.match(/<(\d+)/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10);
+      const hrv = sessionContext?.biometric?.hrv || 100;
+      return hrv < threshold;
+    }
+    case "stress": {
+      const match = condition?.match(/>(\d+)/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10);
+      const stress = sessionContext?.biometric?.stressScore || 0;
+      return stress > threshold;
+    }
+    case "session": {
+      if (condition === "start") {
+        return context.isNewSession;
+      }
+      const idleMatch = condition?.match(/idle:(\d+)m/);
+      if (idleMatch) {
+        return false;
+      }
+      return false;
+    }
+    case "navigation": {
+      const targetRoute = condition?.replace("to:", "");
+      return sessionContext?.currentRoute === targetRoute;
+    }
+    case "time": {
+      const hour = context.localHour;
+      if (condition === "morning")
+        return hour >= 6 && hour < 12;
+      if (condition === "afternoon")
+        return hour >= 12 && hour < 18;
+      if (condition === "evening")
+        return hour >= 18 && hour < 22;
+      if (condition === "night")
+        return hour >= 22 || hour < 6;
+      return false;
+    }
+    default:
+      return false;
+  }
+}
+function createExhaustEntry(directive, result, type) {
+  return {
+    type,
+    timestamp: Date.now(),
+    content: {
+      directiveId: directive.id,
+      output: result.output,
+      model: result.model,
+      success: result.success,
+      latencyMs: result.latencyMs
+    },
+    visible: type === "cyrano" || type === "user",
+    source: directive.params.model
+  };
+}
+var CYRANO_TOOL_SUGGESTIONS = {
+  breathing: {
+    triggers: ["stress:>70", "hrv:<40", "emotion:anxious"],
+    tool: "breathing/4-7-8",
+    reason: "You seem stressed - a breathing exercise might help"
+  },
+  grounding: {
+    triggers: ["emotion:overwhelmed", "behavior:aimless"],
+    tool: "grounding/5-4-3-2-1",
+    reason: "A grounding exercise can help center you"
+  },
+  journaling: {
+    triggers: ["dwell:>120s", "emotion:reflective"],
+    tool: "journaling/freeform",
+    reason: "Would you like to write about what's on your mind?"
+  },
+  insights: {
+    triggers: ["navigation:to:/insights", "dwell:>60s"],
+    tool: "insights/dashboard",
+    reason: "Your recent patterns are ready to explore"
+  }
+};
+function getToolSuggestions(context, sessionContext) {
+  const suggestions = [];
+  for (const [, config] of Object.entries(CYRANO_TOOL_SUGGESTIONS)) {
+    for (const trigger of config.triggers) {
+      if (evaluateTrigger(trigger, context, sessionContext)) {
+        suggestions.push({
+          tool: config.tool,
+          reason: config.reason,
+          priority: trigger.startsWith("stress") || trigger.startsWith("hrv") ? 2 : 1
+        });
+        break;
+      }
+    }
+  }
+  return suggestions.sort((a, b) => b.priority - a.priority);
+}
+
 // src/router/esi.ts
 var esiCache = new Map;
 function getCacheKey(directive, context) {
@@ -5792,6 +6093,69 @@ function useESIInfer(options = {}) {
   }, []);
   return { run, result, isLoading, error, reset };
 }
+var DEFAULT_ESI_STATE = {
+  userTier: "free",
+  emotionState: null,
+  preferences: {
+    theme: "auto",
+    reducedMotion: false
+  },
+  localHour: new Date().getHours(),
+  timezone: "UTC",
+  features: {
+    aiInference: true,
+    emotionTracking: true,
+    collaboration: false,
+    advancedInsights: false,
+    customThemes: false,
+    voiceSynthesis: false,
+    imageAnalysis: false
+  },
+  isNewSession: true,
+  recentPages: [],
+  viewport: { width: 1920, height: 1080 },
+  connection: "4g"
+};
+function useGlobalESIState() {
+  const [state, setState] = import_react.useState(() => {
+    if (typeof window !== "undefined" && window.__AEON_ESI_STATE__) {
+      return window.__AEON_ESI_STATE__;
+    }
+    return DEFAULT_ESI_STATE;
+  });
+  import_react.useEffect(() => {
+    if (typeof window !== "undefined" && window.__AEON_ESI_STATE__?.subscribe) {
+      const unsubscribe = window.__AEON_ESI_STATE__.subscribe((newState) => {
+        setState(newState);
+      });
+      return unsubscribe;
+    }
+  }, []);
+  return state;
+}
+function useESIFeature(feature) {
+  const { features } = useGlobalESIState();
+  return features[feature] ?? false;
+}
+function useESITier() {
+  const { userTier } = useGlobalESIState();
+  return userTier;
+}
+function useESIEmotionState() {
+  const { emotionState } = useGlobalESIState();
+  return emotionState;
+}
+function useESIPreferences() {
+  const { preferences } = useGlobalESIState();
+  return preferences;
+}
+function updateGlobalESIState(partial) {
+  if (typeof window !== "undefined" && window.__AEON_ESI_STATE__?.update) {
+    window.__AEON_ESI_STATE__.update(partial);
+  } else if (typeof window !== "undefined" && window.__AEON_ESI_STATE__) {
+    Object.assign(window.__AEON_ESI_STATE__, partial);
+  }
+}
 var ESI = {
   Provider: ESIProvider,
   Infer: ESIInfer,
@@ -5840,11 +6204,11 @@ function determineDensity(context) {
   }
   return "normal";
 }
-function buildTransitionMatrix(history) {
+function buildTransitionMatrix(history2) {
   const matrix = {};
-  for (let i = 0;i < history.length - 1; i++) {
-    const from = history[i];
-    const to = history[i + 1];
+  for (let i = 0;i < history2.length - 1; i++) {
+    const from = history2[i];
+    const to = history2[i + 1];
     if (!matrix[from]) {
       matrix[from] = {};
     }
@@ -5859,9 +6223,9 @@ function buildTransitionMatrix(history) {
   return matrix;
 }
 function defaultPredictNavigation(currentPath, context, defaultPaths, topN) {
-  const history = context.recentPages;
-  if (history.length >= 3) {
-    const matrix = buildTransitionMatrix(history);
+  const history2 = context.recentPages;
+  if (history2.length >= 3) {
+    const matrix = buildTransitionMatrix(history2);
     const transitions = matrix[currentPath];
     if (transitions) {
       const sorted = Object.entries(transitions).sort(([, a], [, b]) => b - a).slice(0, topN).map(([path]) => path);
@@ -6282,6 +6646,80 @@ function addSpeculationHeaders(response, prefetch, prerender) {
     statusText: response.statusText,
     headers
   });
+}
+function serializeToESIState(context) {
+  const tierFeatures = {
+    free: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: false,
+      customThemes: false,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    starter: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    pro: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    },
+    enterprise: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    }
+  };
+  return {
+    userTier: context.tier,
+    emotionState: context.emotionState ? {
+      primary: context.emotionState.primary,
+      valence: context.emotionState.valence,
+      arousal: context.emotionState.arousal,
+      confidence: context.emotionState.confidence
+    } : undefined,
+    preferences: {
+      theme: context.preferences.theme,
+      reducedMotion: context.reducedMotion,
+      language: context.preferences.language
+    },
+    sessionId: context.sessionId,
+    localHour: context.localHour,
+    timezone: context.timezone,
+    features: tierFeatures[context.tier],
+    userId: context.userId,
+    isNewSession: context.isNewSession,
+    recentPages: context.recentPages.slice(-10),
+    viewport: {
+      width: context.viewport.width,
+      height: context.viewport.height
+    },
+    connection: context.connection
+  };
+}
+function generateESIStateScript(esiState) {
+  const stateJson = JSON.stringify(esiState);
+  return `<script>window.__AEON_ESI_STATE__=${stateJson};</script>`;
+}
+function generateESIStateScriptFromContext(context) {
+  const esiState = serializeToESIState(context);
+  return generateESIStateScript(esiState);
 }
 // src/router/speculation.ts
 function supportsSpeculationRules() {
@@ -8225,6 +8663,95 @@ function setNavigationCache(cache) {
   globalCache = cache;
 }
 
+class SkeletonCache {
+  cache = new Map;
+  maxSize;
+  defaultTtl;
+  constructor(options = {}) {
+    this.maxSize = options.maxSize ?? 500;
+    this.defaultTtl = options.defaultTtl ?? 30 * 60 * 1000;
+  }
+  get(route) {
+    const skeleton = this.cache.get(route);
+    if (!skeleton)
+      return null;
+    if (skeleton.expiresAt && Date.now() > skeleton.expiresAt) {
+      this.cache.delete(route);
+      return null;
+    }
+    return skeleton;
+  }
+  set(skeleton, ttl) {
+    if (!this.cache.has(skeleton.route) && this.cache.size >= this.maxSize) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest)
+        this.cache.delete(oldest);
+    }
+    this.cache.set(skeleton.route, {
+      ...skeleton,
+      cachedAt: Date.now(),
+      expiresAt: ttl ? Date.now() + ttl : Date.now() + this.defaultTtl
+    });
+  }
+  has(route) {
+    const skeleton = this.cache.get(route);
+    if (!skeleton)
+      return false;
+    if (skeleton.expiresAt && Date.now() > skeleton.expiresAt) {
+      this.cache.delete(route);
+      return false;
+    }
+    return true;
+  }
+  invalidate(route) {
+    this.cache.delete(route);
+  }
+  clear() {
+    this.cache.clear();
+  }
+  get size() {
+    return this.cache.size;
+  }
+  export() {
+    return Array.from(this.cache.values());
+  }
+  import(skeletons) {
+    for (const skeleton of skeletons) {
+      this.set(skeleton);
+    }
+  }
+}
+function getWithSkeleton(route, skeletonCache, sessionCache, contentFetcher) {
+  const skeleton = skeletonCache.get(route);
+  const content = (async () => {
+    const sessionId = routeToSessionId(route);
+    const cached = sessionCache.get(sessionId);
+    if (cached)
+      return cached;
+    try {
+      const session = await contentFetcher(route);
+      sessionCache.set(session);
+      return session;
+    } catch {
+      return null;
+    }
+  })();
+  return { skeleton, content };
+}
+function routeToSessionId(route) {
+  return route.replace(/^\/|\/$/g, "").replace(/\//g, "-") || "index";
+}
+var globalSkeletonCache = null;
+function getSkeletonCache() {
+  if (!globalSkeletonCache) {
+    globalSkeletonCache = new SkeletonCache;
+  }
+  return globalSkeletonCache;
+}
+function setSkeletonCache(cache) {
+  globalSkeletonCache = cache;
+}
+
 // src/navigation.ts
 class AeonNavigationEngine {
   router;
@@ -8456,15 +8983,154 @@ function getNavigator() {
   }
   return globalNavigator;
 }
-function setNavigator(navigator) {
-  globalNavigator = navigator;
+function setNavigator(navigator2) {
+  globalNavigator = navigator2;
 }
 if (typeof window !== "undefined") {
   window.addEventListener("popstate", (event) => {
-    const navigator = getNavigator();
+    const navigator2 = getNavigator();
     const route = event.state?.route ?? window.location.pathname;
-    navigator.navigate(route, { replace: true });
+    navigator2.navigate(route, { replace: true });
   });
+}
+// src/skeleton-hydrate.ts
+var state = {
+  skeletonRoot: null,
+  contentRoot: null,
+  swapped: false
+};
+function initSkeleton() {
+  state.skeletonRoot = document.getElementById("aeon-skeleton");
+  state.contentRoot = document.getElementById("root");
+  if (!state.skeletonRoot || !state.contentRoot) {
+    return;
+  }
+  state.contentRoot.style.display = "none";
+  state.skeletonRoot.style.display = "block";
+}
+function swapToContent(options = {}) {
+  if (state.swapped || !state.skeletonRoot || !state.contentRoot) {
+    options.onComplete?.();
+    return;
+  }
+  const { fade = true, duration = 150, onComplete } = options;
+  if (fade) {
+    const transitionStyle = `opacity ${duration}ms ease-out`;
+    state.skeletonRoot.style.transition = transitionStyle;
+    state.contentRoot.style.transition = transitionStyle;
+    state.contentRoot.style.opacity = "0";
+    state.contentRoot.style.display = "block";
+    state.contentRoot.offsetHeight;
+    state.skeletonRoot.style.opacity = "0";
+    state.contentRoot.style.opacity = "1";
+    setTimeout(() => {
+      state.skeletonRoot?.remove();
+      onComplete?.();
+    }, duration);
+  } else {
+    state.skeletonRoot.remove();
+    state.contentRoot.style.display = "block";
+    onComplete?.();
+  }
+  state.swapped = true;
+}
+function isSkeletonVisible() {
+  return !state.swapped && state.skeletonRoot !== null;
+}
+function generateSkeletonInitScript() {
+  return `<script>
+(function(){
+  var s=document.getElementById('aeon-skeleton'),r=document.getElementById('root');
+  if(s&&r){r.style.display='none';s.style.display='block'}
+  window.__AEON_SKELETON__={
+    swap:function(o){
+      if(this.done)return;
+      o=o||{};
+      var f=o.fade!==false,d=o.duration||150;
+      if(f){
+        s.style.transition=r.style.transition='opacity '+d+'ms ease-out';
+        r.style.opacity='0';r.style.display='block';
+        void r.offsetHeight;
+        s.style.opacity='0';r.style.opacity='1';
+        setTimeout(function(){s.remove();o.onComplete&&o.onComplete()},d);
+      }else{
+        s.remove();r.style.display='block';o.onComplete&&o.onComplete();
+      }
+      this.done=true
+    },
+    isVisible:function(){return!this.done&&!!s},
+    done:false
+  };
+})();
+</script>`;
+}
+function generateSkeletonPageStructure(options) {
+  const {
+    title,
+    description,
+    skeletonHtml,
+    skeletonCss,
+    contentHtml,
+    contentCss,
+    headExtra = "",
+    bodyExtra = ""
+  } = options;
+  const descriptionMeta = description ? `
+  <meta name="description" content="${escapeHtml(description)}">` : "";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>${descriptionMeta}
+  <style>
+/* Skeleton CSS */
+${skeletonCss}
+/* Content CSS */
+${contentCss}
+  </style>
+  ${generateSkeletonInitScript()}
+  ${headExtra}
+</head>
+<body>
+  <div id="aeon-skeleton" aria-hidden="true">${skeletonHtml}</div>
+  <div id="root" style="display:none">${contentHtml}</div>
+  <script>
+    // Swap when DOM is ready
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',function(){
+        window.__AEON_SKELETON__.swap({fade:true});
+      });
+    }else{
+      window.__AEON_SKELETON__.swap({fade:true});
+    }
+  </script>
+  ${bodyExtra}
+</body>
+</html>`;
+}
+function generateAsyncSwapScript() {
+  return `<script>
+(function(){
+  // Wait for content to be ready (e.g., after React hydration)
+  function checkReady(){
+    var root=document.getElementById('root');
+    if(root&&root.children.length>0){
+      window.__AEON_SKELETON__&&window.__AEON_SKELETON__.swap({fade:true});
+    }else{
+      requestAnimationFrame(checkReady);
+    }
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',checkReady);
+  }else{
+    checkReady();
+  }
+})();
+</script>`;
+}
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 // src/predictor.ts
 var DEFAULT_CONFIG2 = {
@@ -8672,6 +9338,289 @@ function getPredictor() {
 }
 function setPredictor(predictor) {
   globalPredictor = predictor;
+}
+// src/speculation.ts
+var DEFAULT_CONFIG3 = {
+  maxCachedPages: 5,
+  maxCacheSize: 5 * 1024 * 1024,
+  staleTTL: 5 * 60 * 1000,
+  minConfidence: 0.3,
+  intersectionRootMargin: "200px",
+  useSpeculationRules: true,
+  prerenderOnHover: true,
+  hoverDelay: 100,
+  sessionBaseUrl: "/_aeon/session"
+};
+
+class SpeculativeRenderer {
+  config;
+  cache = new Map;
+  currentCacheSize = 0;
+  observer = null;
+  hoverTimeouts = new Map;
+  initialized = false;
+  constructor(config = {}) {
+    this.config = { ...DEFAULT_CONFIG3, ...config };
+  }
+  init() {
+    if (this.initialized)
+      return;
+    if (typeof window === "undefined")
+      return;
+    this.initialized = true;
+    this.setupIntersectionObserver();
+    if (this.config.prerenderOnHover) {
+      this.setupHoverListeners();
+    }
+    if (this.config.useSpeculationRules) {
+      this.injectSpeculationRules();
+    }
+    this.setupNavigationInterception();
+    this.startPredictivePrerendering();
+    console.log("[aeon:speculation] Initialized");
+  }
+  destroy() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    for (const timeout of this.hoverTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.hoverTimeouts.clear();
+    this.cache.clear();
+    this.currentCacheSize = 0;
+    this.initialized = false;
+    console.log("[aeon:speculation] Destroyed");
+  }
+  async prerender(route, confidence = 1) {
+    const existing = this.cache.get(route);
+    if (existing && !existing.stale && Date.now() - existing.prefetchedAt < this.config.staleTTL) {
+      return true;
+    }
+    if (typeof window !== "undefined" && window.location.pathname === route) {
+      return false;
+    }
+    try {
+      console.log(`[aeon:speculation] Pre-rendering: ${route}`);
+      const response = await fetch(`${route}?_aeon_prerender=1`, {
+        headers: {
+          "X-Aeon-Prerender": "1",
+          Accept: "text/html"
+        }
+      });
+      if (!response.ok) {
+        console.warn(`[aeon:speculation] Failed to fetch: ${route}`, response.status);
+        return false;
+      }
+      const html = await response.text();
+      const size = html.length;
+      this.evictIfNeeded(size);
+      const page = {
+        route,
+        html,
+        prefetchedAt: Date.now(),
+        confidence,
+        stale: false,
+        size
+      };
+      this.cache.set(route, page);
+      this.currentCacheSize += size;
+      console.log(`[aeon:speculation] Cached: ${route} (${(size / 1024).toFixed(1)}KB)`);
+      return true;
+    } catch (err) {
+      console.warn(`[aeon:speculation] Error pre-rendering: ${route}`, err);
+      return false;
+    }
+  }
+  async navigate(route) {
+    const cached = this.cache.get(route);
+    if (cached && !cached.stale && Date.now() - cached.prefetchedAt < this.config.staleTTL) {
+      console.log(`[aeon:speculation] Instant nav to: ${route}`);
+      document.open();
+      document.write(cached.html);
+      document.close();
+      history.pushState({ aeonSpeculative: true }, "", route);
+      this.reinitialize();
+      return true;
+    }
+    return false;
+  }
+  invalidate(routes) {
+    if (routes) {
+      for (const route of routes) {
+        const cached = this.cache.get(route);
+        if (cached) {
+          cached.stale = true;
+        }
+      }
+    } else {
+      for (const page of this.cache.values()) {
+        page.stale = true;
+      }
+    }
+  }
+  getStats() {
+    return {
+      cachedPages: this.cache.size,
+      cacheSize: this.currentCacheSize,
+      cacheHitRate: 0
+    };
+  }
+  setupIntersectionObserver() {
+    this.observer = new IntersectionObserver((entries) => this.onLinksVisible(entries), { rootMargin: this.config.intersectionRootMargin });
+    this.observeLinks();
+  }
+  observeLinks() {
+    if (!this.observer)
+      return;
+    document.querySelectorAll('a[href^="/"]').forEach((link) => {
+      this.observer.observe(link);
+    });
+  }
+  async onLinksVisible(entries) {
+    for (const entry of entries) {
+      if (!entry.isIntersecting)
+        continue;
+      const link = entry.target;
+      const route = new URL(link.href, window.location.origin).pathname;
+      this.observer?.unobserve(link);
+      await this.prerender(route, 0.7);
+    }
+  }
+  setupHoverListeners() {
+    document.addEventListener("mouseenter", (e) => this.onLinkHover(e), true);
+    document.addEventListener("mouseleave", (e) => this.onLinkLeave(e), true);
+  }
+  onLinkHover(e) {
+    const link = e.target.closest('a[href^="/"]');
+    if (!link)
+      return;
+    const route = new URL(link.href, window.location.origin).pathname;
+    const timeout = setTimeout(() => {
+      this.prerender(route, 0.9);
+    }, this.config.hoverDelay);
+    this.hoverTimeouts.set(route, timeout);
+  }
+  onLinkLeave(e) {
+    const link = e.target.closest('a[href^="/"]');
+    if (!link)
+      return;
+    const route = new URL(link.href, window.location.origin).pathname;
+    const timeout = this.hoverTimeouts.get(route);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.hoverTimeouts.delete(route);
+    }
+  }
+  injectSpeculationRules() {
+    if (!(("supports" in HTMLScriptElement) && HTMLScriptElement.supports("speculationrules"))) {
+      console.log("[aeon:speculation] Browser does not support Speculation Rules API");
+      return;
+    }
+    const rules = {
+      prerender: [
+        {
+          source: "document",
+          where: {
+            href_matches: "/*",
+            not: {
+              or: [
+                { href_matches: "/api/*" },
+                { href_matches: "/_aeon/*" },
+                { selector_matches: "[data-aeon-no-prerender]" }
+              ]
+            }
+          },
+          eagerness: "moderate"
+        }
+      ]
+    };
+    const script = document.createElement("script");
+    script.type = "speculationrules";
+    script.textContent = JSON.stringify(rules);
+    document.head.appendChild(script);
+    console.log("[aeon:speculation] Speculation Rules injected");
+  }
+  setupNavigationInterception() {
+    document.addEventListener("click", async (e) => {
+      const link = e.target.closest('a[href^="/"]');
+      if (!link)
+        return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+        return;
+      const route = new URL(link.href, window.location.origin).pathname;
+      if (await this.navigate(route)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("popstate", (e) => {
+      if (e.state?.aeonSpeculative) {
+        const route = window.location.pathname;
+        const cached = this.cache.get(route);
+        if (cached && !cached.stale) {
+          document.open();
+          document.write(cached.html);
+          document.close();
+          this.reinitialize();
+        }
+      }
+    });
+  }
+  async startPredictivePrerendering() {
+    const predictor = getPredictor();
+    const currentRoute = window.location.pathname;
+    const predictions = predictor.predict(currentRoute);
+    for (const prediction of predictions) {
+      if (prediction.probability >= this.config.minConfidence) {
+        this.prerender(prediction.route, prediction.probability);
+      }
+    }
+  }
+  reinitialize() {
+    setTimeout(() => {
+      this.observeLinks();
+      this.startPredictivePrerendering();
+    }, 0);
+  }
+  evictIfNeeded(incomingSize) {
+    while ((this.cache.size >= this.config.maxCachedPages || this.currentCacheSize + incomingSize > this.config.maxCacheSize) && this.cache.size > 0) {
+      let toEvict = null;
+      let lowestScore = Infinity;
+      for (const [route, page] of this.cache) {
+        const age = Date.now() - page.prefetchedAt;
+        const score = page.confidence / (1 + age / 60000);
+        if (page.stale || score < lowestScore) {
+          lowestScore = score;
+          toEvict = route;
+        }
+      }
+      if (toEvict) {
+        const page = this.cache.get(toEvict);
+        this.cache.delete(toEvict);
+        this.currentCacheSize -= page.size;
+        console.log(`[aeon:speculation] Evicted: ${toEvict}`);
+      } else {
+        break;
+      }
+    }
+  }
+}
+var globalSpeculativeRenderer = null;
+function getSpeculativeRenderer() {
+  if (!globalSpeculativeRenderer) {
+    globalSpeculativeRenderer = new SpeculativeRenderer;
+  }
+  return globalSpeculativeRenderer;
+}
+function setSpeculativeRenderer(renderer) {
+  globalSpeculativeRenderer = renderer;
+}
+function initSpeculativeRendering(config) {
+  const renderer = new SpeculativeRenderer(config);
+  setSpeculativeRenderer(renderer);
+  renderer.init();
+  return renderer;
 }
 // src/storage.ts
 class FileStorageAdapter {
@@ -9371,8 +10320,8 @@ class AeonPageSession {
   sessions = new Map;
   session = null;
   webhooks = [];
-  constructor(state, env) {
-    this.state = state;
+  constructor(state2, env) {
+    this.state = state2;
     this.env = env;
     this.state.blockConcurrencyWhile(async () => {
       this.webhooks = await this.state.storage.get("webhooks") || [];
@@ -9384,8 +10333,11 @@ class AeonPageSession {
       return this.handleWebSocket(request);
     }
     switch (url.pathname) {
+      case "/":
       case "/session":
         return this.handleSessionRequest(request);
+      case "/init":
+        return this.handleInitRequest(request);
       case "/tree":
         return this.handleTreeRequest(request);
       case "/presence":
@@ -9396,6 +10348,12 @@ class AeonPageSession {
         return this.handleWebhooksConfig(request);
       case "/version":
         return this.handleVersionRequest(request);
+      case "/sync-queue":
+        return this.handleSyncQueueRequest(request);
+      case "/queue-status":
+        return this.handleQueueStatusRequest(request);
+      case "/resolve-conflict":
+        return this.handleResolveConflictRequest(request);
       default:
         return new Response("Not found", { status: 404 });
     }
@@ -9811,6 +10769,32 @@ class AeonPageSession {
         return new Response("Method not allowed", { status: 405 });
     }
   }
+  async handleInitRequest(request) {
+    if (request.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    try {
+      const body = await request.json();
+      const existing = await this.getSession();
+      if (existing) {
+        return Response.json({ status: "exists", session: existing });
+      }
+      const session = {
+        route: body.route || "/",
+        tree: body.tree || { type: "div", props: {}, children: [] },
+        data: body.data || {},
+        schema: body.schema || { version: "1.0.0" },
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        presence: []
+      };
+      await this.saveSession(session, "bootstrap", false);
+      return Response.json({ status: "created", session });
+    } catch (err) {
+      console.error("Failed to initialize session:", err);
+      return new Response(JSON.stringify({ error: "Failed to initialize session", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  }
   async handleTreeRequest(request) {
     switch (request.method) {
       case "GET": {
@@ -9853,13 +10837,162 @@ class AeonPageSession {
       await this.fireWebhook("session.updated", session, undefined, triggeredBy);
     }
   }
+  async handleSyncQueueRequest(request) {
+    if (request.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    try {
+      const batch = await request.json();
+      const synced = [];
+      const failed = [];
+      const conflicts = [];
+      for (const op of batch.operations) {
+        try {
+          const session = await this.getSession();
+          if (session && (op.type === "session_update" || op.type === "tree_update")) {
+            const currentVersion = session.version || 0;
+            const opVersion = op.data?.version || 0;
+            if (opVersion < currentVersion) {
+              conflicts.push({
+                operationId: op.operationId,
+                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt || "" },
+                strategy: "remote-wins"
+              });
+              continue;
+            }
+          }
+          if (op.type === "session_update") {
+            const currentSession = await this.getSession();
+            if (currentSession) {
+              const newSession = { ...currentSession, ...op.data };
+              await this.saveSession(newSession, "sync-queue", true);
+            }
+          } else if (op.type === "tree_update") {
+            const tree = op.data;
+            await this.state.storage.put("tree", tree);
+          } else if (op.type === "data_update") {
+            const session2 = await this.getSession();
+            if (session2) {
+              session2.data = { ...session2.data, ...op.data };
+              await this.saveSession(session2, "sync-queue", true);
+            }
+          }
+          synced.push(op.operationId);
+        } catch (err) {
+          failed.push({
+            operationId: op.operationId,
+            error: err instanceof Error ? err.message : "Unknown error",
+            retryable: true
+          });
+        }
+      }
+      await this.state.storage.put(`sync:${batch.batchId}`, {
+        batchId: batch.batchId,
+        processedAt: Date.now(),
+        synced: synced.length,
+        failed: failed.length,
+        conflicts: conflicts.length
+      });
+      return Response.json({
+        success: failed.length === 0,
+        synced,
+        failed,
+        conflicts,
+        serverTimestamp: Date.now()
+      });
+    } catch (err) {
+      console.error("Failed to process sync queue:", err);
+      return new Response(JSON.stringify({ error: "Failed to process sync queue", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  }
+  async handleQueueStatusRequest(request) {
+    if (request.method !== "GET") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    try {
+      const syncRecords = await this.state.storage.list({ prefix: "sync:" });
+      const conflicts = await this.state.storage.list({ prefix: "conflict:" });
+      const unresolvedConflicts = Array.from(conflicts.values()).filter((c) => !c.resolved);
+      return Response.json({
+        pendingOperations: 0,
+        recentSyncs: Array.from(syncRecords.values()).slice(-10),
+        unresolvedConflicts: unresolvedConflicts.length,
+        conflicts: unresolvedConflicts
+      });
+    } catch (err) {
+      console.error("Failed to get queue status:", err);
+      return new Response(JSON.stringify({ error: "Failed to get queue status" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  }
+  async handleResolveConflictRequest(request) {
+    if (request.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+    try {
+      const { conflictId, strategy, resolvedData, resolvedBy } = await request.json();
+      const conflict = await this.state.storage.get(`conflict:${conflictId}`);
+      if (!conflict) {
+        return new Response(JSON.stringify({ error: "Conflict not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+      }
+      let finalData;
+      switch (strategy) {
+        case "local-wins":
+          finalData = conflict.localData;
+          break;
+        case "remote-wins":
+          finalData = conflict.remoteData;
+          break;
+        case "merge":
+          finalData = { ...conflict.remoteData, ...conflict.localData };
+          break;
+        case "manual":
+          if (!resolvedData) {
+            return new Response(JSON.stringify({ error: "resolvedData required for manual strategy" }), { status: 400, headers: { "Content-Type": "application/json" } });
+          }
+          finalData = resolvedData;
+          break;
+      }
+      const session = await this.getSession();
+      if (session) {
+        session.data = { ...session.data, ...finalData };
+        await this.saveSession(session, resolvedBy || "conflict-resolution", true);
+      }
+      await this.state.storage.put(`conflict:${conflictId}`, {
+        ...conflict,
+        resolved: true,
+        resolution: {
+          strategy,
+          resolvedData: finalData,
+          resolvedAt: Date.now(),
+          resolvedBy
+        }
+      });
+      this.broadcast({
+        type: "conflict-resolved",
+        payload: {
+          conflictId,
+          strategy,
+          resolvedData: finalData
+        }
+      });
+      return Response.json({
+        success: true,
+        conflictId,
+        strategy,
+        resolvedData: finalData
+      });
+    } catch (err) {
+      console.error("Failed to resolve conflict:", err);
+      return new Response(JSON.stringify({ error: "Failed to resolve conflict", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  }
 }
 
 class AeonRoutesRegistry {
   state;
   env;
-  constructor(state, env) {
-    this.state = state;
+  constructor(state2, env) {
+    this.state = state2;
     this.env = env;
   }
   async fetch(request) {
@@ -9905,39 +11038,1806 @@ class AeonRoutesRegistry {
     return Response.json(Array.from(routes.values()));
   }
 }
+// src/api-routes.ts
+class ApiRouter {
+  routes = [];
+  register(pattern, module) {
+    const segments = this.parsePattern(pattern);
+    this.routes.push({ pattern, segments, module });
+  }
+  registerAll(routes) {
+    for (const [pattern, module] of Object.entries(routes)) {
+      this.register(pattern, module);
+    }
+  }
+  match(request) {
+    const url = new URL(request.url);
+    const method = request.method.toUpperCase();
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+    for (const route of this.routes) {
+      const params = this.matchSegments(route.segments, pathSegments);
+      if (params !== null) {
+        const handler = this.getHandler(route.module, method);
+        if (handler) {
+          return { route, params, handler };
+        }
+      }
+    }
+    return null;
+  }
+  async handle(request, env, ctx) {
+    const match = this.match(request);
+    if (!match) {
+      return null;
+    }
+    const url = new URL(request.url);
+    const context = {
+      request,
+      env,
+      params: match.params,
+      url,
+      ctx
+    };
+    try {
+      return await match.handler(context);
+    } catch (error) {
+      console.error("API route error:", error);
+      return new Response(JSON.stringify({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }
+  parsePattern(pattern) {
+    return pattern.split("/").filter(Boolean).map((segment) => {
+      if (segment.startsWith("[...") && segment.endsWith("]")) {
+        return {
+          value: segment.slice(4, -1),
+          isDynamic: true,
+          isCatchAll: true
+        };
+      }
+      if (segment.startsWith("[") && segment.endsWith("]")) {
+        return {
+          value: segment.slice(1, -1),
+          isDynamic: true,
+          isCatchAll: false
+        };
+      }
+      return {
+        value: segment,
+        isDynamic: false,
+        isCatchAll: false
+      };
+    });
+  }
+  matchSegments(routeSegments, pathSegments) {
+    const params = {};
+    let pathIndex = 0;
+    for (let i = 0;i < routeSegments.length; i++) {
+      const routeSegment = routeSegments[i];
+      if (routeSegment.isCatchAll) {
+        params[routeSegment.value] = pathSegments.slice(pathIndex).join("/");
+        return params;
+      }
+      if (pathIndex >= pathSegments.length) {
+        return null;
+      }
+      if (routeSegment.isDynamic) {
+        params[routeSegment.value] = pathSegments[pathIndex];
+        pathIndex++;
+      } else {
+        if (routeSegment.value !== pathSegments[pathIndex]) {
+          return null;
+        }
+        pathIndex++;
+      }
+    }
+    if (pathIndex !== pathSegments.length) {
+      return null;
+    }
+    return params;
+  }
+  getHandler(module, method) {
+    const handler = module[method];
+    if (handler) {
+      return handler;
+    }
+    if (module.default) {
+      return module.default;
+    }
+    return null;
+  }
+  getRoutes() {
+    return [...this.routes];
+  }
+}
+function createApiRouter() {
+  return new ApiRouter;
+}
+function json(data, init) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers
+    }
+  });
+}
+function redirect(url, status = 302) {
+  return new Response(null, {
+    status,
+    headers: { Location: url }
+  });
+}
+function error(message, status = 500) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" }
+  });
+}
+function notFound(message = "Not found") {
+  return error(message, 404);
+}
+function badRequest(message = "Bad request") {
+  return error(message, 400);
+}
+function unauthorized(message = "Unauthorized") {
+  return error(message, 401);
+}
+function forbidden(message = "Forbidden") {
+  return error(message, 403);
+}
+function composeMiddleware(...middlewares) {
+  return (handler) => {
+    return async (context) => {
+      let index = 0;
+      const next = async () => {
+        if (index < middlewares.length) {
+          const middleware = middlewares[index++];
+          return middleware(context, next);
+        }
+        return handler(context);
+      };
+      return next();
+    };
+  };
+}
+function cors(options) {
+  const opts = {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    headers: ["Content-Type", "Authorization"],
+    credentials: false,
+    maxAge: 86400,
+    ...options
+  };
+  return async (context, next) => {
+    const requestOrigin = context.request.headers.get("Origin") || "";
+    let allowedOrigin = "*";
+    if (typeof opts.origin === "string") {
+      allowedOrigin = opts.origin;
+    } else if (Array.isArray(opts.origin)) {
+      if (opts.origin.includes(requestOrigin)) {
+        allowedOrigin = requestOrigin;
+      }
+    } else if (typeof opts.origin === "function") {
+      if (opts.origin(requestOrigin)) {
+        allowedOrigin = requestOrigin;
+      }
+    }
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": opts.methods.join(", "),
+      "Access-Control-Allow-Headers": opts.headers.join(", ")
+    };
+    if (opts.credentials) {
+      corsHeaders["Access-Control-Allow-Credentials"] = "true";
+    }
+    if (context.request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          ...corsHeaders,
+          "Access-Control-Max-Age": String(opts.maxAge)
+        }
+      });
+    }
+    const response = await next();
+    const newHeaders = new Headers(response.headers);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      newHeaders.set(key, value);
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
+    });
+  };
+}
+function requireAuth(validate) {
+  return async (context, next) => {
+    const authHeader = context.request.headers.get("Authorization");
+    if (!authHeader) {
+      return unauthorized("Missing Authorization header");
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const isValid = await validate(token, context);
+    if (!isValid) {
+      return unauthorized("Invalid token");
+    }
+    return next();
+  };
+}
+function rateLimit(options) {
+  return async (context, next) => {
+    const kv = options.kvKey ? context.env[options.kvKey] : context.env.CACHE;
+    if (!kv || typeof kv.get !== "function") {
+      return next();
+    }
+    const kvNamespace = kv;
+    const clientKey = options.keyGenerator ? options.keyGenerator(context) : context.request.headers.get("CF-Connecting-IP") || "unknown";
+    const rateLimitKey = `ratelimit:${clientKey}`;
+    const current = await kvNamespace.get(rateLimitKey);
+    const count = current ? parseInt(current, 10) : 0;
+    if (count >= options.limit) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(options.window)
+        }
+      });
+    }
+    await kvNamespace.put(rateLimitKey, String(count + 1), {
+      expirationTtl: options.window
+    });
+    return next();
+  };
+}
+// src/worker.ts
+function createAeonWorker(options = {}) {
+  const apiRouter = createApiRouter();
+  if (options.apiRoutes) {
+    apiRouter.registerAll(options.apiRoutes);
+  }
+  const corsConfig = {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    headers: ["Content-Type", "Authorization"],
+    credentials: false,
+    ...options.cors
+  };
+  const getCorsHeaders = (requestOrigin) => {
+    let allowedOrigin = "*";
+    if (typeof corsConfig.origin === "string") {
+      allowedOrigin = corsConfig.origin;
+    } else if (Array.isArray(corsConfig.origin) && requestOrigin) {
+      if (corsConfig.origin.includes(requestOrigin)) {
+        allowedOrigin = requestOrigin;
+      }
+    }
+    const headers = {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": corsConfig.methods.join(", "),
+      "Access-Control-Allow-Headers": corsConfig.headers.join(", ")
+    };
+    if (corsConfig.credentials) {
+      headers["Access-Control-Allow-Credentials"] = "true";
+    }
+    return headers;
+  };
+  return {
+    async fetch(request, env, ctx) {
+      const url = new URL(request.url);
+      const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            ...corsHeaders,
+            "Access-Control-Max-Age": "86400"
+          }
+        });
+      }
+      try {
+        if (options.onRequest) {
+          const customResponse = await options.onRequest(request, env, ctx);
+          if (customResponse) {
+            return addCorsHeaders(customResponse, corsHeaders);
+          }
+        }
+        if (url.pathname.startsWith("/api/")) {
+          const response = await apiRouter.handle(request, env, ctx);
+          if (response) {
+            return addCorsHeaders(response, corsHeaders);
+          }
+        }
+        if (url.pathname.startsWith("/session/")) {
+          return handleSessionRequest(request, env, corsHeaders);
+        }
+        if (url.pathname.startsWith("/routes")) {
+          return handleRoutesRequest(request, env, corsHeaders);
+        }
+        if (url.pathname === "/health") {
+          return new Response(JSON.stringify({ status: "ok", env: env.ENVIRONMENT }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (options.notFound) {
+          const notFoundResponse = await options.notFound(request, env);
+          return addCorsHeaders(notFoundResponse, corsHeaders);
+        }
+        return new Response("Not found", { status: 404, headers: corsHeaders });
+      } catch (error2) {
+        console.error("Worker error:", error2);
+        return new Response(JSON.stringify({
+          error: "Internal server error",
+          message: error2 instanceof Error ? error2.message : "Unknown error"
+        }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+  };
+}
+function addCorsHeaders(response, corsHeaders) {
+  const newHeaders = new Headers(response.headers);
+  for (const [key, value] of Object.entries(corsHeaders)) {
+    if (!newHeaders.has(key)) {
+      newHeaders.set(key, value);
+    }
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
+}
+var worker_default = createAeonWorker();
+async function handleSessionRequest(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const sessionId = pathParts[1];
+  if (!sessionId) {
+    return new Response("Session ID required", { status: 400, headers: corsHeaders });
+  }
+  const id = env.PAGE_SESSIONS.idFromName(sessionId);
+  const stub = env.PAGE_SESSIONS.get(id);
+  const doUrl = new URL(request.url);
+  doUrl.pathname = "/" + pathParts.slice(2).join("/") || "/session";
+  const doRequest = new Request(doUrl.toString(), {
+    method: request.method,
+    headers: request.headers,
+    body: request.body
+  });
+  const response = await stub.fetch(doRequest);
+  const newHeaders = new Headers(response.headers);
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
+}
+async function handleRoutesRequest(request, env, corsHeaders) {
+  const id = env.ROUTES_REGISTRY.idFromName("__routes__");
+  const stub = env.ROUTES_REGISTRY.get(id);
+  const url = new URL(request.url);
+  const doUrl = new URL(request.url);
+  doUrl.pathname = url.pathname.replace("/routes", "") || "/routes";
+  const doRequest = new Request(doUrl.toString(), {
+    method: request.method,
+    headers: request.headers,
+    body: request.body
+  });
+  const response = await stub.fetch(doRequest);
+  const newHeaders = new Headers(response.headers);
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
+}
+// src/nextjs-adapter.ts
+function adaptRequest(request, params) {
+  const url = new URL(request.url);
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = parseCookies2(cookieHeader);
+  const nextRequest = request;
+  Object.defineProperty(nextRequest, "nextUrl", {
+    value: url,
+    writable: false
+  });
+  Object.defineProperty(nextRequest, "cookies", {
+    value: {
+      get(name) {
+        const value = cookies[name];
+        return value ? { value } : undefined;
+      },
+      getAll() {
+        return Object.entries(cookies).map(([name, value]) => ({ name, value }));
+      }
+    },
+    writable: false
+  });
+  const cfProps = request.cf;
+  if (cfProps) {
+    Object.defineProperty(nextRequest, "geo", {
+      value: {
+        city: cfProps.city,
+        country: cfProps.country,
+        region: cfProps.region
+      },
+      writable: false
+    });
+    Object.defineProperty(nextRequest, "ip", {
+      value: request.headers.get("CF-Connecting-IP") || undefined,
+      writable: false
+    });
+  }
+  return nextRequest;
+}
+function parseCookies2(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader)
+    return cookies;
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, ...valueParts] = cookie.trim().split("=");
+    if (name) {
+      cookies[name] = valueParts.join("=");
+    }
+  });
+  return cookies;
+}
+function adaptHandler(handler) {
+  return async (ctx) => {
+    const nextRequest = adaptRequest(ctx.request, ctx.params);
+    const nextParams = {};
+    for (const [key, value] of Object.entries(ctx.params)) {
+      if (value.includes("/")) {
+        nextParams[key] = value.split("/");
+      } else {
+        nextParams[key] = value;
+      }
+    }
+    try {
+      const response = await handler(nextRequest, { params: nextParams });
+      return response;
+    } catch (error2) {
+      console.error("Next.js route handler error:", error2);
+      return new Response(JSON.stringify({
+        error: "Internal server error",
+        message: error2 instanceof Error ? error2.message : "Unknown error"
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  };
+}
+function adaptRouteModule(module) {
+  const adapted = {};
+  const methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+  for (const method of methods) {
+    const handler = module[method];
+    if (handler) {
+      adapted[method] = adaptHandler(handler);
+    }
+  }
+  return adapted;
+}
+function json2(data, init) {
+  return new Response(JSON.stringify(data), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers
+    }
+  });
+}
+function redirect2(url, status = 307) {
+  return new Response(null, {
+    status,
+    headers: { Location: url.toString() }
+  });
+}
+function rewrite(url) {
+  return new Response(null, {
+    status: 307,
+    headers: { Location: url.toString() }
+  });
+}
+function next() {
+  return new Response(null, {
+    status: 200,
+    headers: { "x-middleware-next": "1" }
+  });
+}
+var NextResponse = {
+  json: json2,
+  redirect: redirect2,
+  rewrite,
+  next
+};
+// src/offline/encryption.ts
+var ENCRYPTION_VERSION = 1;
+var NONCE_LENGTH = 12;
+var TAG_LENGTH = 16;
+
+class OfflineOperationEncryption {
+  keyCache = new Map;
+  async deriveKeyFromUCAN(userId, signingKeyBytes, context) {
+    const cacheKey = `${userId}:${context}`;
+    if (this.keyCache.has(cacheKey)) {
+      return this.keyCache.get(cacheKey);
+    }
+    const baseKey = await crypto.subtle.importKey("raw", signingKeyBytes.buffer, "HKDF", false, ["deriveKey"]);
+    const info = new TextEncoder().encode(`aeon-offline-operation:${context}`);
+    const salt = new TextEncoder().encode("aeon-pages-v1");
+    const encryptionKey = await crypto.subtle.deriveKey({
+      name: "HKDF",
+      hash: "SHA-256",
+      salt,
+      info
+    }, baseKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    const material = {
+      key: encryptionKey,
+      context,
+      userId
+    };
+    this.keyCache.set(cacheKey, material);
+    return material;
+  }
+  async deriveKeyFromSession(sessionId, context) {
+    const cacheKey = `session:${sessionId}:${context}`;
+    if (this.keyCache.has(cacheKey)) {
+      return this.keyCache.get(cacheKey);
+    }
+    const sessionBytes = new TextEncoder().encode(sessionId);
+    const baseKey = await crypto.subtle.importKey("raw", sessionBytes, "HKDF", false, ["deriveKey"]);
+    const info = new TextEncoder().encode(`aeon-session-operation:${context}`);
+    const salt = new TextEncoder().encode("aeon-pages-session-v1");
+    const encryptionKey = await crypto.subtle.deriveKey({
+      name: "HKDF",
+      hash: "SHA-256",
+      salt,
+      info
+    }, baseKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    const material = {
+      key: encryptionKey,
+      context,
+      userId: sessionId
+    };
+    this.keyCache.set(cacheKey, material);
+    return material;
+  }
+  async encryptOperation(operation, keyMaterial) {
+    const operationJson = JSON.stringify({
+      type: operation.type,
+      sessionId: operation.sessionId,
+      data: operation.data,
+      priority: operation.priority,
+      createdAt: operation.createdAt,
+      encryptionVersion: operation.encryptionVersion
+    });
+    const plaintext = new TextEncoder().encode(operationJson);
+    const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH));
+    const ciphertext = await crypto.subtle.encrypt({
+      name: "AES-GCM",
+      iv: nonce,
+      tagLength: TAG_LENGTH * 8
+    }, keyMaterial.key, plaintext);
+    const ciphertextBytes = new Uint8Array(ciphertext);
+    const serialized = new Uint8Array(1 + NONCE_LENGTH + ciphertextBytes.length);
+    serialized[0] = ENCRYPTION_VERSION;
+    serialized.set(nonce, 1);
+    serialized.set(ciphertextBytes, 1 + NONCE_LENGTH);
+    return serialized;
+  }
+  async decryptOperation(encryptedData, keyMaterial) {
+    const version = encryptedData[0];
+    if (version !== ENCRYPTION_VERSION) {
+      throw new Error(`Unsupported encryption version: ${version}`);
+    }
+    const nonce = encryptedData.slice(1, 1 + NONCE_LENGTH);
+    const ciphertext = encryptedData.slice(1 + NONCE_LENGTH);
+    const plaintext = await crypto.subtle.decrypt({
+      name: "AES-GCM",
+      iv: nonce,
+      tagLength: TAG_LENGTH * 8
+    }, keyMaterial.key, ciphertext);
+    const operationJson = new TextDecoder().decode(plaintext);
+    const parsed = JSON.parse(operationJson);
+    return {
+      type: parsed.type,
+      sessionId: parsed.sessionId,
+      data: parsed.data,
+      priority: parsed.priority || "normal",
+      createdAt: parsed.createdAt || Date.now(),
+      encryptionVersion: parsed.encryptionVersion || ENCRYPTION_VERSION
+    };
+  }
+  async encryptSyncBatch(operations, keyMaterial) {
+    const batchJson = JSON.stringify({
+      operations,
+      timestamp: Date.now(),
+      userId: keyMaterial.userId
+    });
+    const plaintext = new TextEncoder().encode(batchJson);
+    const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH));
+    const ciphertext = await crypto.subtle.encrypt({
+      name: "AES-GCM",
+      iv: nonce,
+      tagLength: TAG_LENGTH * 8
+    }, keyMaterial.key, plaintext);
+    return {
+      version: ENCRYPTION_VERSION,
+      nonce,
+      ciphertext: new Uint8Array(ciphertext)
+    };
+  }
+  async decryptSyncBatch(encrypted, keyMaterial) {
+    if (encrypted.version !== ENCRYPTION_VERSION) {
+      throw new Error(`Unsupported encryption version: ${encrypted.version}`);
+    }
+    const plaintext = await crypto.subtle.decrypt({
+      name: "AES-GCM",
+      iv: encrypted.nonce.buffer,
+      tagLength: TAG_LENGTH * 8
+    }, keyMaterial.key, encrypted.ciphertext.buffer);
+    const batchJson = new TextDecoder().decode(plaintext);
+    const parsed = JSON.parse(batchJson);
+    return parsed.operations;
+  }
+  clearKeyCache() {
+    this.keyCache.clear();
+  }
+  removeKeyFromCache(userId, context) {
+    this.keyCache.delete(`${userId}:${context}`);
+    this.keyCache.delete(`session:${userId}:${context}`);
+  }
+}
+var _instance = null;
+function getOperationEncryption() {
+  if (!_instance) {
+    _instance = new OfflineOperationEncryption;
+  }
+  return _instance;
+}
+function resetOperationEncryption() {
+  if (_instance) {
+    _instance.clearKeyCache();
+  }
+  _instance = null;
+}
+function generateOperationId() {
+  const timestamp = Date.now().toString(36);
+  const random = crypto.getRandomValues(new Uint8Array(8));
+  const randomStr = Array.from(random).map((b) => b.toString(36).padStart(2, "0")).join("").slice(0, 9);
+  return `op_${timestamp}_${randomStr}`;
+}
+function estimateEncryptedSize(operation) {
+  const json3 = JSON.stringify(operation);
+  return json3.length + 1 + NONCE_LENGTH + TAG_LENGTH + 16;
+}
+// src/offline/encrypted-queue.ts
+var DEFAULT_CONFIG4 = {
+  maxLocalCapacity: 50 * 1024 * 1024,
+  compactionThreshold: 0.8,
+  d1SyncInterval: 5 * 60 * 1000,
+  syncedCleanupAge: 60 * 60 * 1000,
+  encryption: {
+    enabled: false,
+    keyDerivation: "session"
+  }
+};
+
+class OfflineQueueEventEmitter {
+  handlers = new Map;
+  on(event, handler) {
+    if (!this.handlers.has(event)) {
+      this.handlers.set(event, new Set);
+    }
+    this.handlers.get(event).add(handler);
+  }
+  off(event, handler) {
+    this.handlers.get(event)?.delete(handler);
+  }
+  emit(event, data) {
+    this.handlers.get(event)?.forEach((handler) => handler(data));
+  }
+}
+
+class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
+  config;
+  operations = new Map;
+  isInitialized = false;
+  cleanupTimer = null;
+  currentBytes = 0;
+  encryption;
+  keyMaterial = null;
+  storage = null;
+  constructor(config = {}) {
+    super();
+    this.config = { ...DEFAULT_CONFIG4, ...config };
+    this.encryption = getOperationEncryption();
+  }
+  async initialize(options) {
+    if (this.isInitialized)
+      return;
+    this.storage = options?.storage ?? null;
+    this.keyMaterial = options?.keyMaterial ?? null;
+    if (this.storage) {
+      await this.loadFromStorage();
+    }
+    this.startCleanupTimer();
+    this.isInitialized = true;
+    this.emit("initialized");
+  }
+  setKeyMaterial(keyMaterial) {
+    this.keyMaterial = keyMaterial;
+  }
+  async queueOperation(operation) {
+    if (!this.isInitialized) {
+      throw new Error("Queue not initialized");
+    }
+    const operationId = generateOperationId();
+    let encryptedData;
+    let size;
+    if (this.config.encryption.enabled && this.keyMaterial) {
+      encryptedData = await this.encryption.encryptOperation(operation, this.keyMaterial);
+      size = encryptedData.byteLength;
+    } else {
+      size = estimateEncryptedSize(operation);
+    }
+    if (this.currentBytes + size > this.config.maxLocalCapacity) {
+      await this.compactQueue();
+      if (this.currentBytes + size > this.config.maxLocalCapacity) {
+        const error2 = "Queue capacity exceeded";
+        this.emit("queue:error", { operationId, error: error2 });
+        throw new Error(error2);
+      }
+    }
+    const fullOperation = {
+      id: operationId,
+      type: operation.type,
+      sessionId: operation.sessionId,
+      status: "pending",
+      data: operation.data,
+      priority: operation.priority || "normal",
+      encryptedData,
+      encryptionVersion: 1,
+      bytesSize: size,
+      createdAt: operation.createdAt || Date.now(),
+      failedCount: 0,
+      retryCount: 0,
+      maxRetries: 5
+    };
+    this.operations.set(operationId, fullOperation);
+    this.currentBytes += size;
+    this.emit("operation:queued", {
+      operationId,
+      sessionId: operation.sessionId,
+      size
+    });
+    return operationId;
+  }
+  getPendingOperations(sessionId, limit = 100) {
+    if (!this.isInitialized) {
+      throw new Error("Queue not initialized");
+    }
+    const pending = [];
+    Array.from(this.operations.values()).forEach((op) => {
+      if (op.status !== "pending")
+        return;
+      if (sessionId && op.sessionId !== sessionId)
+        return;
+      pending.push(op);
+    });
+    pending.sort((a, b) => {
+      const priorityOrder = { high: 0, normal: 1, low: 2 };
+      const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (priorityDiff !== 0)
+        return priorityDiff;
+      return a.createdAt - b.createdAt;
+    });
+    return pending.slice(0, limit);
+  }
+  async getDecryptedOperation(operationId) {
+    const op = this.operations.get(operationId);
+    if (!op)
+      return null;
+    if (op.encryptedData && this.keyMaterial) {
+      return this.encryption.decryptOperation(op.encryptedData, this.keyMaterial);
+    }
+    return {
+      type: op.type,
+      sessionId: op.sessionId,
+      data: op.data,
+      priority: op.priority,
+      createdAt: op.createdAt
+    };
+  }
+  markSyncing(operationId) {
+    if (!this.isInitialized) {
+      throw new Error("Queue not initialized");
+    }
+    const op = this.operations.get(operationId);
+    if (op) {
+      op.status = "syncing";
+      this.emit("operation:syncing", { operationId });
+    }
+  }
+  markSynced(operationId) {
+    if (!this.isInitialized) {
+      throw new Error("Queue not initialized");
+    }
+    const op = this.operations.get(operationId);
+    if (op) {
+      op.status = "synced";
+      op.syncedAt = Date.now();
+      op.failedCount = 0;
+      this.emit("operation:synced", { operationId });
+    }
+  }
+  markFailed(operationId, error2) {
+    if (!this.isInitialized) {
+      throw new Error("Queue not initialized");
+    }
+    const op = this.operations.get(operationId);
+    if (!op)
+      return;
+    op.failedCount += 1;
+    op.lastError = error2;
+    op.retryCount += 1;
+    if (op.failedCount >= op.maxRetries) {
+      op.status = "failed";
+      this.emit("operation:failed_max_retries", { operationId, error: error2 });
+    } else {
+      op.status = "pending";
+      this.emit("operation:retry", { operationId, attempt: op.failedCount });
+    }
+  }
+  removeOperation(operationId) {
+    const op = this.operations.get(operationId);
+    if (op) {
+      this.currentBytes -= op.bytesSize;
+      this.operations.delete(operationId);
+      return true;
+    }
+    return false;
+  }
+  getStats() {
+    if (!this.isInitialized) {
+      return {
+        total: 0,
+        pending: 0,
+        syncing: 0,
+        synced: 0,
+        failed: 0,
+        totalBytes: 0,
+        compactionNeeded: false
+      };
+    }
+    let pending = 0;
+    let syncing = 0;
+    let synced = 0;
+    let failed = 0;
+    Array.from(this.operations.values()).forEach((op) => {
+      switch (op.status) {
+        case "pending":
+          pending++;
+          break;
+        case "syncing":
+          syncing++;
+          break;
+        case "synced":
+          synced++;
+          break;
+        case "failed":
+          failed++;
+          break;
+      }
+    });
+    const compactionNeeded = this.currentBytes / this.config.maxLocalCapacity > this.config.compactionThreshold;
+    return {
+      total: this.operations.size,
+      pending,
+      syncing,
+      synced,
+      failed,
+      totalBytes: this.currentBytes,
+      compactionNeeded
+    };
+  }
+  clear() {
+    this.operations.clear();
+    this.currentBytes = 0;
+  }
+  async compactQueue() {
+    const cutoff = Date.now() - this.config.syncedCleanupAge;
+    const toRemove = [];
+    Array.from(this.operations.entries()).forEach(([id, op]) => {
+      if (op.status === "synced" && op.syncedAt && op.syncedAt < cutoff) {
+        toRemove.push(id);
+      }
+    });
+    for (const id of toRemove) {
+      this.removeOperation(id);
+    }
+    if (toRemove.length > 0) {
+      this.emit("queue:compacted");
+    }
+  }
+  async loadFromStorage() {}
+  startCleanupTimer() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+    }
+    this.cleanupTimer = setInterval(async () => {
+      const stats = this.getStats();
+      if (stats.compactionNeeded) {
+        await this.compactQueue();
+      }
+    }, 60000);
+  }
+  shutdown() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+    this.isInitialized = false;
+    this.emit("shutdown");
+  }
+}
+var _queueInstance = null;
+function getOfflineQueue() {
+  if (!_queueInstance) {
+    _queueInstance = new EncryptedOfflineQueue;
+  }
+  return _queueInstance;
+}
+function createOfflineQueue(config) {
+  return new EncryptedOfflineQueue(config);
+}
+function resetOfflineQueue() {
+  if (_queueInstance) {
+    _queueInstance.shutdown();
+  }
+  _queueInstance = null;
+}
+// src/sync/conflict-resolver.ts
+class EventEmitter2 {
+  handlers = new Map;
+  on(event, handler) {
+    const key = event;
+    if (!this.handlers.has(key)) {
+      this.handlers.set(key, new Set);
+    }
+    this.handlers.get(key).add(handler);
+  }
+  off(event, handler) {
+    this.handlers.get(event)?.delete(handler);
+  }
+  emit(event, data) {
+    this.handlers.get(event)?.forEach((handler) => handler(data));
+  }
+}
+var DEFAULT_CONFIG5 = {
+  defaultStrategy: "last-modified",
+  enableAutoMerge: true,
+  enableLocalWins: true,
+  maxConflictCacheSize: 1000,
+  conflictTimeoutMs: 30000,
+  mergeThreshold: 70
+};
+
+class ConflictResolver extends EventEmitter2 {
+  conflicts = new Map;
+  conflictsByEntity = new Map;
+  config;
+  resolutionTimings = [];
+  stats = {
+    totalConflicts: 0,
+    resolvedConflicts: 0,
+    unresolvedConflicts: 0,
+    conflictsByType: {
+      update_update: 0,
+      delete_update: 0,
+      update_delete: 0,
+      concurrent: 0
+    },
+    resolutionsByStrategy: {
+      "local-wins": 0,
+      "remote-wins": 0,
+      merge: 0,
+      manual: 0,
+      "last-modified": 0
+    },
+    averageResolutionTimeMs: 0
+  };
+  constructor(config = {}) {
+    super();
+    this.config = { ...DEFAULT_CONFIG5, ...config };
+  }
+  detectConflict(localOp, remoteOp) {
+    if (localOp.sessionId !== remoteOp.sessionId) {
+      return null;
+    }
+    const isLocalDelete = localOp.type.includes("delete");
+    const isRemoteDelete = remoteOp.type.includes("delete");
+    if (isLocalDelete && isRemoteDelete) {
+      return null;
+    }
+    let conflictType;
+    if (isLocalDelete && !isRemoteDelete) {
+      conflictType = "delete_update";
+    } else if (!isLocalDelete && isRemoteDelete) {
+      conflictType = "update_delete";
+    } else if (!isLocalDelete && !isRemoteDelete) {
+      conflictType = "update_update";
+    } else {
+      conflictType = "concurrent";
+    }
+    const severity = this.calculateSeverity(conflictType, localOp, remoteOp);
+    const conflictingFields = this.findConflictingFields(localOp.data, remoteOp.data);
+    const conflict = {
+      id: `conflict-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      operationId: localOp.id,
+      sessionId: localOp.sessionId,
+      localData: localOp.data,
+      remoteData: remoteOp.data,
+      type: conflictType,
+      severity,
+      detectedAt: Date.now()
+    };
+    this.conflicts.set(conflict.id, conflict);
+    const entityKey = `${localOp.sessionId}`;
+    if (!this.conflictsByEntity.has(entityKey)) {
+      this.conflictsByEntity.set(entityKey, []);
+    }
+    this.conflictsByEntity.get(entityKey).push(conflict.id);
+    this.stats.totalConflicts++;
+    if (conflictType) {
+      this.stats.conflictsByType[conflictType]++;
+    }
+    this.stats.unresolvedConflicts++;
+    this.emit("conflict:detected", conflict);
+    if (this.shouldAutoResolve(conflict)) {
+      this.resolveConflict(conflict.id, this.config.defaultStrategy);
+    }
+    return conflict;
+  }
+  calculateSeverity(conflictType, localOp, remoteOp) {
+    if (conflictType === "delete_update" || conflictType === "update_delete") {
+      return "high";
+    }
+    if (conflictType === "update_update") {
+      const similarity = this.calculateDataSimilarity(localOp.data, remoteOp.data);
+      if (similarity < 30) {
+        return "high";
+      } else if (similarity < 60) {
+        return "medium";
+      }
+    }
+    return "low";
+  }
+  calculateDataSimilarity(data1, data2) {
+    if (data1 === data2)
+      return 100;
+    if (!data1 || !data2)
+      return 0;
+    try {
+      const str1 = JSON.stringify(data1);
+      const str2 = JSON.stringify(data2);
+      const commonChars = Array.from(str1).filter((char) => str2.includes(char)).length;
+      return Math.round(commonChars / Math.max(str1.length, str2.length) * 100);
+    } catch {
+      return 0;
+    }
+  }
+  findConflictingFields(data1, data2) {
+    const conflicts = [];
+    const allKeys = new Set([...Object.keys(data1), ...Object.keys(data2)]);
+    Array.from(allKeys).forEach((key) => {
+      const val1 = data1[key];
+      const val2 = data2[key];
+      if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+        conflicts.push(key);
+      }
+    });
+    return conflicts;
+  }
+  shouldAutoResolve(conflict) {
+    if (conflict.severity === "low") {
+      return true;
+    }
+    if (conflict.type === "update_update") {
+      const similarity = this.calculateDataSimilarity(conflict.localData, conflict.remoteData);
+      return similarity > this.config.mergeThreshold;
+    }
+    return false;
+  }
+  resolveConflict(conflictId, strategy) {
+    const conflict = this.conflicts.get(conflictId);
+    if (!conflict) {
+      return null;
+    }
+    const startTime = Date.now();
+    const selectedStrategy = strategy || this.config.defaultStrategy;
+    let resolvedData;
+    let winner;
+    switch (selectedStrategy) {
+      case "local-wins":
+        resolvedData = conflict.localData;
+        winner = "local";
+        break;
+      case "remote-wins":
+        resolvedData = conflict.remoteData;
+        winner = "remote";
+        break;
+      case "last-modified":
+        resolvedData = conflict.localData;
+        winner = "local";
+        break;
+      case "merge":
+        if (this.config.enableAutoMerge && conflict.type === "update_update") {
+          resolvedData = this.attemptMerge(conflict.localData, conflict.remoteData);
+          winner = "merged";
+        } else {
+          resolvedData = conflict.localData;
+          winner = "local";
+        }
+        break;
+      case "manual":
+        return null;
+      default:
+        resolvedData = conflict.localData;
+        winner = "local";
+    }
+    const resolution = {
+      strategy: selectedStrategy,
+      resolvedData,
+      resolvedAt: Date.now()
+    };
+    conflict.resolution = resolution;
+    this.stats.resolvedConflicts++;
+    this.stats.unresolvedConflicts--;
+    this.stats.resolutionsByStrategy[selectedStrategy]++;
+    const resolutionTime = Date.now() - startTime;
+    this.resolutionTimings.push(resolutionTime);
+    if (this.resolutionTimings.length > 100) {
+      this.resolutionTimings.shift();
+    }
+    this.stats.averageResolutionTimeMs = this.resolutionTimings.reduce((a, b) => a + b, 0) / this.resolutionTimings.length;
+    this.emit("conflict:resolved", { conflict, strategy: selectedStrategy });
+    return resolution;
+  }
+  attemptMerge(data1, data2) {
+    const merged = { ...data1 };
+    for (const key of Object.keys(data2)) {
+      if (!(key in merged)) {
+        merged[key] = data2[key];
+      } else if (typeof merged[key] === "object" && merged[key] !== null && typeof data2[key] === "object" && data2[key] !== null) {
+        merged[key] = this.attemptMerge(merged[key], data2[key]);
+      }
+    }
+    return merged;
+  }
+  getConflict(conflictId) {
+    return this.conflicts.get(conflictId);
+  }
+  getUnresolvedConflicts() {
+    return Array.from(this.conflicts.values()).filter((c) => !c.resolution);
+  }
+  getConflictsForSession(sessionId) {
+    const conflictIds = this.conflictsByEntity.get(sessionId) || [];
+    return conflictIds.map((id) => this.conflicts.get(id)).filter((c) => c !== undefined);
+  }
+  getHighSeverityConflicts() {
+    return Array.from(this.conflicts.values()).filter((c) => !c.resolution && c.severity === "high");
+  }
+  getStats() {
+    return { ...this.stats };
+  }
+  configure(config) {
+    this.config = { ...this.config, ...config };
+    this.emit("config:updated", this.config);
+  }
+  getConfig() {
+    return { ...this.config };
+  }
+  clear() {
+    this.conflicts.clear();
+    this.conflictsByEntity.clear();
+  }
+  reset() {
+    this.clear();
+    this.resolutionTimings = [];
+    this.stats = {
+      totalConflicts: 0,
+      resolvedConflicts: 0,
+      unresolvedConflicts: 0,
+      conflictsByType: {
+        update_update: 0,
+        delete_update: 0,
+        update_delete: 0,
+        concurrent: 0
+      },
+      resolutionsByStrategy: {
+        "local-wins": 0,
+        "remote-wins": 0,
+        merge: 0,
+        manual: 0,
+        "last-modified": 0
+      },
+      averageResolutionTimeMs: 0
+    };
+  }
+}
+var _instance2 = null;
+function getConflictResolver() {
+  if (!_instance2) {
+    _instance2 = new ConflictResolver;
+  }
+  return _instance2;
+}
+function createConflictResolver(config) {
+  return new ConflictResolver(config);
+}
+function resetConflictResolver() {
+  if (_instance2) {
+    _instance2.reset();
+  }
+  _instance2 = null;
+}
+// src/sync/coordinator.ts
+class EventEmitter3 {
+  handlers = new Map;
+  on(event, handler) {
+    const key = event;
+    if (!this.handlers.has(key)) {
+      this.handlers.set(key, new Set);
+    }
+    this.handlers.get(key).add(handler);
+  }
+  off(event, handler) {
+    this.handlers.get(event)?.delete(handler);
+  }
+  emit(event, data) {
+    this.handlers.get(event)?.forEach((handler) => handler(data));
+  }
+}
+var DEFAULT_CONFIG6 = {
+  maxBatchSize: 100,
+  maxBatchBytes: 5 * 1024 * 1024,
+  batchTimeoutMs: 5000,
+  maxRetries: 5,
+  retryDelayMs: 1000,
+  enableCompression: true,
+  enableDeltaSync: true,
+  adaptiveBatching: true
+};
+
+class SyncCoordinator2 extends EventEmitter3 {
+  networkState = "unknown";
+  bandwidthProfile = {
+    speedKbps: 1024,
+    latencyMs: 50,
+    timestamp: Date.now(),
+    reliability: 1,
+    effectiveType: "unknown"
+  };
+  batches = new Map;
+  progress = new Map;
+  currentSyncBatchId = null;
+  config;
+  syncTimings = [];
+  stats = {
+    totalSyncsAttempted: 0,
+    successfulSyncs: 0,
+    failedSyncs: 0,
+    totalOperationsSynced: 0,
+    averageSyncDurationMs: 0,
+    networkStateHistory: [],
+    bandwidthHistory: []
+  };
+  constructor(config = {}) {
+    super();
+    this.config = { ...DEFAULT_CONFIG6, ...config };
+    if (typeof navigator !== "undefined") {
+      this.initNetworkDetection();
+    }
+  }
+  initNetworkDetection() {
+    if (typeof navigator !== "undefined" && "onLine" in navigator) {
+      this.setNetworkState(navigator.onLine ? "online" : "offline");
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => this.setNetworkState("online"));
+      window.addEventListener("offline", () => this.setNetworkState("offline"));
+    }
+    if (typeof navigator !== "undefined" && "connection" in navigator) {
+      const conn = navigator.connection;
+      if (conn) {
+        this.updateBandwidthFromConnection(conn);
+        conn.addEventListener?.("change", () => this.updateBandwidthFromConnection(conn));
+      }
+    }
+  }
+  updateBandwidthFromConnection(conn) {
+    const effectiveType = conn.effectiveType;
+    let speedKbps = 1024;
+    let latencyMs = 50;
+    switch (effectiveType) {
+      case "slow-2g":
+        speedKbps = 50;
+        latencyMs = 2000;
+        break;
+      case "2g":
+        speedKbps = 150;
+        latencyMs = 1000;
+        break;
+      case "3g":
+        speedKbps = 750;
+        latencyMs = 400;
+        break;
+      case "4g":
+        speedKbps = 5000;
+        latencyMs = 50;
+        break;
+    }
+    if (conn.downlink) {
+      speedKbps = conn.downlink * 1024;
+    }
+    if (conn.rtt) {
+      latencyMs = conn.rtt;
+    }
+    this.updateBandwidthProfile({
+      speedKbps,
+      latencyMs,
+      effectiveType,
+      reliability: effectiveType === "4g" ? 0.95 : effectiveType === "3g" ? 0.85 : 0.7
+    });
+    if (effectiveType === "slow-2g" || effectiveType === "2g") {
+      this.setNetworkState("poor");
+    }
+  }
+  setNetworkState(state2) {
+    const previousState = this.networkState;
+    if (previousState === state2)
+      return;
+    this.networkState = state2;
+    const event = {
+      previousState,
+      newState: state2,
+      bandwidth: this.bandwidthProfile,
+      timestamp: Date.now()
+    };
+    this.stats.networkStateHistory.push({ state: state2, timestamp: Date.now() });
+    if (this.stats.networkStateHistory.length > 100) {
+      this.stats.networkStateHistory.shift();
+    }
+    this.emit("network:changed", event);
+    if (previousState !== "online" && state2 === "online") {
+      this.emit("network:online");
+    } else if (previousState === "online" && state2 !== "online") {
+      this.emit("network:offline");
+    }
+  }
+  getNetworkState() {
+    return this.networkState;
+  }
+  updateBandwidthProfile(profile) {
+    this.bandwidthProfile = {
+      ...this.bandwidthProfile,
+      ...profile,
+      timestamp: Date.now()
+    };
+    this.stats.bandwidthHistory.push(this.bandwidthProfile);
+    if (this.stats.bandwidthHistory.length > 50) {
+      this.stats.bandwidthHistory.shift();
+    }
+    if (this.config.adaptiveBatching) {
+      this.adaptBatchSizes();
+    }
+    this.emit("bandwidth:updated", this.bandwidthProfile);
+  }
+  getBandwidthProfile() {
+    return { ...this.bandwidthProfile };
+  }
+  createSyncBatch(operations) {
+    const batchOps = operations.slice(0, this.config.maxBatchSize);
+    let totalSize = 0;
+    const sizedOps = [];
+    for (const op of batchOps) {
+      const opSize = op.bytesSize || JSON.stringify(op).length;
+      if (totalSize + opSize > this.config.maxBatchBytes) {
+        break;
+      }
+      totalSize += opSize;
+      sizedOps.push(op);
+    }
+    const priorityOrder = { high: 0, normal: 1, low: 2 };
+    const highestPriority = sizedOps.reduce((highest, op) => priorityOrder[op.priority] < priorityOrder[highest] ? op.priority : highest, "low");
+    const batch = {
+      batchId: `batch-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      operations: sizedOps,
+      totalSize,
+      createdAt: Date.now(),
+      priority: highestPriority,
+      compressed: this.config.enableCompression
+    };
+    this.batches.set(batch.batchId, batch);
+    this.emit("batch:created", batch);
+    return batch;
+  }
+  startSyncBatch(batchId) {
+    const batch = this.batches.get(batchId);
+    if (!batch)
+      return;
+    this.currentSyncBatchId = batchId;
+    this.stats.totalSyncsAttempted++;
+    this.progress.set(batchId, {
+      batchId,
+      totalOperations: batch.operations.length,
+      syncedOperations: 0,
+      bytesSynced: 0,
+      totalBytes: batch.totalSize
+    });
+    this.emit("batch:started", { batchId });
+  }
+  updateProgress(batchId, syncedOperations, bytesSynced) {
+    const batch = this.batches.get(batchId);
+    if (!batch)
+      return;
+    const progress = {
+      batchId,
+      totalOperations: batch.operations.length,
+      syncedOperations,
+      bytesSynced,
+      totalBytes: batch.totalSize,
+      estimatedTimeRemaining: this.estimateSyncTime(batch.totalSize - bytesSynced)
+    };
+    this.progress.set(batchId, progress);
+    this.emit("batch:progress", progress);
+  }
+  completeSyncBatch(batchId, result) {
+    const batch = this.batches.get(batchId);
+    if (!batch)
+      return;
+    if (result.success) {
+      this.stats.successfulSyncs++;
+      this.stats.totalOperationsSynced += result.synced.length;
+      this.stats.lastSyncTime = Date.now();
+    } else {
+      this.stats.failedSyncs++;
+    }
+    this.currentSyncBatchId = null;
+    this.emit("batch:completed", { batch, result });
+  }
+  failSyncBatch(batchId, error2, retryable = true) {
+    const batch = this.batches.get(batchId);
+    if (!batch)
+      return;
+    const attemptCount = batch.attemptCount || 0;
+    if (retryable && attemptCount < this.config.maxRetries) {
+      batch.attemptCount = attemptCount + 1;
+      this.emit("batch:retry", { batch, attempt: attemptCount + 1 });
+    } else {
+      this.stats.failedSyncs++;
+      this.emit("batch:failed", { batch, error: error2 });
+    }
+    this.currentSyncBatchId = null;
+  }
+  getBatch(batchId) {
+    return this.batches.get(batchId);
+  }
+  getPendingBatches() {
+    return Array.from(this.batches.values());
+  }
+  getCurrentProgress() {
+    if (this.currentSyncBatchId) {
+      return this.progress.get(this.currentSyncBatchId);
+    }
+    return;
+  }
+  estimateSyncTime(bytes) {
+    const secondsNeeded = bytes * 8 / (this.bandwidthProfile.speedKbps * 1024);
+    return Math.round((secondsNeeded + this.bandwidthProfile.latencyMs / 1000) * 1000);
+  }
+  adaptBatchSizes() {
+    const speed = this.bandwidthProfile.speedKbps;
+    if (speed < 512) {
+      this.config.maxBatchSize = Math.max(10, Math.floor(DEFAULT_CONFIG6.maxBatchSize / 4));
+      this.config.maxBatchBytes = Math.max(512 * 1024, Math.floor(DEFAULT_CONFIG6.maxBatchBytes / 4));
+    } else if (speed < 1024) {
+      this.config.maxBatchSize = Math.max(25, Math.floor(DEFAULT_CONFIG6.maxBatchSize / 2));
+      this.config.maxBatchBytes = Math.max(1024 * 1024, Math.floor(DEFAULT_CONFIG6.maxBatchBytes / 2));
+    } else if (speed > 5000) {
+      this.config.maxBatchSize = Math.min(500, DEFAULT_CONFIG6.maxBatchSize * 2);
+      this.config.maxBatchBytes = Math.min(50 * 1024 * 1024, DEFAULT_CONFIG6.maxBatchBytes * 2);
+    } else {
+      this.config.maxBatchSize = DEFAULT_CONFIG6.maxBatchSize;
+      this.config.maxBatchBytes = DEFAULT_CONFIG6.maxBatchBytes;
+    }
+  }
+  getStats() {
+    return { ...this.stats };
+  }
+  configure(config) {
+    this.config = { ...this.config, ...config };
+    this.emit("config:updated", this.config);
+  }
+  getConfig() {
+    return { ...this.config };
+  }
+  clear() {
+    this.batches.clear();
+    this.progress.clear();
+    this.currentSyncBatchId = null;
+  }
+  reset() {
+    this.clear();
+    this.networkState = "unknown";
+    this.syncTimings = [];
+    this.stats = {
+      totalSyncsAttempted: 0,
+      successfulSyncs: 0,
+      failedSyncs: 0,
+      totalOperationsSynced: 0,
+      averageSyncDurationMs: 0,
+      networkStateHistory: [],
+      bandwidthHistory: []
+    };
+  }
+}
+var _instance3 = null;
+function getSyncCoordinator() {
+  if (!_instance3) {
+    _instance3 = new SyncCoordinator2;
+  }
+  return _instance3;
+}
+function createSyncCoordinator(config) {
+  return new SyncCoordinator2(config);
+}
+function resetSyncCoordinator() {
+  if (_instance3) {
+    _instance3.reset();
+  }
+  _instance3 = null;
+}
+// src/service-worker-push.ts
+function handlePush(event, config = {}) {
+  if (!event.data) {
+    console.warn("[AeonSW] Push event received with no data");
+    return;
+  }
+  let data;
+  try {
+    data = event.data.json();
+  } catch {
+    data = {
+      title: "Notification",
+      body: event.data.text()
+    };
+  }
+  const notificationOptions = {
+    body: data.body,
+    icon: data.icon || config.defaultIcon,
+    badge: data.badge || config.defaultBadge,
+    tag: data.tag || "aeon-notification",
+    data: data.data,
+    requireInteraction: data.requireInteraction || false,
+    vibrate: data.vibrate || config.defaultVibrate || [200, 100, 200],
+    actions: data.actions
+  };
+  event.waitUntil(self.registration.showNotification(data.title, notificationOptions));
+}
+function handleNotificationClick(event, config = {}) {
+  event.notification.close();
+  const data = event.notification.data;
+  let targetUrl = "/";
+  if (event.action && data?.action) {
+    targetUrl = data.action;
+  } else if (data?.url) {
+    targetUrl = data.url;
+  } else if (config.onNotificationClick) {
+    const customUrl = config.onNotificationClick(data);
+    if (customUrl) {
+      targetUrl = customUrl;
+    }
+  }
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if ("focus" in client && client.url.includes(self.location.origin)) {
+        return client.focus().then((focusedClient) => {
+          if ("navigate" in focusedClient) {
+            return focusedClient.navigate(targetUrl);
+          }
+        });
+      }
+    }
+    if (clients.openWindow) {
+      return clients.openWindow(targetUrl);
+    }
+  }));
+}
+function handleNotificationClose(event) {
+  console.debug("[AeonSW] Notification closed:", event.notification.tag);
+}
+function handleSync(event, tag) {
+  if (tag === "aeon-offline-sync") {
+    event.waitUntil(syncOfflineQueue());
+  }
+}
+async function syncOfflineQueue() {
+  const clientList = await clients.matchAll({ type: "window" });
+  for (const client of clientList) {
+    client.postMessage({
+      type: "SYNC_OFFLINE_QUEUE",
+      timestamp: Date.now()
+    });
+  }
+}
+function handleMessage(event, handlers) {
+  const message = event.data;
+  if (!message || !message.type) {
+    return;
+  }
+  const handler = handlers[message.type];
+  if (handler) {
+    const result = handler(message.payload);
+    if (result instanceof Promise) {
+      event.waitUntil(result.then((response) => {
+        if (event.source && "postMessage" in event.source) {
+          event.source.postMessage({
+            type: `${message.type}_RESPONSE`,
+            payload: response
+          });
+        }
+      }));
+    }
+  }
+}
+function registerPushHandlers(sw, config = {}) {
+  sw.addEventListener("push", (event) => {
+    handlePush(event, config);
+  });
+  sw.addEventListener("notificationclick", (event) => {
+    handleNotificationClick(event, config);
+  });
+  sw.addEventListener("notificationclose", (event) => {
+    handleNotificationClose(event);
+  });
+}
+function registerSyncHandlers(sw) {
+  sw.addEventListener("sync", (event) => {
+    const syncEvent = event;
+    handleSync(syncEvent, syncEvent.tag);
+  });
+}
+function registerMessageHandlers(sw, handlers) {
+  sw.addEventListener("message", (event) => {
+    handleMessage(event, handlers);
+  });
+}
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0;i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+function serializePushSubscription(subscription) {
+  const p256dh = subscription.getKey("p256dh");
+  const auth = subscription.getKey("auth");
+  return {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: p256dh ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dh)))) : "",
+      auth: auth ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(auth)))) : ""
+    }
+  };
+}
 
 // src/index.ts
-var VERSION = "0.1.0";
+var VERSION = "1.0.0";
 export {
+  urlBase64ToUint8Array,
+  unauthorized,
+  swapToContent,
+  setSpeculativeRenderer,
+  setSkeletonCache,
   setPredictor,
   setNavigator,
   setNavigationCache,
   setContextCookies,
+  serializePushSubscription,
+  resetSyncCoordinator,
+  resetOperationEncryption,
+  resetOfflineQueue,
+  resetConflictResolver,
+  requireAuth,
+  registerSyncHandlers,
+  registerPushHandlers,
+  registerMessageHandlers,
+  redirect,
+  rateLimit,
+  notFound,
+  json,
+  isSkeletonVisible,
+  initSpeculativeRendering,
+  initSkeleton,
+  handleSync,
+  handlePush,
+  handleNotificationClose,
+  handleNotificationClick,
+  handleMessage,
+  getWithSkeleton,
+  getSyncCoordinator,
+  getSpeculativeRenderer,
+  getSkeletonCache,
   getPredictor,
+  getOperationEncryption,
+  getOfflineQueue,
   getNavigator,
   getNavigationCache,
+  getConflictResolver,
+  generateSkeletonPageStructure,
+  generateSkeletonInitScript,
+  generateOperationId,
+  generateAsyncSwapScript,
+  forbidden,
   extractUserContext,
+  estimateEncryptedSize,
   esiWithContext,
   esiVision,
   esiInfer,
   esiEmotion,
   esiEmbed,
+  error,
+  createSyncCoordinator,
   createStorageAdapter,
+  createOfflineQueue,
   createContextMiddleware,
+  createConflictResolver,
+  createApiRouter,
+  createAeonWorker,
   createAeonServer,
+  cors,
+  composeMiddleware,
+  badRequest,
   addSpeculationHeaders,
+  adaptRouteModule,
+  adaptRequest,
+  adaptHandler,
   VERSION,
+  SyncCoordinator2 as SyncCoordinator,
+  SpeculativeRenderer,
+  SkeletonCache,
+  OfflineOperationEncryption,
+  NextResponse,
   NavigationPredictor,
   NavigationCache,
   HybridStorageAdapter,
   HeuristicAdapter,
   FileStorageAdapter,
+  EncryptedOfflineQueue,
   EdgeWorkersESIProcessor,
   DurableObjectStorageAdapter,
   DashStorageAdapter,
   DEFAULT_ROUTER_CONFIG,
   DEFAULT_ESI_CONFIG,
   D1StorageAdapter,
+  ConflictResolver,
+  ApiRouter,
   AeonRoutesRegistry,
   AeonRouter,
   AeonRouteRegistry,

@@ -188,6 +188,139 @@ export declare function useESIInfer(options?: UseESIInferOptions): {
     error: string | null;
     reset: () => void;
 };
+/**
+ * Global ESI State type (matches ESIState from context-extractor)
+ */
+export interface GlobalESIState {
+    userTier: 'free' | 'starter' | 'pro' | 'enterprise';
+    emotionState?: {
+        primary: string;
+        valence: number;
+        arousal: number;
+        confidence?: number;
+    } | null;
+    preferences: {
+        theme?: 'light' | 'dark' | 'auto';
+        reducedMotion: boolean;
+        language?: string;
+    };
+    sessionId?: string;
+    localHour: number;
+    timezone: string;
+    features: {
+        aiInference: boolean;
+        emotionTracking: boolean;
+        collaboration: boolean;
+        advancedInsights: boolean;
+        customThemes: boolean;
+        voiceSynthesis: boolean;
+        imageAnalysis: boolean;
+    };
+    userId?: string;
+    isNewSession: boolean;
+    recentPages: string[];
+    viewport: {
+        width: number;
+        height: number;
+    };
+    connection: string;
+    update?: (partial: Partial<GlobalESIState>) => void;
+    subscribe?: (listener: (state: GlobalESIState) => void) => () => void;
+}
+declare global {
+    interface Window {
+        __AEON_ESI_STATE__?: GlobalESIState;
+    }
+}
+/**
+ * Hook to consume global ESI state from window.__AEON_ESI_STATE__
+ *
+ * This state is injected in the <head> at pre-render time and hydrated
+ * with actual user context at runtime. Components can use this to
+ * access tier, emotion state, preferences, etc. before full React hydration.
+ *
+ * @example
+ * ```tsx
+ * function TierGatedFeature() {
+ *   const { userTier, features } = useGlobalESIState();
+ *
+ *   if (!features.advancedInsights) {
+ *     return <UpgradePrompt />;
+ *   }
+ *
+ *   return <AdvancedInsightsPanel />;
+ * }
+ * ```
+ */
+export declare function useGlobalESIState(): GlobalESIState;
+/**
+ * Hook to check if user has a specific feature enabled based on tier
+ *
+ * @example
+ * ```tsx
+ * function VoiceButton() {
+ *   const hasVoice = useESIFeature('voiceSynthesis');
+ *
+ *   return hasVoice ? <VoiceControl /> : <UpgradeToProBanner />;
+ * }
+ * ```
+ */
+export declare function useESIFeature(feature: keyof GlobalESIState['features']): boolean;
+/**
+ * Hook to get user tier
+ *
+ * @example
+ * ```tsx
+ * function PricingBanner() {
+ *   const tier = useESITier();
+ *
+ *   if (tier === 'pro' || tier === 'enterprise') {
+ *     return null; // Already on paid tier
+ *   }
+ *
+ *   return <UpgradeBanner currentTier={tier} />;
+ * }
+ * ```
+ */
+export declare function useESITier(): GlobalESIState['userTier'];
+/**
+ * Hook to get current emotion state
+ *
+ * @example
+ * ```tsx
+ * function EmotionAwareUI() {
+ *   const emotion = useESIEmotion();
+ *
+ *   if (emotion?.valence < -0.3) {
+ *     return <SupportiveContent />;
+ *   }
+ *
+ *   return <RegularContent />;
+ * }
+ * ```
+ */
+export declare function useESIEmotionState(): GlobalESIState['emotionState'];
+/**
+ * Hook to get user preferences
+ */
+export declare function useESIPreferences(): GlobalESIState['preferences'];
+/**
+ * Update global ESI state at runtime (e.g., after fetching user context)
+ *
+ * @example
+ * ```tsx
+ * useEffect(() => {
+ *   fetchUserContext().then((ctx) => {
+ *     updateGlobalESIState({
+ *       userTier: ctx.tier,
+ *       userId: ctx.id,
+ *       emotionState: ctx.emotion,
+ *     });
+ *   });
+ * }, []);
+ * ```
+ */
+export declare function updateGlobalESIState(partial: Partial<GlobalESIState>): void;
 export declare const ESI: {
     Provider: FC<ESIProviderProps>;
     Infer: FC<ESIInferProps>;

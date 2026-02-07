@@ -28,7 +28,7 @@ var __export = (target, all) => {
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 var __require = import.meta.require;
 
-// ../../../../node_modules/react/cjs/react.development.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/cjs/react.development.js
 var require_react_development = __commonJS((exports, module) => {
   (function() {
     function defineDeprecationWarning(methodName, info) {
@@ -851,7 +851,7 @@ See https://react.dev/link/invalid-hook-call for tips about how to debug and fix
   })();
 });
 
-// ../../../../node_modules/react/index.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/index.js
 var require_react = __commonJS((exports, module) => {
   var react_development = __toESM(require_react_development());
   if (false) {} else {
@@ -859,7 +859,7 @@ var require_react = __commonJS((exports, module) => {
   }
 });
 
-// ../../../../node_modules/react/cjs/react-jsx-dev-runtime.development.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/cjs/react-jsx-dev-runtime.development.js
 var require_react_jsx_dev_runtime_development = __commonJS((exports) => {
   var React = __toESM(require_react());
   (function() {
@@ -1074,7 +1074,7 @@ React keys must be passed directly to JSX without using spread:
   })();
 });
 
-// ../../../../node_modules/react/jsx-dev-runtime.js
+// ../../../../node_modules/.bun/react@19.2.3/node_modules/react/jsx-dev-runtime.js
 var require_jsx_dev_runtime = __commonJS((exports, module) => {
   var react_jsx_dev_runtime_development = __toESM(require_react_jsx_dev_runtime_development());
   if (false) {} else {
@@ -1128,6 +1128,307 @@ var DEFAULT_ESI_CONFIG = {
     }
   }
 };
+// src/router/esi-cyrano.ts
+function esiContext(context, options = {}) {
+  const { emitExhaust = true, id } = options;
+  return {
+    id: id || `esi-context-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "custom",
+      custom: {
+        type: "context-drop",
+        emitExhaust
+      }
+    },
+    content: {
+      type: "json",
+      value: JSON.stringify(context)
+    },
+    contextAware: true,
+    signals: ["emotion", "preferences", "history", "time", "device"]
+  };
+}
+function esiCyrano(config, options = {}) {
+  const {
+    intent,
+    tone = "warm",
+    trigger = "always",
+    fallback,
+    suggestTool,
+    suggestRoute,
+    autoAcceptNavigation = false,
+    priority = 1,
+    maxTriggersPerSession,
+    cooldownSeconds,
+    speak = false,
+    showCaption = true,
+    requiredTier
+  } = config;
+  const systemPrompt = buildCyranoSystemPrompt(intent, tone);
+  return {
+    id: `esi-cyrano-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "llm",
+      system: systemPrompt,
+      temperature: 0.7,
+      maxTokens: 150,
+      fallback,
+      custom: {
+        type: "cyrano-whisper",
+        intent,
+        tone,
+        trigger,
+        suggestTool,
+        suggestRoute,
+        autoAcceptNavigation,
+        priority,
+        maxTriggersPerSession,
+        cooldownSeconds,
+        speak,
+        showCaption
+      },
+      ...options
+    },
+    content: {
+      type: "template",
+      value: buildCyranoPrompt(intent, trigger),
+      variables: {
+        intent,
+        tone,
+        trigger
+      }
+    },
+    contextAware: true,
+    signals: ["emotion", "preferences", "history", "time"],
+    requiredTier
+  };
+}
+function buildCyranoSystemPrompt(intent, tone) {
+  const toneGuide = {
+    warm: "Be warm, caring, and approachable. Use gentle language.",
+    calm: "Be calm, measured, and reassuring. Use a steady pace.",
+    encouraging: "Be supportive and uplifting. Celebrate small wins.",
+    playful: "Be light-hearted and fun. Use appropriate humor.",
+    professional: "Be clear and direct. Maintain professionalism.",
+    empathetic: "Show deep understanding. Validate feelings.",
+    neutral: "Be balanced and objective. Provide information."
+  };
+  const intentGuide = {
+    greeting: "Welcome the user. Make them feel at home.",
+    "proactive-check-in": "Check in gently. Ask how they are doing.",
+    "supportive-presence": "Simply acknowledge. Let them know you are here.",
+    "gentle-nudge": "Suggest an action softly. No pressure.",
+    "tool-suggestion": "Recommend a tool that might help.",
+    "navigation-hint": "Suggest exploring another area.",
+    intervention: "Step in supportively. Offer help.",
+    celebration: "Celebrate their progress. Be genuinely happy for them.",
+    reflection: "Invite them to reflect. Ask thoughtful questions.",
+    guidance: "Offer helpful guidance. Be a trusted advisor.",
+    farewell: "Wish them well. Leave the door open.",
+    custom: "Respond appropriately to the context."
+  };
+  return `You are Cyrano, an ambient AI companion. ${toneGuide[tone]} ${intentGuide[intent]}
+
+Keep responses brief (1-2 sentences). Be natural and conversational.
+Never start with "I" - use "You" or the situation as the subject.
+Never say "As an AI" or similar phrases.
+Respond to the emotional context provided.`;
+}
+function buildCyranoPrompt(intent, trigger) {
+  const prompts = {
+    greeting: "Generate a warm greeting based on the time of day and user context.",
+    "proactive-check-in": "Check in with the user based on their emotional state and behavior.",
+    "supportive-presence": "Acknowledge the user's presence and current activity.",
+    "gentle-nudge": "Gently suggest the user might benefit from a particular action.",
+    "tool-suggestion": "Suggest a specific tool that could help with the user's current state.",
+    "navigation-hint": "Suggest the user might want to explore a different area.",
+    intervention: "Offer supportive intervention based on detected stress or difficulty.",
+    celebration: "Celebrate the user's progress or achievement.",
+    reflection: "Invite the user to reflect on their current experience.",
+    guidance: "Offer helpful guidance for the user's current situation.",
+    farewell: "Say goodbye warmly, acknowledging the session.",
+    custom: "Respond appropriately to the context provided."
+  };
+  let prompt = prompts[intent] || prompts.custom;
+  if (trigger !== "always" && trigger !== "never") {
+    prompt += ` The trigger condition is: ${trigger}.`;
+  }
+  return prompt;
+}
+function esiHalo(config, options = {}) {
+  const {
+    observe,
+    window: window2 = "session",
+    action = "whisper-to-cyrano",
+    sensitivity = 0.5,
+    crisisLevel = false,
+    parameters = {}
+  } = config;
+  return {
+    id: `esi-halo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    params: {
+      model: "custom",
+      custom: {
+        type: "halo-insight",
+        observe,
+        window: window2,
+        action,
+        sensitivity,
+        crisisLevel,
+        parameters
+      },
+      ...options
+    },
+    content: {
+      type: "json",
+      value: JSON.stringify({
+        observation: observe,
+        window: window2,
+        action,
+        sensitivity,
+        crisisLevel
+      })
+    },
+    contextAware: true,
+    signals: ["emotion", "history", "time"]
+  };
+}
+function evaluateTrigger(trigger, context, sessionContext) {
+  if (trigger === "always")
+    return true;
+  if (trigger === "never")
+    return false;
+  const [type, condition] = trigger.split(":");
+  switch (type) {
+    case "dwell": {
+      const match = condition?.match(/>(\d+)s/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10) * 1000;
+      const dwellTime = sessionContext?.behavior?.dwellTime || 0;
+      return dwellTime > threshold;
+    }
+    case "scroll": {
+      const match = condition?.match(/>(\d+\.?\d*)/);
+      if (!match)
+        return false;
+      const threshold = parseFloat(match[1]);
+      const scrollDepth = sessionContext?.behavior?.scrollDepth || 0;
+      return scrollDepth > threshold;
+    }
+    case "emotion": {
+      const targetEmotion = condition;
+      return sessionContext?.emotion?.primary === targetEmotion || context.emotionState?.primary === targetEmotion;
+    }
+    case "behavior": {
+      if (condition === "aimless") {
+        return sessionContext?.behavior?.isAimlessClicking === true;
+      }
+      if (condition === "hesitation") {
+        return sessionContext?.behavior?.hesitationDetected === true;
+      }
+      return false;
+    }
+    case "hrv": {
+      const match = condition?.match(/<(\d+)/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10);
+      const hrv = sessionContext?.biometric?.hrv || 100;
+      return hrv < threshold;
+    }
+    case "stress": {
+      const match = condition?.match(/>(\d+)/);
+      if (!match)
+        return false;
+      const threshold = parseInt(match[1], 10);
+      const stress = sessionContext?.biometric?.stressScore || 0;
+      return stress > threshold;
+    }
+    case "session": {
+      if (condition === "start") {
+        return context.isNewSession;
+      }
+      const idleMatch = condition?.match(/idle:(\d+)m/);
+      if (idleMatch) {
+        return false;
+      }
+      return false;
+    }
+    case "navigation": {
+      const targetRoute = condition?.replace("to:", "");
+      return sessionContext?.currentRoute === targetRoute;
+    }
+    case "time": {
+      const hour = context.localHour;
+      if (condition === "morning")
+        return hour >= 6 && hour < 12;
+      if (condition === "afternoon")
+        return hour >= 12 && hour < 18;
+      if (condition === "evening")
+        return hour >= 18 && hour < 22;
+      if (condition === "night")
+        return hour >= 22 || hour < 6;
+      return false;
+    }
+    default:
+      return false;
+  }
+}
+function createExhaustEntry(directive, result, type) {
+  return {
+    type,
+    timestamp: Date.now(),
+    content: {
+      directiveId: directive.id,
+      output: result.output,
+      model: result.model,
+      success: result.success,
+      latencyMs: result.latencyMs
+    },
+    visible: type === "cyrano" || type === "user",
+    source: directive.params.model
+  };
+}
+var CYRANO_TOOL_SUGGESTIONS = {
+  breathing: {
+    triggers: ["stress:>70", "hrv:<40", "emotion:anxious"],
+    tool: "breathing/4-7-8",
+    reason: "You seem stressed - a breathing exercise might help"
+  },
+  grounding: {
+    triggers: ["emotion:overwhelmed", "behavior:aimless"],
+    tool: "grounding/5-4-3-2-1",
+    reason: "A grounding exercise can help center you"
+  },
+  journaling: {
+    triggers: ["dwell:>120s", "emotion:reflective"],
+    tool: "journaling/freeform",
+    reason: "Would you like to write about what's on your mind?"
+  },
+  insights: {
+    triggers: ["navigation:to:/insights", "dwell:>60s"],
+    tool: "insights/dashboard",
+    reason: "Your recent patterns are ready to explore"
+  }
+};
+function getToolSuggestions(context, sessionContext) {
+  const suggestions = [];
+  for (const [, config] of Object.entries(CYRANO_TOOL_SUGGESTIONS)) {
+    for (const trigger of config.triggers) {
+      if (evaluateTrigger(trigger, context, sessionContext)) {
+        suggestions.push({
+          tool: config.tool,
+          reason: config.reason,
+          priority: trigger.startsWith("stress") || trigger.startsWith("hrv") ? 2 : 1
+        });
+        break;
+      }
+    }
+  }
+  return suggestions.sort((a, b) => b.priority - a.priority);
+}
+
 // src/router/esi.ts
 var esiCache = new Map;
 function getCacheKey(directive, context) {
@@ -1858,6 +2159,69 @@ function useESIInfer(options = {}) {
   }, []);
   return { run, result, isLoading, error, reset };
 }
+var DEFAULT_ESI_STATE = {
+  userTier: "free",
+  emotionState: null,
+  preferences: {
+    theme: "auto",
+    reducedMotion: false
+  },
+  localHour: new Date().getHours(),
+  timezone: "UTC",
+  features: {
+    aiInference: true,
+    emotionTracking: true,
+    collaboration: false,
+    advancedInsights: false,
+    customThemes: false,
+    voiceSynthesis: false,
+    imageAnalysis: false
+  },
+  isNewSession: true,
+  recentPages: [],
+  viewport: { width: 1920, height: 1080 },
+  connection: "4g"
+};
+function useGlobalESIState() {
+  const [state, setState] = import_react.useState(() => {
+    if (typeof window !== "undefined" && window.__AEON_ESI_STATE__) {
+      return window.__AEON_ESI_STATE__;
+    }
+    return DEFAULT_ESI_STATE;
+  });
+  import_react.useEffect(() => {
+    if (typeof window !== "undefined" && window.__AEON_ESI_STATE__?.subscribe) {
+      const unsubscribe = window.__AEON_ESI_STATE__.subscribe((newState) => {
+        setState(newState);
+      });
+      return unsubscribe;
+    }
+  }, []);
+  return state;
+}
+function useESIFeature(feature) {
+  const { features } = useGlobalESIState();
+  return features[feature] ?? false;
+}
+function useESITier() {
+  const { userTier } = useGlobalESIState();
+  return userTier;
+}
+function useESIEmotionState() {
+  const { emotionState } = useGlobalESIState();
+  return emotionState;
+}
+function useESIPreferences() {
+  const { preferences } = useGlobalESIState();
+  return preferences;
+}
+function updateGlobalESIState(partial) {
+  if (typeof window !== "undefined" && window.__AEON_ESI_STATE__?.update) {
+    window.__AEON_ESI_STATE__.update(partial);
+  } else if (typeof window !== "undefined" && window.__AEON_ESI_STATE__) {
+    Object.assign(window.__AEON_ESI_STATE__, partial);
+  }
+}
 var ESI = {
   Provider: ESIProvider,
   Infer: ESIInfer,
@@ -2348,6 +2712,80 @@ function addSpeculationHeaders(response, prefetch, prerender) {
     statusText: response.statusText,
     headers
   });
+}
+function serializeToESIState(context) {
+  const tierFeatures = {
+    free: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: false,
+      customThemes: false,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    starter: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    pro: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    },
+    enterprise: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    }
+  };
+  return {
+    userTier: context.tier,
+    emotionState: context.emotionState ? {
+      primary: context.emotionState.primary,
+      valence: context.emotionState.valence,
+      arousal: context.emotionState.arousal,
+      confidence: context.emotionState.confidence
+    } : undefined,
+    preferences: {
+      theme: context.preferences.theme,
+      reducedMotion: context.reducedMotion,
+      language: context.preferences.language
+    },
+    sessionId: context.sessionId,
+    localHour: context.localHour,
+    timezone: context.timezone,
+    features: tierFeatures[context.tier],
+    userId: context.userId,
+    isNewSession: context.isNewSession,
+    recentPages: context.recentPages.slice(-10),
+    viewport: {
+      width: context.viewport.width,
+      height: context.viewport.height
+    },
+    connection: context.connection
+  };
+}
+function generateESIStateScript(esiState) {
+  const stateJson = JSON.stringify(esiState);
+  return `<script>window.__AEON_ESI_STATE__=${stateJson};</script>`;
+}
+function generateESIStateScriptFromContext(context) {
+  const esiState = serializeToESIState(context);
+  return generateESIStateScript(esiState);
 }
 // src/router/speculation.ts
 function supportsSpeculationRules() {
@@ -3471,22 +3909,37 @@ var ESIControl = {
   Auto: ESIAuto
 };
 export {
+  useGlobalESIState,
+  useESITier,
+  useESIPreferences,
   useESIInfer,
+  useESIFeature,
+  useESIEmotionState,
   useESI,
+  updateGlobalESIState,
   supportsSpeculationRules,
   supportsLinkPrefetch,
   setContextCookies,
+  serializeToESIState,
   parseWithSchema,
+  getToolSuggestions,
   generateSchemaPrompt,
+  generateESIStateScriptFromContext,
+  generateESIStateScript,
   extractUserContext,
+  evaluateTrigger,
   esiWithContext,
   esiVision,
   esiMatch,
   esiInfer,
   esiIf,
+  esiHalo,
   esiEmotion,
   esiEmbed,
+  esiCyrano,
+  esiContext,
   createSpeculationHook,
+  createExhaustEntry,
   createControlProcessor,
   createContextMiddleware,
   autoInitSpeculation,
@@ -3511,5 +3964,6 @@ export {
   ESIAuto,
   ESI,
   DEFAULT_ROUTER_CONFIG,
-  DEFAULT_ESI_CONFIG
+  DEFAULT_ESI_CONFIG,
+  CYRANO_TOOL_SUGGESTIONS
 };

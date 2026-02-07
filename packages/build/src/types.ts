@@ -30,6 +30,28 @@ export interface PreRenderedPage {
   css: string;
   size: number;
   renderedAt: string;
+  /** Skeleton HTML for zero-CLS rendering (if enabled) */
+  skeletonHtml?: string;
+  /** Skeleton CSS */
+  skeletonCss?: string;
+}
+
+/**
+ * Skeleton configuration options
+ */
+export interface SkeletonConfig {
+  /** Enable skeleton generation */
+  enabled: boolean;
+  /** Minimum confidence to generate skeleton (0-1) */
+  minConfidence?: number;
+  /** Components that should always have skeletons */
+  alwaysDynamic?: string[];
+  /** Components that should never have skeletons */
+  neverDynamic?: string[];
+  /** Enable cross-fade animation */
+  fadeAnimation?: boolean;
+  /** Fade duration in milliseconds */
+  fadeDuration?: number;
 }
 
 /**
@@ -76,6 +98,8 @@ export interface BuildConfig {
   runtime: 'cloudflare' | 'bun' | 'node';
   /** Enable pre-rendering */
   prerender?: boolean;
+  /** Skeleton generation configuration */
+  skeleton?: SkeletonConfig;
   /** Aeon-specific configuration */
   aeon?: {
     sync?: { mode: 'distributed' | 'local' };

@@ -10,10 +10,12 @@ use std::collections::HashMap;
 mod router;
 mod hydrate;
 mod render;
+mod skeleton;
 
 pub use router::*;
 pub use hydrate::*;
 pub use render::*;
+pub use skeleton::*;
 
 #[wasm_bindgen(start)]
 pub fn init() {

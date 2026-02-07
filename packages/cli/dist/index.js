@@ -59777,6 +59777,667 @@ var init_font_manifest = __esm(() => {
   };
 });
 
+// ../build/src/skeleton-extractor.ts
+function parseFraction(value) {
+  const match = value.match(/^(\d+)\/(\d+)$/);
+  if (!match)
+    return;
+  const numerator = parseInt(match[1], 10);
+  const denominator = parseInt(match[2], 10);
+  if (denominator === 0)
+    return;
+  const percent = (numerator / denominator * 100).toFixed(6);
+  return `${percent}%`;
+}
+function parseArbitrary(value) {
+  const match = value.match(/^\[([^\]]+)\]$/);
+  return match ? match[1] : undefined;
+}
+function parseSpecial(value) {
+  switch (value) {
+    case "screen":
+      return "100vw";
+    case "svw":
+      return "100svw";
+    case "lvw":
+      return "100lvw";
+    case "dvw":
+      return "100dvw";
+    case "min":
+      return "min-content";
+    case "max":
+      return "max-content";
+    case "fit":
+      return "fit-content";
+    default:
+      return;
+  }
+}
+function parseHeightSpecial(value) {
+  switch (value) {
+    case "screen":
+      return "100vh";
+    case "svh":
+      return "100svh";
+    case "lvh":
+      return "100lvh";
+    case "dvh":
+      return "100dvh";
+    case "min":
+      return "min-content";
+    case "max":
+      return "max-content";
+    case "fit":
+      return "fit-content";
+    default:
+      return;
+  }
+}
+function extractDimensionsFromClasses(className) {
+  const classes = className.split(/\s+/).filter(Boolean);
+  const result = { confidence: 0 };
+  let matchCount = 0;
+  for (const cls of classes) {
+    const baseClass = cls.includes(":") ? cls.split(":").pop() : cls;
+    const widthMatch = baseClass.match(/^w-(.+)$/);
+    if (widthMatch) {
+      const value = widthMatch[1];
+      const parsed = SPACING2[value] || parseFraction(value) || parseArbitrary(value) || parseSpecial(value);
+      if (parsed) {
+        result.width = parsed;
+        matchCount++;
+      }
+    }
+    const minWidthMatch = baseClass.match(/^min-w-(.+)$/);
+    if (minWidthMatch && !result.width) {
+      const value = minWidthMatch[1];
+      const parsed = SPACING2[value] || parseArbitrary(value);
+      if (parsed) {
+        result.width = parsed;
+        matchCount++;
+      }
+    }
+    const maxWidthMatch = baseClass.match(/^max-w-(.+)$/);
+    if (maxWidthMatch && !result.width) {
+      const value = maxWidthMatch[1];
+      const parsed = MAX_WIDTH[value] || parseArbitrary(value);
+      if (parsed) {
+        result.width = parsed;
+        matchCount++;
+      }
+    }
+    const heightMatch = baseClass.match(/^h-(.+)$/);
+    if (heightMatch) {
+      const value = heightMatch[1];
+      const parsed = SPACING2[value] || parseFraction(value) || parseArbitrary(value) || parseHeightSpecial(value);
+      if (parsed) {
+        result.height = parsed;
+        matchCount++;
+      }
+    }
+    const minHeightMatch = baseClass.match(/^min-h-(.+)$/);
+    if (minHeightMatch) {
+      const value = minHeightMatch[1];
+      let parsed;
+      if (value === "screen")
+        parsed = "100vh";
+      else if (value === "svh")
+        parsed = "100svh";
+      else if (value === "lvh")
+        parsed = "100lvh";
+      else if (value === "dvh")
+        parsed = "100dvh";
+      else if (value === "full")
+        parsed = "100%";
+      else
+        parsed = SPACING2[value] || parseArbitrary(value);
+      if (parsed) {
+        result.minHeight = parsed;
+        matchCount++;
+      }
+    }
+    if (baseClass === "aspect-square") {
+      result.aspectRatio = "1/1";
+      matchCount++;
+    } else if (baseClass === "aspect-video") {
+      result.aspectRatio = "16/9";
+      matchCount++;
+    } else if (baseClass === "aspect-auto") {
+      result.aspectRatio = "auto";
+    } else {
+      const aspectMatch = baseClass.match(/^aspect-\[([^\]]+)\]$/);
+      if (aspectMatch) {
+        result.aspectRatio = aspectMatch[1];
+        matchCount++;
+      }
+    }
+    const paddingMatch = baseClass.match(/^p([xytblr])?-(.+)$/);
+    if (paddingMatch) {
+      const value = paddingMatch[2];
+      const parsed = SPACING2[value] || parseArbitrary(value);
+      if (parsed) {
+        result.padding = parsed;
+        matchCount++;
+      }
+    }
+    const marginMatch = baseClass.match(/^-?m([xytblr])?-(.+)$/);
+    if (marginMatch) {
+      const isNegative = baseClass.startsWith("-");
+      const value = marginMatch[2];
+      let parsed = SPACING2[value] || parseArbitrary(value);
+      if (parsed && isNegative && parsed !== "0px" && parsed !== "auto") {
+        parsed = `-${parsed}`;
+      }
+      if (parsed) {
+        result.margin = parsed;
+        matchCount++;
+      }
+    }
+    const gapMatch = baseClass.match(/^gap(?:-[xy])?-(.+)$/);
+    if (gapMatch) {
+      const value = gapMatch[1];
+      const parsed = SPACING2[value] || parseArbitrary(value);
+      if (parsed) {
+        result.gap = parsed;
+        matchCount++;
+      }
+    }
+    const roundedMatch = baseClass.match(/^rounded(?:-([a-z0-9]+))?$/);
+    if (roundedMatch) {
+      const size = roundedMatch[1] || "DEFAULT";
+      const parsed = BORDER_RADIUS2[size] || parseArbitrary(size);
+      if (parsed) {
+        result.borderRadius = parsed;
+        matchCount++;
+      }
+    }
+    const cornerRoundedMatch = baseClass.match(/^rounded-(?:t|r|b|l|tl|tr|bl|br)-(.+)$/);
+    if (cornerRoundedMatch && !result.borderRadius) {
+      const size = cornerRoundedMatch[1];
+      const parsed = BORDER_RADIUS2[size] || parseArbitrary(size);
+      if (parsed) {
+        result.borderRadius = parsed;
+        matchCount++;
+      }
+    }
+  }
+  const widthWeight = result.width ? 2 : 0;
+  const heightWeight = result.height ? 2 : 0;
+  const aspectWeight = result.aspectRatio ? 1.5 : 0;
+  const otherWeight = matchCount - (result.width ? 1 : 0) - (result.height ? 1 : 0) - (result.aspectRatio ? 1 : 0);
+  const totalWeight = widthWeight + heightWeight + aspectWeight + otherWeight * 0.5;
+  result.confidence = Math.min(totalWeight / 5, 1);
+  return result;
+}
+function propsToDimensions(props) {
+  const result = { confidence: 0 };
+  let matchCount = 0;
+  if (props.width !== undefined) {
+    const width = String(props.width);
+    if (/^\d+$/.test(width)) {
+      result.width = `${width}px`;
+    } else {
+      result.width = width;
+    }
+    matchCount++;
+  }
+  if (props.height !== undefined) {
+    const height = String(props.height);
+    if (/^\d+$/.test(height)) {
+      result.height = `${height}px`;
+    } else {
+      result.height = height;
+    }
+    matchCount++;
+  }
+  const sizeMap = {
+    xs: { width: "1rem", height: "1rem" },
+    sm: { width: "1.5rem", height: "1.5rem" },
+    md: { width: "2rem", height: "2rem" },
+    lg: { width: "2.5rem", height: "2.5rem" },
+    xl: { width: "3rem", height: "3rem" },
+    "2xl": { width: "4rem", height: "4rem" },
+    "3xl": { width: "5rem", height: "5rem" },
+    "4xl": { width: "6rem", height: "6rem" }
+  };
+  if (props.size !== undefined && typeof props.size === "string") {
+    const mapped = sizeMap[props.size];
+    if (mapped) {
+      if (!result.width)
+        result.width = mapped.width;
+      if (!result.height)
+        result.height = mapped.height;
+      matchCount++;
+    }
+  }
+  if (props.size !== undefined && typeof props.size === "number") {
+    const size = `${props.size}px`;
+    if (!result.width)
+      result.width = size;
+    if (!result.height)
+      result.height = size;
+    matchCount++;
+  }
+  result.confidence = Math.min(matchCount / 2, 1);
+  return result;
+}
+function mergeDimensions(...sources) {
+  const result = { confidence: 0 };
+  for (const source of sources) {
+    if (source.width)
+      result.width = source.width;
+    if (source.height)
+      result.height = source.height;
+    if (source.minHeight)
+      result.minHeight = source.minHeight;
+    if (source.aspectRatio)
+      result.aspectRatio = source.aspectRatio;
+    if (source.padding)
+      result.padding = source.padding;
+    if (source.margin)
+      result.margin = source.margin;
+    if (source.borderRadius)
+      result.borderRadius = source.borderRadius;
+    if (source.gap)
+      result.gap = source.gap;
+    result.confidence = Math.max(result.confidence, source.confidence);
+  }
+  return result;
+}
+var SPACING2, BORDER_RADIUS2, MAX_WIDTH;
+var init_skeleton_extractor = __esm(() => {
+  SPACING2 = {
+    "0": "0px",
+    px: "1px",
+    "0.5": "0.125rem",
+    "1": "0.25rem",
+    "1.5": "0.375rem",
+    "2": "0.5rem",
+    "2.5": "0.625rem",
+    "3": "0.75rem",
+    "3.5": "0.875rem",
+    "4": "1rem",
+    "5": "1.25rem",
+    "6": "1.5rem",
+    "7": "1.75rem",
+    "8": "2rem",
+    "9": "2.25rem",
+    "10": "2.5rem",
+    "11": "2.75rem",
+    "12": "3rem",
+    "14": "3.5rem",
+    "16": "4rem",
+    "20": "5rem",
+    "24": "6rem",
+    "28": "7rem",
+    "32": "8rem",
+    "36": "9rem",
+    "40": "10rem",
+    "44": "11rem",
+    "48": "12rem",
+    "52": "13rem",
+    "56": "14rem",
+    "60": "15rem",
+    "64": "16rem",
+    "72": "18rem",
+    "80": "20rem",
+    "96": "24rem",
+    full: "100%",
+    auto: "auto"
+  };
+  BORDER_RADIUS2 = {
+    none: "0px",
+    sm: "0.125rem",
+    DEFAULT: "0.25rem",
+    md: "0.375rem",
+    lg: "0.5rem",
+    xl: "0.75rem",
+    "2xl": "1rem",
+    "3xl": "1.5rem",
+    full: "9999px"
+  };
+  MAX_WIDTH = {
+    xs: "20rem",
+    sm: "24rem",
+    md: "28rem",
+    lg: "32rem",
+    xl: "36rem",
+    "2xl": "42rem",
+    "3xl": "48rem",
+    "4xl": "56rem",
+    "5xl": "64rem",
+    "6xl": "72rem",
+    "7xl": "80rem",
+    "screen-sm": "640px",
+    "screen-md": "768px",
+    "screen-lg": "1024px",
+    "screen-xl": "1280px",
+    "screen-2xl": "1536px",
+    full: "100%",
+    min: "min-content",
+    max: "max-content",
+    fit: "fit-content",
+    prose: "65ch"
+  };
+});
+
+// ../build/src/skeleton-hints.ts
+function parseSkeletonHints(props) {
+  const hint = {};
+  for (const [key, value] of Object.entries(props)) {
+    if (!key.startsWith("data-skeleton-"))
+      continue;
+    const hintKey = key.replace("data-skeleton-", "");
+    switch (hintKey) {
+      case "shape": {
+        const strValue = String(value);
+        if (VALID_SHAPES.includes(strValue)) {
+          hint.shape = strValue;
+        }
+        break;
+      }
+      case "width": {
+        const strValue = String(value);
+        if (strValue && /^[\d.]+(?:px|rem|em|%|vw|vh|ch|ex)?$/.test(strValue)) {
+          hint.width = strValue;
+        } else if (strValue) {
+          hint.width = strValue;
+        }
+        break;
+      }
+      case "height": {
+        const strValue = String(value);
+        if (strValue) {
+          hint.height = strValue;
+        }
+        break;
+      }
+      case "lines": {
+        const numValue = parseInt(String(value), 10);
+        if (!isNaN(numValue) && numValue > 0 && numValue <= 20) {
+          hint.lines = numValue;
+        }
+        break;
+      }
+      case "ignore": {
+        hint.ignore = value === true || value === "true" || value === "1" || value === 1;
+        break;
+      }
+      case "dynamic": {
+        break;
+      }
+    }
+  }
+  return hint;
+}
+function isDynamicFromHints(props) {
+  if (props["data-skeleton-dynamic"] === true || props["data-skeleton-dynamic"] === "true") {
+    return true;
+  }
+  if (props["data-loading"] === true || props["data-loading"] === "true") {
+    return true;
+  }
+  return false;
+}
+var VALID_SHAPES;
+var init_skeleton_hints = __esm(() => {
+  VALID_SHAPES = ["rect", "circle", "text-line", "text-block", "container"];
+});
+
+// ../build/src/skeleton-compiler.ts
+function compileSkeletonTree(tree, config = {}) {
+  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+  return walkAndEnrich(tree, mergedConfig);
+}
+function walkAndEnrich(node, config) {
+  const props = node.props || {};
+  const hints = parseSkeletonHints(props);
+  if (hints.ignore) {
+    return enrichChildren(node, config);
+  }
+  const className = props.className || props.class || "";
+  const tailwindDims = extractDimensionsFromClasses(className);
+  const propDims = propsToDimensions(props);
+  const hintDims = {
+    confidence: hints.width || hints.height ? 1 : 0,
+    ...hints.width && { width: hints.width },
+    ...hints.height && { height: hints.height }
+  };
+  const dimensions = mergeDimensions(tailwindDims, propDims, hintDims);
+  const shape = determineShape(node, hints, dimensions);
+  const isDynamic = isDynamicContent(node, config, hints);
+  const confidence = calculateConfidence(dimensions, hints, isDynamic);
+  const source = determineSource(hints, tailwindDims, propDims);
+  const skeleton = isDynamic && confidence >= config.minConfidence ? {
+    dimensions: stripConfidence(dimensions),
+    shape,
+    lines: hints.lines || (shape === "text-block" ? 3 : undefined),
+    isDynamic,
+    confidence,
+    source
+  } : undefined;
+  const enrichedNode = {
+    ...node,
+    ...skeleton && { _skeleton: skeleton }
+  };
+  return enrichChildren(enrichedNode, config);
+}
+function enrichChildren(node, config) {
+  if (!node.children || node.children.length === 0) {
+    return node;
+  }
+  return {
+    ...node,
+    children: node.children.map((child) => typeof child === "string" ? child : walkAndEnrich(child, config))
+  };
+}
+function determineShape(node, hints, dimensions) {
+  if (hints.shape) {
+    return hints.shape;
+  }
+  const nodeType = node.type;
+  if (IMAGE_COMPONENTS.has(nodeType)) {
+    if (dimensions.aspectRatio === "1/1" || dimensions.borderRadius === "9999px" || dimensions.borderRadius === "50%") {
+      return "circle";
+    }
+    return "rect";
+  }
+  if (TEXT_ELEMENTS.has(nodeType)) {
+    if (hints.lines && hints.lines > 1) {
+      return "text-block";
+    }
+    return "text-line";
+  }
+  if (CONTAINER_ELEMENTS.has(nodeType)) {
+    return "container";
+  }
+  if (nodeType.includes("Text") || nodeType.includes("Label") || nodeType.includes("Title") || nodeType.includes("Heading") || nodeType.includes("Paragraph")) {
+    return "text-line";
+  }
+  if (nodeType.includes("Card") || nodeType.includes("Container") || nodeType.includes("Box") || nodeType.includes("Wrapper") || nodeType.includes("Section")) {
+    return "container";
+  }
+  return "rect";
+}
+function isDynamicContent(node, config, hints) {
+  const props = node.props || {};
+  const nodeType = node.type;
+  if (isDynamicFromHints(props)) {
+    return true;
+  }
+  if (config.alwaysDynamic.includes(nodeType)) {
+    return true;
+  }
+  if (config.neverDynamic.includes(nodeType) && !hints.shape) {
+    return !!(hints.width || hints.height || hints.lines);
+  }
+  if (IMAGE_COMPONENTS.has(nodeType)) {
+    const src = props.src;
+    if (src) {
+      if (src.includes("{") || src.includes("$") || !src.startsWith("/") && !src.startsWith("./") && !src.startsWith("data:")) {
+        return true;
+      }
+    }
+    if (!src) {
+      return true;
+    }
+  }
+  if (props.loading === true || props.isLoading === true || props["aria-busy"] === "true" || props["aria-busy"] === true) {
+    return true;
+  }
+  if (node.children && node.children.length === 1) {
+    const child = node.children[0];
+    if (typeof child === "string") {
+      return false;
+    }
+  }
+  if ((!node.children || node.children.length === 0) && (props.className || props.class)) {
+    const className = props.className || props.class || "";
+    const dims = extractDimensionsFromClasses(className);
+    return dims.confidence > 0.5;
+  }
+  return false;
+}
+function calculateConfidence(dimensions, hints, isDynamic) {
+  if (hints.shape || hints.width || hints.height) {
+    return 1;
+  }
+  let confidence = dimensions.confidence;
+  if (dimensions.width && dimensions.height) {
+    confidence = Math.min(confidence + 0.2, 1);
+  }
+  if (!isDynamic) {
+    confidence *= 0.8;
+  }
+  return confidence;
+}
+function determineSource(hints, tailwindDims, propDims) {
+  if (hints.shape || hints.width || hints.height) {
+    return "hint";
+  }
+  if (tailwindDims.confidence > propDims.confidence) {
+    return "tailwind";
+  }
+  if (propDims.confidence > 0) {
+    return "prop-defaults";
+  }
+  return "tailwind";
+}
+function stripConfidence(dims) {
+  const { confidence, ...rest } = dims;
+  return rest;
+}
+function getSkeletonStats(tree) {
+  let totalNodes = 0;
+  let nodesWithSkeleton = 0;
+  let confidenceSum = 0;
+  const shapeDistribution = {
+    rect: 0,
+    circle: 0,
+    "text-line": 0,
+    "text-block": 0,
+    container: 0
+  };
+  function walk(node) {
+    totalNodes++;
+    if (node._skeleton) {
+      nodesWithSkeleton++;
+      confidenceSum += node._skeleton.confidence;
+      shapeDistribution[node._skeleton.shape]++;
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        if (typeof child !== "string") {
+          walk(child);
+        }
+      }
+    }
+  }
+  walk(tree);
+  return {
+    totalNodes,
+    nodesWithSkeleton,
+    averageConfidence: nodesWithSkeleton > 0 ? confidenceSum / nodesWithSkeleton : 0,
+    shapeDistribution
+  };
+}
+var DEFAULT_CONFIG, TEXT_ELEMENTS, CONTAINER_ELEMENTS, IMAGE_COMPONENTS;
+var init_skeleton_compiler = __esm(() => {
+  init_skeleton_extractor();
+  init_skeleton_hints();
+  DEFAULT_CONFIG = {
+    minConfidence: 0.3,
+    alwaysDynamic: [
+      "Avatar",
+      "UserCard",
+      "ProfileImage",
+      "DataTable",
+      "Chart",
+      "Graph",
+      "Feed",
+      "Timeline",
+      "Comments",
+      "Skeleton"
+    ],
+    neverDynamic: [
+      "Fragment",
+      "div",
+      "span"
+    ],
+    verbose: false
+  };
+  TEXT_ELEMENTS = new Set([
+    "p",
+    "span",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "li",
+    "td",
+    "th",
+    "label",
+    "a",
+    "button",
+    "strong",
+    "em",
+    "code",
+    "pre",
+    "blockquote"
+  ]);
+  CONTAINER_ELEMENTS = new Set([
+    "div",
+    "section",
+    "article",
+    "main",
+    "aside",
+    "header",
+    "footer",
+    "nav",
+    "form",
+    "ul",
+    "ol",
+    "table",
+    "thead",
+    "tbody",
+    "tr"
+  ]);
+  IMAGE_COMPONENTS = new Set([
+    "img",
+    "Image",
+    "Avatar",
+    "ProfileImage",
+    "Thumbnail",
+    "Picture",
+    "picture",
+    "video",
+    "canvas",
+    "svg"
+  ]);
+});
+
 // ../build/src/prerender.ts
 function escapeHtml2(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -59979,13 +60640,65 @@ ${componentCSS}`;
   const hydrationScript = options.addHydrationScript !== false ? generateHydrationScript(context, options.env) : "";
   const title = session.data.title || "AFFECTIVELY";
   const description = session.data.description || "";
-  const html = `<!DOCTYPE html>
+  const skeletonEnabled = options.skeleton?.enabled ?? false;
+  let skeletonHtml = "";
+  let skeletonCss = "";
+  let skeletonInitScript = "";
+  if (skeletonEnabled) {
+    const treeWithSkeleton = compileSkeletonTree(resolvedTree, {
+      minConfidence: options.skeleton?.minConfidence ?? 0.3,
+      alwaysDynamic: options.skeleton?.alwaysDynamic,
+      neverDynamic: options.skeleton?.neverDynamic
+    });
+    skeletonHtml = renderSkeletonTree(treeWithSkeleton);
+    skeletonCss = generateSkeletonCSS();
+    skeletonInitScript = generateSkeletonInitScript();
+    const stats = getSkeletonStats(treeWithSkeleton);
+    if (stats.nodesWithSkeleton > 0) {
+      console.log(`   \uD83E\uDDB4 Skeleton: ${stats.nodesWithSkeleton}/${stats.totalNodes} nodes (${(stats.averageConfidence * 100).toFixed(0)}% avg confidence)`);
+    }
+  }
+  const esiStateEnabled = options.esiState?.enabled ?? false;
+  const esiStateScript = esiStateEnabled ? generateESIStateScript(options.esiState) : "";
+  const html = skeletonEnabled ? `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml2(title)}</title>
   ${description ? `<meta name="description" content="${escapeHtml2(description)}">` : ""}
+  <style>
+/* Skeleton CSS */
+${skeletonCss}
+/* Content CSS */
+${fullCSS}
+  </style>
+  ${esiStateScript}
+  ${skeletonInitScript}
+</head>
+<body>
+  <div id="aeon-skeleton" aria-hidden="true">${skeletonHtml}</div>
+  <div id="root" style="display:none">${htmlContent}</div>
+  <script>
+    // Swap skeleton to content when DOM is ready
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',function(){
+        window.__AEON_SKELETON__&&window.__AEON_SKELETON__.swap({fade:${options.skeleton?.fadeAnimation !== false},duration:${options.skeleton?.fadeDuration ?? 150}});
+      });
+    }else{
+      window.__AEON_SKELETON__&&window.__AEON_SKELETON__.swap({fade:${options.skeleton?.fadeAnimation !== false},duration:${options.skeleton?.fadeDuration ?? 150}});
+    }
+  </script>
+  ${hydrationScript}
+</body>
+</html>` : `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml2(title)}</title>
+  ${description ? `<meta name="description" content="${escapeHtml2(description)}">` : ""}
+  ${esiStateScript}
   <style>${fullCSS}</style>
 </head>
 <body>
@@ -59999,8 +60712,167 @@ ${componentCSS}`;
     html,
     css: fullCSS,
     size: html.length,
-    renderedAt: new Date().toISOString()
+    renderedAt: new Date().toISOString(),
+    ...skeletonEnabled && { skeletonHtml, skeletonCss }
   };
+}
+function renderSkeletonTree(node) {
+  const skeleton = node._skeleton;
+  if (!skeleton || !skeleton.isDynamic) {
+    return (node.children || []).filter((c) => typeof c !== "string").map(renderSkeletonTree).join("");
+  }
+  const style = buildSkeletonStyle(skeleton.dimensions, skeleton.shape);
+  const className = `aeon-skeleton aeon-skeleton--${skeleton.shape}`;
+  if (skeleton.shape === "text-block") {
+    const lines = skeleton.lines || 3;
+    let html = `<div class="${className}" style="${style}" aria-hidden="true">`;
+    for (let i = 0;i < lines; i++) {
+      const lineWidth = i === lines - 1 ? "60%" : "100%";
+      html += `<div class="aeon-skeleton--line" style="width: ${lineWidth}; height: 1em; margin-bottom: 0.5em;"></div>`;
+    }
+    html += "</div>";
+    return html;
+  }
+  if (skeleton.shape === "container") {
+    const childrenHtml = (node.children || []).filter((c) => typeof c !== "string").map(renderSkeletonTree).join("");
+    return `<div class="${className}" style="${style}" aria-hidden="true">${childrenHtml}</div>`;
+  }
+  return `<div class="${className}" style="${style}" aria-hidden="true"></div>`;
+}
+function buildSkeletonStyle(dims = {}, shape) {
+  const styles = [];
+  if (dims.width)
+    styles.push(`width: ${dims.width}`);
+  if (dims.height)
+    styles.push(`height: ${dims.height}`);
+  if (dims.minHeight)
+    styles.push(`min-height: ${dims.minHeight}`);
+  if (dims.aspectRatio)
+    styles.push(`aspect-ratio: ${dims.aspectRatio}`);
+  if (dims.padding)
+    styles.push(`padding: ${dims.padding}`);
+  if (dims.margin)
+    styles.push(`margin: ${dims.margin}`);
+  if (dims.gap)
+    styles.push(`gap: ${dims.gap}`);
+  const radius = dims.borderRadius || (shape === "circle" ? "50%" : shape === "rect" ? "0.25rem" : "0.125rem");
+  styles.push(`border-radius: ${radius}`);
+  if (shape === "container") {
+    styles.push("display: flex");
+    styles.push("flex-direction: column");
+  }
+  return styles.join("; ");
+}
+function generateSkeletonCSS() {
+  return `/* Aeon Skeleton - Zero CLS */
+.aeon-skeleton {
+  background: linear-gradient(90deg, var(--aeon-skeleton-base, #e5e7eb) 0%, var(--aeon-skeleton-highlight, #f3f4f6) 50%, var(--aeon-skeleton-base, #e5e7eb) 100%);
+  background-size: 200% 100%;
+  animation: aeon-skeleton-pulse 1.5s ease-in-out infinite;
+}
+.aeon-skeleton--rect { display: block; }
+.aeon-skeleton--circle { display: block; }
+.aeon-skeleton--text-line { display: block; height: 1em; }
+.aeon-skeleton--text-block { display: flex; flex-direction: column; }
+.aeon-skeleton--line { background: inherit; background-size: inherit; animation: inherit; border-radius: 0.125rem; }
+.aeon-skeleton--container { background: transparent; animation: none; }
+@keyframes aeon-skeleton-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-color-scheme: dark) { :root { --aeon-skeleton-base: #374151; --aeon-skeleton-highlight: #4b5563; } }
+@media (prefers-reduced-motion: reduce) { .aeon-skeleton, .aeon-skeleton--line { animation: none; background-size: 100% 100%; } }`;
+}
+function generateSkeletonInitScript() {
+  return `<script>
+(function(){
+  var s=document.getElementById('aeon-skeleton'),r=document.getElementById('root');
+  if(s&&r){r.style.display='none';s.style.display='block'}
+  window.__AEON_SKELETON__={
+    swap:function(o){
+      if(this.done)return;
+      o=o||{};
+      var f=o.fade!==false,d=o.duration||150;
+      if(f){
+        s.style.transition=r.style.transition='opacity '+d+'ms ease-out';
+        r.style.opacity='0';r.style.display='block';
+        void r.offsetHeight;
+        s.style.opacity='0';r.style.opacity='1';
+        setTimeout(function(){s.remove();o.onComplete&&o.onComplete()},d);
+      }else{
+        s.remove();r.style.display='block';o.onComplete&&o.onComplete();
+      }
+      this.done=true
+    },
+    isVisible:function(){return!this.done&&!!s},
+    done:false
+  };
+})();
+</script>`;
+}
+function generateESIStateScript(config) {
+  const tier = config.defaultTier || "free";
+  const tierFeatures = {
+    free: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: false,
+      customThemes: false,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    starter: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: false,
+      imageAnalysis: false
+    },
+    pro: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    },
+    enterprise: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true
+    }
+  };
+  const features = config.defaultFeatures || tierFeatures[tier] || tierFeatures.free;
+  const esiState = {
+    userTier: tier,
+    emotionState: config.includeEmotionPlaceholder ? null : undefined,
+    preferences: {
+      theme: "auto",
+      reducedMotion: false,
+      language: undefined
+    },
+    sessionId: undefined,
+    localHour: new Date().getHours(),
+    timezone: "UTC",
+    features,
+    userId: undefined,
+    isNewSession: true,
+    recentPages: [],
+    viewport: { width: 1920, height: 1080 },
+    connection: "4g"
+  };
+  const stateJson = JSON.stringify(esiState);
+  return `<script>
+/* Aeon ESI State - Pre-rendered defaults, hydrated at runtime */
+window.__AEON_ESI_STATE__=${stateJson};
+window.__AEON_ESI_STATE__.update=function(o){Object.assign(this,o);this._listeners&&this._listeners.forEach(function(l){l(this)}.bind(this))};
+window.__AEON_ESI_STATE__.subscribe=function(l){this._listeners=this._listeners||[];this._listeners.push(l);return function(){this._listeners=this._listeners.filter(function(x){return x!==l})}.bind(this)};
+</script>`;
 }
 async function prerenderAllPages(sessions, options) {
   const startTime = Date.now();
@@ -60084,9 +60956,13 @@ var init_prerender = __esm(() => {
   init_css_manifest();
   init_asset_manifest();
   init_font_manifest();
+  init_skeleton_compiler();
 });
 // ../build/src/index.ts
 var init_src = __esm(() => {
+  init_skeleton_extractor();
+  init_skeleton_hints();
+  init_skeleton_compiler();
   init_css_manifest();
   init_asset_manifest();
   init_font_manifest();

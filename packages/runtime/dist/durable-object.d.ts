@@ -83,10 +83,30 @@ export declare class AeonPageSession {
      */
     private fireWebhook;
     private handleSessionRequest;
+    /**
+     * Handle session initialization (POST /init)
+     * Creates a new session or returns existing one
+     */
+    private handleInitRequest;
     private handleTreeRequest;
     private handlePresenceRequest;
     private getSession;
     private saveSession;
+    /**
+     * Handle sync queue batch (POST /sync-queue)
+     * Receives a batch of offline operations to sync
+     */
+    private handleSyncQueueRequest;
+    /**
+     * Handle queue status request (GET /queue-status)
+     * Returns pending operations for this session
+     */
+    private handleQueueStatusRequest;
+    /**
+     * Handle conflict resolution (POST /resolve-conflict)
+     * Manually resolve a detected conflict
+     */
+    private handleResolveConflictRequest;
 }
 /**
  * Aeon Routes Registry Durable Object

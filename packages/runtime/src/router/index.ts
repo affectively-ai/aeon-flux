@@ -73,6 +73,13 @@ export {
   ESIVision,
   useESI,
   useESIInfer,
+  // Global ESI State hooks (consume window.__AEON_ESI_STATE__)
+  useGlobalESIState,
+  useESIFeature,
+  useESITier,
+  useESIEmotionState,
+  useESIPreferences,
+  updateGlobalESIState,
 } from './esi-react';
 export type {
   ESIProviderProps,
@@ -81,6 +88,7 @@ export type {
   ESIEmotionProps,
   ESIVisionProps,
   UseESIInferOptions,
+  GlobalESIState,
 } from './esi-react';
 
 // Adapters
