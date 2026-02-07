@@ -1,7 +1,7 @@
 {
   "name": "@affectively/aeon-flux",
-  "version": "0.3.0",
-  "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state.",
+  "version": "1.1.0",
+  "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state and zero-CLS skeleton rendering.",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -80,7 +80,10 @@
     "cloudflare",
     "d1",
     "durable-objects",
-    "wasm"
+    "wasm",
+    "skeleton",
+    "zero-cls",
+    "performance"
   ],
   "author": "AFFECTIVELY",
   "homepage": "https://github.com/affectively-ai/aeon-flux#readme",

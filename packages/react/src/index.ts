@@ -87,3 +87,59 @@ export {
   type PilotNavigationOptions,
   type PilotNavigationState,
 } from './hooks/usePilotNavigation';
+
+// ============================================================================
+// Offline Luxury Features
+// ============================================================================
+
+// Network state hook
+export {
+  useNetworkState,
+  type NetworkState,
+  type BandwidthProfile,
+  type NetworkStateResult,
+} from './hooks/useNetworkState';
+
+// Conflict management hook
+export {
+  useConflicts,
+  addConflict,
+  getAllConflicts,
+  clearAllConflicts,
+  type Conflict,
+  type ConflictStats,
+  type ResolutionStrategy,
+  type UseConflictsResult,
+} from './hooks/useConflicts';
+
+// PWA install prompt component
+export {
+  InstallPrompt,
+  useInstallPrompt,
+  type InstallPromptProps,
+  type InstallPromptState,
+} from './components/InstallPrompt';
+
+// Push notifications component
+export {
+  PushNotifications,
+  usePushNotifications,
+  type PushNotificationsProps,
+  type PushSubscriptionData,
+  type PushNotificationState,
+  type UsePushNotificationsConfig,
+} from './components/PushNotifications';
+
+// Offline diagnostics component
+export {
+  OfflineDiagnostics,
+  NetworkStatusPanel,
+  ServiceWorkerPanel,
+  CacheManagementPanel,
+  QueueStatsPanel,
+  ConflictsPanel,
+  type OfflineDiagnosticsProps,
+  type ServiceWorkerState,
+  type CacheInfo,
+  type QueueStats,
+} from './components/OfflineDiagnostics';

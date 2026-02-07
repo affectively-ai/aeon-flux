@@ -8,9 +8,22 @@
  *
  * With 8.4KB framework + ~2-5KB per page session, we can preload EVERYTHING.
  * A site with 100 pages = ~315KB total (smaller than one hero image!)
+ *
+ * Optional Push & Offline Features:
+ * - Push notification handling (when enabled)
+ * - Background sync for offline queue
+ * - Notification click/close handlers
  */
 
 /// <reference lib="webworker" />
+
+import {
+  handlePush,
+  handleNotificationClick,
+  handleNotificationClose,
+  handleSync,
+  type PushHandlerConfig,
+} from './service-worker-push';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -29,12 +42,28 @@ interface RouteManifest {
 }
 
 interface CacheMessage {
-  type: 'CACHE_STATUS' | 'PRELOAD_PROGRESS' | 'PRELOAD_COMPLETE';
+  type: 'CACHE_STATUS' | 'PRELOAD_PROGRESS' | 'PRELOAD_COMPLETE' | 'QUEUE_STATUS' | 'SYNC_OFFLINE_QUEUE';
   loaded?: number;
   total?: number;
   percentage?: number;
   cachedRoutes?: string[];
+  queueStats?: {
+    pending: number;
+    syncing: number;
+    failed: number;
+    totalBytes: number;
+  };
 }
+
+/**
+ * Push notification configuration
+ * Set via AEON_PUSH_CONFIG in service worker scope
+ */
+const pushConfig: PushHandlerConfig = {
+  defaultIcon: '/icon-192.png',
+  defaultBadge: '/badge-72.png',
+  defaultVibrate: [200, 100, 200],
+};
 
 /**
  * Install event - Pre-cache the framework and manifest
@@ -80,6 +109,35 @@ self.addEventListener('activate', (event) => {
       startTotalPreload();
     })()
   );
+});
+
+/**
+ * Push event - Handle incoming push notifications
+ */
+self.addEventListener('push', (event) => {
+  handlePush(event, pushConfig);
+});
+
+/**
+ * Notification click event - Handle notification interactions
+ */
+self.addEventListener('notificationclick', (event) => {
+  handleNotificationClick(event, pushConfig);
+});
+
+/**
+ * Notification close event - Clean up on notification dismiss
+ */
+self.addEventListener('notificationclose', (event) => {
+  handleNotificationClose(event);
+});
+
+/**
+ * Sync event - Handle background sync for offline queue
+ */
+self.addEventListener('sync', (event: Event) => {
+  const syncEvent = event as ExtendableEvent & { tag: string };
+  handleSync(syncEvent, syncEvent.tag);
 });
 
 /**
@@ -349,6 +407,18 @@ self.addEventListener('message', (event) => {
     case 'CLEAR_CACHE':
       handleClearCache();
       break;
+
+    case 'GET_QUEUE_STATUS':
+      handleGetQueueStatus(event);
+      break;
+
+    case 'SYNC_NOW':
+      handleSyncNow();
+      break;
+
+    case 'GET_NETWORK_STATE':
+      handleGetNetworkState(event);
+      break;
   }
 });
 
@@ -413,6 +483,61 @@ async function handlePrefetchRoute(route: string): Promise<void> {
 async function handleClearCache(): Promise<void> {
   await caches.delete(CACHE_NAME);
   console.log('[aeon-sw] Cache cleared');
+}
+
+/**
+ * Handle queue status request
+ * Returns stats about the offline operation queue
+ */
+async function handleGetQueueStatus(event: ExtendableMessageEvent): Promise<void> {
+  // Queue stats would be stored in IndexedDB by the encrypted queue
+  // For now, we broadcast a message to get stats from the main thread
+  const clients = await self.clients.matchAll({ type: 'window' });
+
+  if (clients.length > 0) {
+    // Ask the first client for queue stats
+    clients[0].postMessage({ type: 'GET_QUEUE_STATS_REQUEST' });
+  }
+
+  // Respond with placeholder - actual stats come from main thread
+  event.ports[0]?.postMessage({
+    pending: 0,
+    syncing: 0,
+    failed: 0,
+    totalBytes: 0,
+  });
+}
+
+/**
+ * Handle sync now request
+ * Triggers immediate sync of offline queue
+ */
+async function handleSyncNow(): Promise<void> {
+  // Broadcast to all clients to trigger sync
+  const clients = await self.clients.matchAll({ type: 'window' });
+  clients.forEach((client) => {
+    client.postMessage({ type: 'SYNC_OFFLINE_QUEUE', timestamp: Date.now() });
+  });
+  console.log('[aeon-sw] Sync triggered');
+}
+
+/**
+ * Handle network state request
+ */
+async function handleGetNetworkState(event: ExtendableMessageEvent): Promise<void> {
+  // Check if we can reach the origin
+  let isOnline = true;
+  try {
+    const response = await fetch(MANIFEST_URL, { method: 'HEAD' });
+    isOnline = response.ok;
+  } catch {
+    isOnline = false;
+  }
+
+  event.ports[0]?.postMessage({
+    state: isOnline ? 'online' : 'offline',
+    timestamp: Date.now(),
+  });
 }
 
 export {};

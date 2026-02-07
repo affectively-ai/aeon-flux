@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-pages-react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React bindings for @affectively/aeon-pages",
   "type": "module",
   "main": "./dist/index.js",

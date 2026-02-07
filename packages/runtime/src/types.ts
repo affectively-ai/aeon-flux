@@ -41,6 +41,12 @@ export interface AeonOptions {
   /** Offline support configuration */
   offline?: OfflineOptions;
 
+  /** Push notification configuration */
+  push?: PushOptions;
+
+  /** PWA install prompt configuration */
+  install?: InstallOptions;
+
   /** Allow dynamic route creation for unclaimed paths */
   dynamicRoutes?: boolean;
 }
@@ -79,8 +85,64 @@ export interface OfflineOptions {
   /** Enable offline support */
   enabled: boolean;
 
-  /** Maximum operations to queue offline */
+  /** Maximum operations to queue offline (default: 1000) */
   maxQueueSize?: number;
+
+  /** Encryption configuration for offline queue */
+  encryption?: {
+    /** Enable encryption for queued operations */
+    enabled: boolean;
+    /** Key derivation method: 'ucan' for UCAN-derived keys, 'session' for session-based */
+    keyDerivation?: 'ucan' | 'session';
+  };
+
+  /** Sync configuration */
+  sync?: {
+    /** Maximum operations per batch (default: 100) */
+    maxBatchSize?: number;
+    /** Maximum bytes per batch (default: 5MB) */
+    maxBatchBytes?: number;
+    /** Batch timeout in ms (default: 5000) */
+    batchTimeoutMs?: number;
+    /** Enable compression for batches (default: true) */
+    enableCompression?: boolean;
+    /** Enable delta sync (default: true) */
+    enableDeltaSync?: boolean;
+    /** Enable adaptive batch sizing based on network (default: true) */
+    adaptiveBatching?: boolean;
+  };
+
+  /** Storage configuration */
+  storage?: {
+    /** Maximum local storage capacity in bytes (default: 50MB) */
+    maxLocalCapacity?: number;
+    /** Interval for D1 sync in ms (default: 5 minutes) */
+    d1SyncInterval?: number;
+  };
+}
+
+/** Push notification configuration */
+export interface PushOptions {
+  /** Enable push notifications */
+  enabled: boolean;
+
+  /** VAPID public key for push subscription */
+  vapidPublicKey?: string;
+
+  /** Default notification icon */
+  defaultIcon?: string;
+
+  /** Default notification badge */
+  defaultBadge?: string;
+}
+
+/** PWA install prompt configuration */
+export interface InstallOptions {
+  /** Show install prompt when available */
+  showPrompt: boolean;
+
+  /** Show iOS-specific installation instructions */
+  iosInstructions: boolean;
 }
 
 export interface ComponentOptions {
@@ -153,11 +215,73 @@ export interface RouteOperation {
   nodeId: string;
 }
 
+// =============================================================================
+// SKELETON SYSTEM - Automatic skeleton generation for zero CLS
+// =============================================================================
+
+/** Shape types for skeleton rendering */
+export type SkeletonShape = 'rect' | 'circle' | 'text-line' | 'text-block' | 'container';
+
+/** Source of skeleton inference */
+export type SkeletonSource = 'tailwind' | 'prop-defaults' | 'hint' | 'measured';
+
+/** Skeleton dimensions extracted from Tailwind classes or props */
+export interface SkeletonDimensions {
+  /** Width CSS value: '256px', '100%', 'auto' */
+  width?: string;
+  /** Height CSS value: '48px', 'auto' */
+  height?: string;
+  /** Min height CSS value */
+  minHeight?: string;
+  /** Aspect ratio: '16/9', '1/1' */
+  aspectRatio?: string;
+  /** Padding CSS value */
+  padding?: string;
+  /** Margin CSS value */
+  margin?: string;
+  /** Border radius CSS value */
+  borderRadius?: string;
+  /** Gap for flex/grid containers */
+  gap?: string;
+}
+
+/** Skeleton metadata attached to component nodes */
+export interface SkeletonMetadata {
+  /** Computed dimensions from Tailwind/props/hints */
+  dimensions: SkeletonDimensions;
+  /** Shape hint for skeleton rendering */
+  shape: SkeletonShape;
+  /** Number of skeleton lines for text-block shape */
+  lines?: number;
+  /** Whether this node has dynamic content that needs skeleton */
+  isDynamic: boolean;
+  /** Confidence score (0-1) for inferred dimensions */
+  confidence: number;
+  /** Source of skeleton data */
+  source: SkeletonSource;
+}
+
+/** Skeleton hint parsed from data-skeleton-* attributes */
+export interface SkeletonHint {
+  /** Explicit shape override */
+  shape?: SkeletonShape;
+  /** Explicit width override */
+  width?: string;
+  /** Explicit height override */
+  height?: string;
+  /** Number of lines for text-block */
+  lines?: number;
+  /** Skip skeleton generation for this element */
+  ignore?: boolean;
+}
+
 /** Serialized component tree */
 export interface SerializedComponent {
   type: string;
   props?: Record<string, unknown>;
   children?: (SerializedComponent | string)[];
+  /** Skeleton metadata for zero-CLS rendering (computed at build time) */
+  _skeleton?: SkeletonMetadata;
 }
 
 /** Page session stored in Aeon */

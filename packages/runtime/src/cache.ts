@@ -285,3 +285,195 @@ export function getNavigationCache(): NavigationCache {
 export function setNavigationCache(cache: NavigationCache): void {
   globalCache = cache;
 }
+
+// =============================================================================
+// SKELETON CACHE - Separate fast cache for skeleton-first rendering
+// =============================================================================
+
+/** Cached skeleton data for a route */
+export interface CachedSkeleton {
+  route: string;
+  html: string;
+  css: string;
+  cachedAt: number;
+  expiresAt?: number;
+}
+
+/** Skeleton cache options */
+export interface SkeletonCacheOptions {
+  /** Maximum number of skeletons to cache */
+  maxSize?: number;
+  /** Default TTL in milliseconds */
+  defaultTtl?: number;
+}
+
+/**
+ * Skeleton Cache - Optimized for instant skeleton delivery
+ *
+ * Skeletons are cached separately from full pages for faster access.
+ * In edge environments, skeletons are stored in KV for ~1ms access.
+ */
+export class SkeletonCache {
+  private cache: Map<string, CachedSkeleton> = new Map();
+  private maxSize: number;
+  private defaultTtl: number;
+
+  constructor(options: SkeletonCacheOptions = {}) {
+    this.maxSize = options.maxSize ?? 500;
+    this.defaultTtl = options.defaultTtl ?? 30 * 60 * 1000; // 30 minutes
+  }
+
+  /**
+   * Get skeleton for a route
+   */
+  get(route: string): CachedSkeleton | null {
+    const skeleton = this.cache.get(route);
+
+    if (!skeleton) return null;
+
+    // Check expiration
+    if (skeleton.expiresAt && Date.now() > skeleton.expiresAt) {
+      this.cache.delete(route);
+      return null;
+    }
+
+    return skeleton;
+  }
+
+  /**
+   * Store skeleton for a route
+   */
+  set(skeleton: CachedSkeleton, ttl?: number): void {
+    // Evict oldest if at capacity
+    if (!this.cache.has(skeleton.route) && this.cache.size >= this.maxSize) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest) this.cache.delete(oldest);
+    }
+
+    this.cache.set(skeleton.route, {
+      ...skeleton,
+      cachedAt: Date.now(),
+      expiresAt: ttl ? Date.now() + ttl : Date.now() + this.defaultTtl,
+    });
+  }
+
+  /**
+   * Check if skeleton is cached
+   */
+  has(route: string): boolean {
+    const skeleton = this.cache.get(route);
+    if (!skeleton) return false;
+
+    if (skeleton.expiresAt && Date.now() > skeleton.expiresAt) {
+      this.cache.delete(route);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Invalidate skeleton for a route
+   */
+  invalidate(route: string): void {
+    this.cache.delete(route);
+  }
+
+  /**
+   * Clear all cached skeletons
+   */
+  clear(): void {
+    this.cache.clear();
+  }
+
+  /**
+   * Get cache size
+   */
+  get size(): number {
+    return this.cache.size;
+  }
+
+  /**
+   * Export all skeletons for service worker
+   */
+  export(): CachedSkeleton[] {
+    return Array.from(this.cache.values());
+  }
+
+  /**
+   * Import skeletons from service worker
+   */
+  import(skeletons: CachedSkeleton[]): void {
+    for (const skeleton of skeletons) {
+      this.set(skeleton);
+    }
+  }
+}
+
+/** Skeleton and content result for progressive rendering */
+export interface SkeletonWithContent {
+  /** Skeleton HTML (available immediately) */
+  skeleton: CachedSkeleton | null;
+  /** Content promise (resolves later) */
+  content: Promise<CachedSession | null>;
+}
+
+/**
+ * Get skeleton and content in parallel for optimal UX
+ *
+ * @param route - The route to fetch
+ * @param skeletonCache - Skeleton cache instance
+ * @param sessionCache - Session cache instance
+ * @param contentFetcher - Function to fetch full content
+ */
+export function getWithSkeleton(
+  route: string,
+  skeletonCache: SkeletonCache,
+  sessionCache: NavigationCache,
+  contentFetcher: (route: string) => Promise<CachedSession>
+): SkeletonWithContent {
+  // Get skeleton immediately (sync)
+  const skeleton = skeletonCache.get(route);
+
+  // Start content fetch in parallel
+  const content = (async () => {
+    // Check session cache first
+    const sessionId = routeToSessionId(route);
+    const cached = sessionCache.get(sessionId);
+    if (cached) return cached;
+
+    // Fetch from network
+    try {
+      const session = await contentFetcher(route);
+      sessionCache.set(session);
+      return session;
+    } catch {
+      return null;
+    }
+  })();
+
+  return { skeleton, content };
+}
+
+/**
+ * Convert route to session ID
+ * This is a simple implementation - real apps may have more complex mapping
+ */
+function routeToSessionId(route: string): string {
+  // Remove leading/trailing slashes and replace slashes with dashes
+  return route.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'index';
+}
+
+// Singleton skeleton cache
+let globalSkeletonCache: SkeletonCache | null = null;
+
+export function getSkeletonCache(): SkeletonCache {
+  if (!globalSkeletonCache) {
+    globalSkeletonCache = new SkeletonCache();
+  }
+  return globalSkeletonCache;
+}
+
+export function setSkeletonCache(cache: SkeletonCache): void {
+  globalSkeletonCache = cache;
+}

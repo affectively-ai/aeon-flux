@@ -39,7 +39,7 @@ interface D1PreparedStatement {
 }
 
 interface WebSocketMessage {
-  type: 'cursor' | 'edit' | 'presence' | 'sync' | 'ping' | 'publish' | 'merge';
+  type: 'cursor' | 'edit' | 'presence' | 'sync' | 'ping' | 'publish' | 'merge' | 'queue-sync' | 'conflict' | 'conflict-resolved';
   payload: unknown;
 }
 
@@ -114,6 +114,12 @@ export class AeonPageSession {
         return this.handleWebhooksConfig(request);
       case '/version':
         return this.handleVersionRequest(request);
+      case '/sync-queue':
+        return this.handleSyncQueueRequest(request);
+      case '/queue-status':
+        return this.handleQueueStatusRequest(request);
+      case '/resolve-conflict':
+        return this.handleResolveConflictRequest(request);
       default:
         return new Response('Not found', { status: 404 });
     }
@@ -792,6 +798,257 @@ export class AeonPageSession {
     // Fire webhooks for session update
     if (fireWebhooks) {
       await this.fireWebhook('session.updated', session, undefined, triggeredBy);
+    }
+  }
+
+  // ============================================================================
+  // Sync Queue Endpoints (for offline-first support)
+  // ============================================================================
+
+  /**
+   * Handle sync queue batch (POST /sync-queue)
+   * Receives a batch of offline operations to sync
+   */
+  private async handleSyncQueueRequest(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    try {
+      const batch = await request.json() as {
+        batchId: string;
+        operations: Array<{
+          operationId: string;
+          type: string;
+          sessionId: string;
+          data: Record<string, unknown>;
+          timestamp: number;
+        }>;
+      };
+
+      const synced: string[] = [];
+      const failed: Array<{ operationId: string; error: string; retryable: boolean }> = [];
+      const conflicts: Array<{
+        operationId: string;
+        remoteVersion: Record<string, unknown>;
+        strategy: string;
+      }> = [];
+
+      // Process each operation
+      for (const op of batch.operations) {
+        try {
+          // Check for conflicts with current session state
+          const session = await this.getSession();
+          if (session && op.type === 'session_update' || op.type === 'tree_update') {
+            // Simple last-write-wins for now
+            // More sophisticated CRDT-based resolution could be added
+            const currentVersion = session.version || 0;
+            const opVersion = (op.data as { version?: number })?.version || 0;
+
+            if (opVersion < currentVersion) {
+              conflicts.push({
+                operationId: op.operationId,
+                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt },
+                strategy: 'remote-wins',
+              });
+              continue;
+            }
+          }
+
+          // Apply the operation
+          if (op.type === 'session_update') {
+            const newSession = { ...(await this.getSession()), ...op.data };
+            await this.saveSession(newSession as PageSession, 'sync-queue', true);
+          } else if (op.type === 'tree_update') {
+            const tree = op.data as SerializedComponent;
+            await this.state.storage.put('tree', tree);
+          } else if (op.type === 'data_update') {
+            const session = await this.getSession();
+            if (session) {
+              session.data = { ...session.data, ...op.data };
+              await this.saveSession(session, 'sync-queue', true);
+            }
+          }
+
+          synced.push(op.operationId);
+        } catch (err) {
+          failed.push({
+            operationId: op.operationId,
+            error: err instanceof Error ? err.message : 'Unknown error',
+            retryable: true,
+          });
+        }
+      }
+
+      // Store sync record for audit
+      await this.state.storage.put(`sync:${batch.batchId}`, {
+        batchId: batch.batchId,
+        processedAt: Date.now(),
+        synced: synced.length,
+        failed: failed.length,
+        conflicts: conflicts.length,
+      });
+
+      return Response.json({
+        success: failed.length === 0,
+        synced,
+        failed,
+        conflicts,
+        serverTimestamp: Date.now(),
+      });
+    } catch (err) {
+      console.error('Failed to process sync queue:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process sync queue', message: err instanceof Error ? err.message : 'Unknown error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  /**
+   * Handle queue status request (GET /queue-status)
+   * Returns pending operations for this session
+   */
+  private async handleQueueStatusRequest(request: Request): Promise<Response> {
+    if (request.method !== 'GET') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    try {
+      // Get all stored sync records
+      const syncRecords = await this.state.storage.list<{
+        batchId: string;
+        processedAt: number;
+        synced: number;
+        failed: number;
+        conflicts: number;
+      }>({ prefix: 'sync:' });
+
+      // Get pending conflicts
+      const conflicts = await this.state.storage.list<{
+        conflictId: string;
+        operationId: string;
+        localData: Record<string, unknown>;
+        remoteData: Record<string, unknown>;
+        detectedAt: number;
+      }>({ prefix: 'conflict:' });
+
+      const unresolvedConflicts = Array.from(conflicts.values()).filter(
+        (c) => !(c as { resolved?: boolean }).resolved
+      );
+
+      return Response.json({
+        pendingOperations: 0, // Operations are processed immediately
+        recentSyncs: Array.from(syncRecords.values()).slice(-10),
+        unresolvedConflicts: unresolvedConflicts.length,
+        conflicts: unresolvedConflicts,
+      });
+    } catch (err) {
+      console.error('Failed to get queue status:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to get queue status' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  /**
+   * Handle conflict resolution (POST /resolve-conflict)
+   * Manually resolve a detected conflict
+   */
+  private async handleResolveConflictRequest(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    try {
+      const { conflictId, strategy, resolvedData, resolvedBy } = await request.json() as {
+        conflictId: string;
+        strategy: 'local-wins' | 'remote-wins' | 'merge' | 'manual';
+        resolvedData?: Record<string, unknown>;
+        resolvedBy?: string;
+      };
+
+      // Get the conflict
+      const conflict = await this.state.storage.get<{
+        conflictId: string;
+        operationId: string;
+        localData: Record<string, unknown>;
+        remoteData: Record<string, unknown>;
+        detectedAt: number;
+      }>(`conflict:${conflictId}`);
+
+      if (!conflict) {
+        return new Response(
+          JSON.stringify({ error: 'Conflict not found' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Determine resolved data based on strategy
+      let finalData: Record<string, unknown>;
+      switch (strategy) {
+        case 'local-wins':
+          finalData = conflict.localData;
+          break;
+        case 'remote-wins':
+          finalData = conflict.remoteData;
+          break;
+        case 'merge':
+          finalData = { ...conflict.remoteData, ...conflict.localData };
+          break;
+        case 'manual':
+          if (!resolvedData) {
+            return new Response(
+              JSON.stringify({ error: 'resolvedData required for manual strategy' }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+          finalData = resolvedData;
+          break;
+      }
+
+      // Apply the resolution
+      const session = await this.getSession();
+      if (session) {
+        session.data = { ...session.data, ...finalData };
+        await this.saveSession(session, resolvedBy || 'conflict-resolution', true);
+      }
+
+      // Mark conflict as resolved
+      await this.state.storage.put(`conflict:${conflictId}`, {
+        ...conflict,
+        resolved: true,
+        resolution: {
+          strategy,
+          resolvedData: finalData,
+          resolvedAt: Date.now(),
+          resolvedBy,
+        },
+      });
+
+      // Broadcast resolution to connected clients
+      this.broadcast({
+        type: 'conflict-resolved',
+        payload: {
+          conflictId,
+          strategy,
+          resolvedData: finalData,
+        },
+      });
+
+      return Response.json({
+        success: true,
+        conflictId,
+        strategy,
+        resolvedData: finalData,
+      });
+    } catch (err) {
+      console.error('Failed to resolve conflict:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to resolve conflict', message: err instanceof Error ? err.message : 'Unknown error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
   }
 }

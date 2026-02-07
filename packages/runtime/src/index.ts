@@ -44,12 +44,32 @@ export {
   NavigationCache,
   getNavigationCache,
   setNavigationCache,
+  // Skeleton cache for zero-CLS rendering
+  SkeletonCache,
+  getSkeletonCache,
+  setSkeletonCache,
+  getWithSkeleton,
 } from './cache';
 export type {
   CachedSession,
   CacheStats,
   NavigationCacheOptions,
+  // Skeleton cache types
+  CachedSkeleton,
+  SkeletonCacheOptions,
+  SkeletonWithContent,
 } from './cache';
+
+// Skeleton hydration - client-side swap
+export {
+  initSkeleton,
+  swapToContent,
+  isSkeletonVisible,
+  generateSkeletonInitScript,
+  generateSkeletonPageStructure,
+  generateAsyncSwapScript,
+} from './skeleton-hydrate';
+export type { SkeletonSwapOptions } from './skeleton-hydrate';
 
 // Navigation predictor (ML-based)
 export {
@@ -127,6 +147,87 @@ export type {
   NextRouteModule,
 } from './nextjs-adapter';
 
+// ============================================================================
+// Offline Luxury Features
+// ============================================================================
+
+// Offline types
+export type {
+  OperationType,
+  OperationPriority,
+  OperationStatus,
+  OfflineOperation,
+  EncryptedQueueConfig,
+  QueueStats,
+  EncryptedPayload,
+  EncryptionKeyMaterial,
+  SyncBatch,
+  SyncResult,
+  ConflictDetectionResult,
+  ResolutionStrategy,
+  StoredConflict,
+  NetworkState,
+  BandwidthProfile,
+  NetworkStateEvent,
+  SyncCoordinatorConfig,
+  SyncProgressEvent,
+  OfflineQueueEvents,
+  SyncCoordinatorEvents,
+} from './offline/types';
+
+// Encryption service
+export {
+  OfflineOperationEncryption,
+  getOperationEncryption,
+  resetOperationEncryption,
+  generateOperationId,
+  estimateEncryptedSize,
+} from './offline/encryption';
+
+// Encrypted offline queue
+export {
+  EncryptedOfflineQueue,
+  getOfflineQueue,
+  createOfflineQueue,
+  resetOfflineQueue,
+} from './offline/encrypted-queue';
+
+// Conflict resolver
+export {
+  ConflictResolver,
+  getConflictResolver,
+  createConflictResolver,
+  resetConflictResolver,
+  type ConflictResolverConfig,
+  type ConflictStats as ConflictResolverStats,
+} from './sync/conflict-resolver';
+
+// Sync coordinator
+export {
+  SyncCoordinator,
+  getSyncCoordinator,
+  createSyncCoordinator,
+  resetSyncCoordinator,
+  type SyncStats,
+} from './sync/coordinator';
+
+// Service worker push handler
+export {
+  handlePush,
+  handleNotificationClick,
+  handleNotificationClose,
+  handleSync,
+  handleMessage,
+  registerPushHandlers,
+  registerSyncHandlers,
+  registerMessageHandlers,
+  urlBase64ToUint8Array,
+  serializePushSubscription,
+  type PushNotificationData,
+  type PushHandlerConfig,
+  type ServiceWorkerMessage,
+} from './service-worker-push';
+
 // Type exports
 export type {
   // Config types
@@ -136,6 +237,8 @@ export type {
   VersioningOptions,
   PresenceOptions,
   OfflineOptions,
+  PushOptions,
+  InstallOptions,
   ComponentOptions,
   OutputOptions,
   // Route types
@@ -149,6 +252,12 @@ export type {
   PresenceInfo,
   PresenceUser,
   AeonCapability,
+  // Skeleton types
+  SkeletonShape,
+  SkeletonSource,
+  SkeletonDimensions,
+  SkeletonMetadata,
+  SkeletonHint,
   // API Route types
   HttpMethod,
   AeonEnv,
@@ -232,4 +341,4 @@ export type {
 } from './router/index';
 
 // Version
-export const VERSION = '0.2.0';
+export const VERSION = '1.0.0';
