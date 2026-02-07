@@ -99,8 +99,11 @@ export class AeonPageSession {
 
     // Handle REST API
     switch (url.pathname) {
+      case '/':
       case '/session':
         return this.handleSessionRequest(request);
+      case '/init':
+        return this.handleInitRequest(request);
       case '/tree':
         return this.handleTreeRequest(request);
       case '/presence':
@@ -697,6 +700,46 @@ export class AeonPageSession {
 
       default:
         return new Response('Method not allowed', { status: 405 });
+    }
+  }
+
+  /**
+   * Handle session initialization (POST /init)
+   * Creates a new session or returns existing one
+   */
+  private async handleInitRequest(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    try {
+      const body = await request.json() as PageSession;
+
+      // Check if session already exists
+      const existing = await this.getSession();
+      if (existing) {
+        return Response.json({ status: 'exists', session: existing });
+      }
+
+      // Create new session
+      const session: PageSession = {
+        route: body.route || '/',
+        tree: body.tree || { type: 'div', props: {}, children: [] },
+        data: body.data || {},
+        schema: body.schema || { version: '1.0.0' },
+        version: 1,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.saveSession(session, 'bootstrap', false);
+
+      return Response.json({ status: 'created', session });
+    } catch (err) {
+      console.error('Failed to initialize session:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to initialize session', message: err instanceof Error ? err.message : 'Unknown error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
   }
 
