@@ -37,6 +37,7 @@ export type {
   NavigationOptions,
   PrefetchOptions,
   NavigationState,
+  PresenceInfo as RoutePresenceInfo,
 } from './navigation';
 
 // Navigation cache (total preload strategy)

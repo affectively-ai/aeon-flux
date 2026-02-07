@@ -97,8 +97,15 @@ export {
   createContextMiddleware,
   setContextCookies,
   addSpeculationHeaders,
+  // ESI State Serialization
+  serializeToESIState,
+  generateESIStateScript,
+  generateESIStateScriptFromContext,
 } from './context-extractor';
-export type { ContextExtractorOptions } from './context-extractor';
+export type {
+  ContextExtractorOptions,
+  ESIState,
+} from './context-extractor';
 
 // Speculation (client-side prefetching)
 export {

@@ -114,13 +114,15 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
       // Get initial presence
       const initialPresence = getPresence(href);
       if (initialPresence) {
-        setPresence(initialPresence);
+        const { count, editing, hot, users } = initialPresence;
+        setPresence({ count, editing, hot, users });
       }
 
       // Subscribe to updates
       const unsubscribe = subscribePresence((route, info) => {
         if (route === href) {
-          setPresence(info);
+          const { count, editing, hot, users } = info;
+          setPresence({ count, editing, hot, users });
         }
       });
 

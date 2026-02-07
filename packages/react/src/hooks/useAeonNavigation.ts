@@ -17,9 +17,17 @@ import type {
   NavigationOptions,
   PrefetchOptions,
   NavigationState,
-  PresenceInfo,
+  RoutePresenceInfo,
 } from '@affectively/aeon-pages-runtime';
+
+// Navigation-level predicted route (simpler than ML predictor's version)
+export interface NavigationPrediction {
+  route: string;
+  probability: number;
+  reason: 'history' | 'hover' | 'visibility' | 'community';
+}
 import { getNavigator } from '@affectively/aeon-pages-runtime';
+
 
 // Context for providing custom navigation engine
 export interface AeonNavigationContextValue {
@@ -125,7 +133,7 @@ export function useRoutePresence() {
 
   // Get cached presence for a route
   const getPresence = useCallback(
-    (route: string): PresenceInfo | null => {
+    (route: string): RoutePresenceInfo | null => {
       return navigator.getPresence(route);
     },
     [navigator]
@@ -133,7 +141,7 @@ export function useRoutePresence() {
 
   // Subscribe to presence updates
   const subscribePresence = useCallback(
-    (callback: (route: string, presence: PresenceInfo) => void): (() => void) => {
+    (callback: (route: string, presence: RoutePresenceInfo) => void): (() => void) => {
       return navigator.subscribePresence(callback);
     },
     [navigator]
@@ -148,12 +156,12 @@ export function useRoutePresence() {
 /**
  * Navigation prediction hook
  */
-export function useNavigationPrediction() {
+export function useNavigationPrediction(): { predict: (fromRoute?: string) => NavigationPrediction[] } {
   const navigator = useNavigator();
 
   // Get predictions for current route
   const predict = useCallback(
-    (fromRoute?: string) => {
+    (fromRoute?: string): NavigationPrediction[] => {
       const state = navigator.getState();
       return navigator.predict(fromRoute ?? state.current);
     },
@@ -201,4 +209,4 @@ export function useTotalPreload() {
 }
 
 // Re-export types for convenience
-export type { NavigationOptions, PrefetchOptions, NavigationState, PresenceInfo };
+export type { NavigationOptions, PrefetchOptions, NavigationState, RoutePresenceInfo };

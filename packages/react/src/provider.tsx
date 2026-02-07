@@ -104,19 +104,17 @@ export function AeonPageProvider({ route, children, initialData = {} }: AeonPage
     const initAeon = async () => {
       try {
         // Dynamic import to avoid SSR issues
-        const aeon = await import('@affectively/aeon');
+        const aeon = await import('@affectively/aeon-pages-runtime');
 
         // Initialize sync coordinator
-        syncCoordinatorRef.current = new aeon.SyncCoordinator();
-
-        // Initialize presence manager
-        presenceManagerRef.current = aeon.AgentPresenceManager.getInstance(sessionId);
+        syncCoordinatorRef.current = aeon.getSyncCoordinator();
 
         // Initialize offline queue
-        offlineQueueRef.current = aeon.OfflineOperationQueue.getInstance();
+        offlineQueueRef.current = aeon.getOfflineQueue();
 
-        // Initialize version manager
-        versionManagerRef.current = new aeon.SchemaVersionManager();
+        // Presence manager and version manager are handled via WebSocket
+        presenceManagerRef.current = null;
+        versionManagerRef.current = null;
 
         // Set up local user
         const userId = generateUserId();

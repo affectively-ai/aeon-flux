@@ -392,3 +392,146 @@ export function addSpeculationHeaders(
     headers,
   });
 }
+
+// ============================================================================
+// ESI State Serialization
+// ============================================================================
+
+/**
+ * ESI State for global injection in <head>
+ * This is consumed by ESI components before React hydration
+ */
+export interface ESIState {
+  /** User subscription tier for feature gating */
+  userTier: UserTier;
+  /** Current emotional state for personalization */
+  emotionState?: {
+    primary: string;
+    valence: number;
+    arousal: number;
+    confidence?: number;
+  };
+  /** User preferences for UI adaptation */
+  preferences: {
+    theme?: 'light' | 'dark' | 'auto';
+    reducedMotion: boolean;
+    language?: string;
+  };
+  /** Session information */
+  sessionId?: string;
+  /** Local time context */
+  localHour: number;
+  timezone: string;
+  /** Feature flags based on tier */
+  features: {
+    aiInference: boolean;
+    emotionTracking: boolean;
+    collaboration: boolean;
+    advancedInsights: boolean;
+    customThemes: boolean;
+    voiceSynthesis: boolean;
+    imageAnalysis: boolean;
+  };
+  /** User ID (if authenticated) */
+  userId?: string;
+  /** Is this a new session? */
+  isNewSession: boolean;
+  /** Recent pages for personalization */
+  recentPages: string[];
+  /** Viewport information */
+  viewport: {
+    width: number;
+    height: number;
+  };
+  /** Connection quality */
+  connection: ConnectionType;
+}
+
+/**
+ * Serialize UserContext to ESIState for global injection
+ */
+export function serializeToESIState(context: UserContext): ESIState {
+  // Determine feature flags based on tier
+  const tierFeatures: Record<UserTier, ESIState['features']> = {
+    free: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: false,
+      customThemes: false,
+      voiceSynthesis: false,
+      imageAnalysis: false,
+    },
+    starter: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: false,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: false,
+      imageAnalysis: false,
+    },
+    pro: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true,
+    },
+    enterprise: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true,
+    },
+  };
+
+  return {
+    userTier: context.tier,
+    emotionState: context.emotionState ? {
+      primary: context.emotionState.primary,
+      valence: context.emotionState.valence,
+      arousal: context.emotionState.arousal,
+      confidence: context.emotionState.confidence,
+    } : undefined,
+    preferences: {
+      theme: context.preferences.theme as 'light' | 'dark' | 'auto' | undefined,
+      reducedMotion: context.reducedMotion,
+      language: context.preferences.language as string | undefined,
+    },
+    sessionId: context.sessionId,
+    localHour: context.localHour,
+    timezone: context.timezone,
+    features: tierFeatures[context.tier],
+    userId: context.userId,
+    isNewSession: context.isNewSession,
+    recentPages: context.recentPages.slice(-10), // Last 10 pages
+    viewport: {
+      width: context.viewport.width,
+      height: context.viewport.height,
+    },
+    connection: context.connection,
+  };
+}
+
+/**
+ * Generate inline script for ESI state injection in <head>
+ * This must execute before any ESI components render
+ */
+export function generateESIStateScript(esiState: ESIState): string {
+  const stateJson = JSON.stringify(esiState);
+  return `<script>window.__AEON_ESI_STATE__=${stateJson};</script>`;
+}
+
+/**
+ * Generate ESI state script from UserContext
+ */
+export function generateESIStateScriptFromContext(context: UserContext): string {
+  const esiState = serializeToESIState(context);
+  return generateESIStateScript(esiState);
+}

@@ -12,12 +12,17 @@
     }
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target browser",
+    "build": "bun build ./src/index.ts --outdir ./dist --target browser && tsc --declaration --emitDeclarationOnly",
     "dev": "bun --watch ./src/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
-    "@affectively/aeon-pages-runtime": "workspace:*"
+    "@affectively/aeon-pages-runtime": "^0.3.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
