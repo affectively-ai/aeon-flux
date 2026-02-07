@@ -748,15 +748,4 @@ export function getToolSuggestions(
   return suggestions.sort((a, b) => b.priority - a.priority);
 }
 
-// ============================================================================
-// Exports
-// ============================================================================
-
-export {
-  esiContext,
-  esiCyrano,
-  esiHalo,
-  evaluateTrigger,
-  createExhaustEntry,
-  getToolSuggestions,
-};
+// All functions are exported at their definition site

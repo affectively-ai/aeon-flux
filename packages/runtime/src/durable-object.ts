@@ -735,6 +735,7 @@ export class AeonPageSession {
         schema: body.schema || { version: '1.0.0' },
         version: 1,
         updatedAt: new Date().toISOString(),
+        presence: [],
       };
 
       await this.saveSession(session, 'bootstrap', false);
@@ -839,7 +840,7 @@ export class AeonPageSession {
         try {
           // Check for conflicts with current session state
           const session = await this.getSession();
-          if (session && op.type === 'session_update' || op.type === 'tree_update') {
+          if (session && (op.type === 'session_update' || op.type === 'tree_update')) {
             // Simple last-write-wins for now
             // More sophisticated CRDT-based resolution could be added
             const currentVersion = session.version || 0;
@@ -848,7 +849,7 @@ export class AeonPageSession {
             if (opVersion < currentVersion) {
               conflicts.push({
                 operationId: op.operationId,
-                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt },
+                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt || '' },
                 strategy: 'remote-wins',
               });
               continue;
@@ -857,10 +858,13 @@ export class AeonPageSession {
 
           // Apply the operation
           if (op.type === 'session_update') {
-            const newSession = { ...(await this.getSession()), ...op.data };
-            await this.saveSession(newSession as PageSession, 'sync-queue', true);
+            const currentSession = await this.getSession();
+            if (currentSession) {
+              const newSession = { ...currentSession, ...op.data };
+              await this.saveSession(newSession as PageSession, 'sync-queue', true);
+            }
           } else if (op.type === 'tree_update') {
-            const tree = op.data as SerializedComponent;
+            const tree = op.data as unknown as SerializedComponent;
             await this.state.storage.put('tree', tree);
           } else if (op.type === 'data_update') {
             const session = await this.getSession();

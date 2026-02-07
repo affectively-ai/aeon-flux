@@ -18,8 +18,8 @@ import type {
   PrefetchOptions,
   NavigationState,
   PresenceInfo,
-} from '../../runtime/src/navigation';
-import { getNavigator } from '../../runtime/src/navigation';
+} from '@affectively/aeon-pages-runtime';
+import { getNavigator } from '@affectively/aeon-pages-runtime';
 
 // Context for providing custom navigation engine
 export interface AeonNavigationContextValue {

@@ -67,7 +67,7 @@ function createMockTreeForCompiler(nodeCount: number) {
   return { id: 'root', type: 'Page', children };
 }
 
-async function benchmark(name: string, fn: () => void | Promise<void>, iterations: number = 1000) {
+async function benchmark(name: string, fn: () => unknown | Promise<unknown>, iterations: number = 1000) {
   // Warmup
   for (let i = 0; i < 10; i++) await fn();
 

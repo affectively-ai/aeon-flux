@@ -17,7 +17,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@affectively/aeon": "workspace:*"
+    "@affectively/aeon-pages-runtime": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
