@@ -149,11 +149,31 @@ export type {
 // ESI Control React Components
 export {
   ESIControl,
+  // Core
   ESIStructured,
+  // Conditionals
   ESIIf,
+  ESIShow,
+  ESIHide,
+  ESIWhen,
+  ESIUnless,
+  // Pattern Matching
   ESIMatch,
   ESICase,
   ESIDefault,
+  ESIFirst,
+  // Gates
+  ESITierGate,
+  ESIEmotionGate,
+  ESITimeGate,
+  // Iteration & Selection
+  ESIForEach,
+  ESISelect,
+  ESIABTest,
+  // Numeric
+  ESIClamp,
+  ESIScore,
+  // Advanced
   ESICollaborative,
   ESIReflect,
   ESIOptimize,
@@ -162,9 +182,22 @@ export {
 export type {
   ESIStructuredProps,
   ESIIfProps,
+  ESIShowProps,
+  ESIHideProps,
+  ESIWhenProps,
+  ESIUnlessProps,
   ESIMatchProps,
   ESICaseProps,
   ESIDefaultProps,
+  ESIFirstProps,
+  ESITierGateProps,
+  ESIEmotionGateProps,
+  ESITimeGateProps,
+  ESIForEachProps,
+  ESISelectProps,
+  ESIABTestProps,
+  ESIClampProps,
+  ESIScoreProps,
   ESICollaborativeProps,
   ESIReflectProps,
   ESIOptimizeProps,

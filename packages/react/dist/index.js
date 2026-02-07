@@ -11510,7 +11510,7 @@ React keys must be passed directly to JSX without using spread:
       pro: {},
       enterprise: {}
     },
-    defaultAccent: "#6366f1",
+    defaultAccent: "#336699",
     signals: {},
     defaultPaths: ["/"],
     maxSpeculationPaths: 5

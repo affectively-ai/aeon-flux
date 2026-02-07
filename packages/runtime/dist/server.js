@@ -6171,7 +6171,7 @@ var DEFAULT_CONFIG = {
     pro: {},
     enterprise: {}
   },
-  defaultAccent: "#6366f1",
+  defaultAccent: "#336699",
   signals: {},
   defaultPaths: ["/"],
   maxSpeculationPaths: 5
@@ -7831,12 +7831,427 @@ function ESIAuto({
     children
   }, undefined, false, undefined, this);
 }
+function ESIShow({
+  condition,
+  children,
+  fallback = null,
+  loading = null,
+  cacheTtl,
+  onEvaluate,
+  className
+}) {
+  const [show, setShow] = import_react2.useState(null);
+  const boolSchema = {
+    safeParse: (val) => {
+      if (typeof val === "boolean")
+        return { success: true, data: val };
+      if (typeof val === "string") {
+        const lower = val.toLowerCase().trim();
+        if (lower === "true" || lower === "yes" || lower === "1")
+          return { success: true, data: true };
+        if (lower === "false" || lower === "no" || lower === "0")
+          return { success: true, data: false };
+      }
+      if (typeof val === "object" && val !== null && "result" in val) {
+        return { success: true, data: Boolean(val.result) };
+      }
+      return { success: false, error: "Not a boolean" };
+    }
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIStructured, {
+        prompt: `Evaluate this condition and respond with only "true" or "false": ${condition}`,
+        schema: boolSchema,
+        cacheTtl,
+        loading,
+        onSuccess: (result) => {
+          setShow(result);
+          onEvaluate?.(result);
+        },
+        render: () => null
+      }, undefined, false, undefined, this),
+      show === true && children,
+      show === false && fallback
+    ]
+  }, undefined, true, undefined, this);
+}
+function ESIHide({
+  condition,
+  children,
+  loading = null,
+  cacheTtl,
+  className
+}) {
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIShow, {
+    condition,
+    fallback: children,
+    loading,
+    cacheTtl,
+    className,
+    children: null
+  }, undefined, false, undefined, this);
+}
+function ESIWhen({ condition, children, loading, cacheTtl, className }) {
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIShow, {
+    condition,
+    loading,
+    cacheTtl,
+    className,
+    children
+  }, undefined, false, undefined, this);
+}
+function ESIUnless({ condition, children, loading, cacheTtl, className }) {
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIHide, {
+    condition,
+    loading,
+    cacheTtl,
+    className,
+    children
+  }, undefined, false, undefined, this);
+}
+var TIER_LEVELS = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+function ESITierGate({ minTier, children, fallback = null, className }) {
+  const [hasAccess, setHasAccess] = import_react2.useState(null);
+  import_react2.useEffect(() => {
+    const state = typeof window !== "undefined" && window.__AEON_ESI_STATE__ || {};
+    const userTier = state.userTier || "free";
+    const userLevel = TIER_LEVELS[userTier] ?? 0;
+    const requiredLevel = TIER_LEVELS[minTier] ?? 0;
+    setHasAccess(userLevel >= requiredLevel);
+  }, [minTier]);
+  if (hasAccess === null)
+    return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+      className
+    }, undefined, false, undefined, this);
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children: hasAccess ? children : fallback
+  }, undefined, false, undefined, this);
+}
+function ESIEmotionGate({
+  allow,
+  block,
+  valenceRange,
+  arousalRange,
+  children,
+  fallback = null,
+  className
+}) {
+  const [hasAccess, setHasAccess] = import_react2.useState(null);
+  import_react2.useEffect(() => {
+    const state = typeof window !== "undefined" && window.__AEON_ESI_STATE__ || {};
+    const emotion = state.emotionState || {};
+    let access = true;
+    if (allow && allow.length > 0 && emotion.primary) {
+      access = access && allow.includes(emotion.primary);
+    }
+    if (block && block.length > 0 && emotion.primary) {
+      access = access && !block.includes(emotion.primary);
+    }
+    if (valenceRange && emotion.valence !== undefined) {
+      access = access && emotion.valence >= valenceRange[0] && emotion.valence <= valenceRange[1];
+    }
+    if (arousalRange && emotion.arousal !== undefined) {
+      access = access && emotion.arousal >= arousalRange[0] && emotion.arousal <= arousalRange[1];
+    }
+    setHasAccess(access);
+  }, [allow, block, valenceRange, arousalRange]);
+  if (hasAccess === null)
+    return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+      className
+    }, undefined, false, undefined, this);
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children: hasAccess ? children : fallback
+  }, undefined, false, undefined, this);
+}
+function ESITimeGate({
+  after,
+  before,
+  days,
+  children,
+  fallback = null,
+  className
+}) {
+  const [inRange, setInRange] = import_react2.useState(null);
+  import_react2.useEffect(() => {
+    const now = new Date;
+    const hour = now.getHours();
+    const day = now.getDay();
+    let access = true;
+    if (after !== undefined)
+      access = access && hour >= after;
+    if (before !== undefined)
+      access = access && hour < before;
+    if (days && days.length > 0)
+      access = access && days.includes(day);
+    setInRange(access);
+  }, [after, before, days]);
+  if (inRange === null)
+    return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+      className
+    }, undefined, false, undefined, this);
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children: inRange ? children : fallback
+  }, undefined, false, undefined, this);
+}
+function ESIABTest({
+  name,
+  variants,
+  selectionPrompt,
+  random = false,
+  onSelect,
+  loading = null,
+  className
+}) {
+  const [selectedVariant, setSelectedVariant] = import_react2.useState(null);
+  const variantKeys = Object.keys(variants);
+  import_react2.useEffect(() => {
+    if (random || !selectionPrompt) {
+      const selected = variantKeys[Math.floor(Math.random() * variantKeys.length)];
+      setSelectedVariant(selected);
+      onSelect?.(selected);
+    }
+  }, [random, selectionPrompt]);
+  if (random || !selectionPrompt) {
+    if (!selectedVariant)
+      return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+        className,
+        children: loading
+      }, undefined, false, undefined, this);
+    return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+      className,
+      children: variants[selectedVariant]
+    }, undefined, false, undefined, this);
+  }
+  const variantSchema = {
+    safeParse: (val) => {
+      const str = String(val).trim();
+      if (variantKeys.includes(str))
+        return { success: true, data: str };
+      for (const key of variantKeys) {
+        if (str.toLowerCase().includes(key.toLowerCase())) {
+          return { success: true, data: key };
+        }
+      }
+      return { success: false, error: "Invalid variant" };
+    }
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children: [
+      /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIStructured, {
+        prompt: `${selectionPrompt}
+
+Available variants: ${variantKeys.join(", ")}
+
+Respond with only the variant name.`,
+        schema: variantSchema,
+        loading,
+        onSuccess: (selected) => {
+          setSelectedVariant(selected);
+          onSelect?.(selected);
+        },
+        render: () => null
+      }, undefined, false, undefined, this),
+      selectedVariant && variants[selectedVariant]
+    ]
+  }, undefined, true, undefined, this);
+}
+function ESIForEach({
+  prompt,
+  itemSchema,
+  render,
+  maxItems = 10,
+  empty = null,
+  loading = "...",
+  as: Wrapper = "div",
+  className
+}) {
+  const [items, setItems] = import_react2.useState([]);
+  const [isLoading, setIsLoading] = import_react2.useState(true);
+  const arraySchema = {
+    safeParse: (val) => {
+      try {
+        let arr;
+        if (Array.isArray(val)) {
+          arr = val;
+        } else if (typeof val === "string") {
+          arr = JSON.parse(val);
+        } else if (typeof val === "object" && val !== null && "items" in val) {
+          arr = val.items;
+        } else {
+          return { success: false, error: "Not an array" };
+        }
+        const validItems = [];
+        for (const item of arr.slice(0, maxItems)) {
+          const result = itemSchema.safeParse(item);
+          if (result.success) {
+            validItems.push(result.data);
+          }
+        }
+        return { success: true, data: validItems };
+      } catch {
+        return { success: false, error: "Parse error" };
+      }
+    }
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIStructured, {
+    prompt: `${prompt}
+
+Respond with a JSON array of items (max ${maxItems}).`,
+    schema: arraySchema,
+    loading,
+    fallback: empty,
+    className,
+    onSuccess: (result) => {
+      setItems(result);
+      setIsLoading(false);
+    },
+    render: (data) => {
+      if (data.length === 0)
+        return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(jsx_dev_runtime2.Fragment, {
+          children: empty
+        }, undefined, false, undefined, this);
+      return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(Wrapper, {
+        className,
+        children: data.map((item, i) => render(item, i))
+      }, undefined, false, undefined, this);
+    }
+  }, undefined, false, undefined, this);
+}
+function ESIFirst({
+  context,
+  children,
+  fallback = null,
+  loading = null,
+  className
+}) {
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV("span", {
+    className,
+    children
+  }, undefined, false, undefined, this);
+}
+function ESIClamp({
+  prompt,
+  min,
+  max,
+  render,
+  defaultValue,
+  loading = "...",
+  className
+}) {
+  const numSchema = {
+    safeParse: (val) => {
+      let num;
+      if (typeof val === "number") {
+        num = val;
+      } else if (typeof val === "string") {
+        num = parseFloat(val);
+      } else if (typeof val === "object" && val !== null && "value" in val) {
+        num = Number(val.value);
+      } else {
+        return { success: false, error: "Not a number" };
+      }
+      if (isNaN(num))
+        return { success: false, error: "NaN" };
+      return { success: true, data: Math.max(min, Math.min(max, num)) };
+    }
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIStructured, {
+    prompt: `${prompt}
+
+Respond with a number between ${min} and ${max}.`,
+    schema: numSchema,
+    loading,
+    fallback: defaultValue !== undefined ? render(defaultValue) : null,
+    className,
+    render: (value) => render(value)
+  }, undefined, false, undefined, this);
+}
+function ESISelect({
+  prompt,
+  options,
+  render,
+  defaultOption,
+  loading = "...",
+  onSelect,
+  className
+}) {
+  const optionSchema = {
+    safeParse: (val) => {
+      const str = String(val).trim().toLowerCase();
+      const match = options.find((o) => o.toLowerCase() === str);
+      if (match)
+        return { success: true, data: match };
+      const partial = options.find((o) => str.includes(o.toLowerCase()) || o.toLowerCase().includes(str));
+      if (partial)
+        return { success: true, data: partial };
+      return { success: false, error: "No match" };
+    }
+  };
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIStructured, {
+    prompt: `${prompt}
+
+Options: ${options.join(", ")}
+
+Respond with only one of the options.`,
+    schema: optionSchema,
+    loading,
+    fallback: defaultOption ? render(defaultOption) : null,
+    className,
+    onSuccess: onSelect,
+    render: (selected) => render(selected)
+  }, undefined, false, undefined, this);
+}
+var DEFAULT_THRESHOLDS = [
+  { value: 0.2, label: "very low" },
+  { value: 0.4, label: "low" },
+  { value: 0.6, label: "moderate" },
+  { value: 0.8, label: "high" },
+  { value: 1, label: "very high" }
+];
+function ESIScore({
+  prompt,
+  render,
+  thresholds = DEFAULT_THRESHOLDS,
+  loading = "...",
+  className
+}) {
+  return /* @__PURE__ */ jsx_dev_runtime2.jsxDEV(ESIClamp, {
+    prompt,
+    min: 0,
+    max: 1,
+    loading,
+    className,
+    render: (score) => {
+      const label = thresholds.find((t) => score <= t.value)?.label || "unknown";
+      return render(score, label);
+    }
+  }, undefined, false, undefined, this);
+}
 var ESIControl = {
   Structured: ESIStructured,
   If: ESIIf,
+  Show: ESIShow,
+  Hide: ESIHide,
+  When: ESIWhen,
+  Unless: ESIUnless,
   Match: ESIMatch,
   Case: ESICase,
   Default: ESIDefault,
+  First: ESIFirst,
+  TierGate: ESITierGate,
+  EmotionGate: ESIEmotionGate,
+  TimeGate: ESITimeGate,
+  ForEach: ESIForEach,
+  Select: ESISelect,
+  ABTest: ESIABTest,
+  Clamp: ESIClamp,
+  Score: ESIScore,
   Collaborative: ESICollaborative,
   Reflect: ESIReflect,
   Optimize: ESIOptimize,

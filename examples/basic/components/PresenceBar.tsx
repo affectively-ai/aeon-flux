@@ -50,7 +50,7 @@ function UserAvatar({ user }: { user: PresenceUser }) {
     <div
       className="relative w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-medium"
       style={{
-        backgroundColor: isAgent ? '#8b5cf6' : '#3b82f6',
+        backgroundColor: isAgent ? '#336699' : '#3b82f6',
         color: 'white',
       }}
       title={`${user.userId.slice(0, 8)} (${user.role})`}

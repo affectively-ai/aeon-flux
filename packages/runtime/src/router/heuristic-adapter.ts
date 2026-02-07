@@ -83,7 +83,7 @@ const DEFAULT_CONFIG: Required<HeuristicAdapterConfig> = {
     pro: {},
     enterprise: {},
   },
-  defaultAccent: '#6366f1', // Indigo - neutral default
+  defaultAccent: '#336699', // Steel blue - neutral default
   signals: {},
   defaultPaths: ['/'],
   maxSpeculationPaths: 5,

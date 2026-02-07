@@ -20,7 +20,7 @@ export { SpeculationManager, supportsSpeculationRules, supportsLinkPrefetch, aut
 export type { SpeculationOptions, SpeculationState, } from './speculation';
 export { parseWithSchema, generateSchemaPrompt, createControlProcessor, esiIf, esiMatch, } from './esi-control';
 export type { ESICondition, ESIIfDirective, ESIMatchDirective, ESIControlResult, ESISchemaParams, ESISchemaResult, ESIControlProcessor, } from './esi-control';
-export { ESIControl, ESIStructured, ESIIf, ESIMatch, ESICase, ESIDefault, ESICollaborative, ESIReflect, ESIOptimize, ESIAuto, } from './esi-control-react';
-export type { ESIStructuredProps, ESIIfProps, ESIMatchProps, ESICaseProps, ESIDefaultProps, ESICollaborativeProps, ESIReflectProps, ESIOptimizeProps, ESIAutoProps, OptimizeMeta, } from './esi-control-react';
+export { ESIControl, ESIStructured, ESIIf, ESIShow, ESIHide, ESIWhen, ESIUnless, ESIMatch, ESICase, ESIDefault, ESIFirst, ESITierGate, ESIEmotionGate, ESITimeGate, ESIForEach, ESISelect, ESIABTest, ESIClamp, ESIScore, ESICollaborative, ESIReflect, ESIOptimize, ESIAuto, } from './esi-control-react';
+export type { ESIStructuredProps, ESIIfProps, ESIShowProps, ESIHideProps, ESIWhenProps, ESIUnlessProps, ESIMatchProps, ESICaseProps, ESIDefaultProps, ESIFirstProps, ESITierGateProps, ESIEmotionGateProps, ESITimeGateProps, ESIForEachProps, ESISelectProps, ESIABTestProps, ESIClampProps, ESIScoreProps, ESICollaborativeProps, ESIReflectProps, ESIOptimizeProps, ESIAutoProps, OptimizeMeta, } from './esi-control-react';
 export { esiContext, esiCyrano, esiHalo, evaluateTrigger, createExhaustEntry, getToolSuggestions, CYRANO_TOOL_SUGGESTIONS, } from './esi-cyrano';
 export type { SessionContext, EmotionContext, BehaviorContext, EnvironmentContext, BiometricContext, CyranoWhisperConfig, CyranoIntent, CyranoTone, CyranoTrigger, HaloInsightConfig, HaloObservation, HaloAction, ChatExhaustType, ChatExhaustEntry, ESIWhisperResult, } from './esi-cyrano';

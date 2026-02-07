@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-07
+
+### Added
+
+- **ESI Control Components** - Comprehensive control flow for AI-powered rendering:
+  - `ESI.Show` / `ESI.Hide` - Simple boolean visibility
+  - `ESI.When` / `ESI.Unless` - Conditional rendering shorthands
+  - `ESI.TierGate` - Gate content by user tier
+  - `ESI.EmotionGate` - Gate content by emotion state
+  - `ESI.TimeGate` - Gate content by time of day
+  - `ESI.ABTest` - A/B testing with AI or random selection
+  - `ESI.ForEach` - Iterate over AI-generated lists
+  - `ESI.Select` - Choose from predefined options
+  - `ESI.Clamp` / `ESI.Score` - Numeric inference with constraints
+  - `ESI.First` - Render first matching condition
+
+### Changed
+
+- Default accent color changed from indigo to steel blue (#336699)
+- Package description updated
+
 ## [1.1.3] - 2026-02-07
 
 ### Added

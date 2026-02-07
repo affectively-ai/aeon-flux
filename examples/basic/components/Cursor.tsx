@@ -13,7 +13,7 @@ function userColor(userId: string): string {
     '#22c55e', // green
     '#06b6d4', // cyan
     '#3b82f6', // blue
-    '#8b5cf6', // violet
+    '#336699', // steel blue
     '#ec4899', // pink
   ];
   let hash = 0;
