@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-flux",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state and zero-CLS skeleton rendering.",
   "type": "module",
   "workspaces": [
@@ -15,6 +15,10 @@
     ".": {
       "import": "./packages/runtime/dist/index.js",
       "types": "./packages/runtime/dist/index.d.ts"
+    },
+    "./esi": {
+      "import": "./packages/runtime/dist/router/index.js",
+      "types": "./packages/runtime/dist/router/index.d.ts"
     },
     "./server": {
       "import": "./packages/runtime/dist/server.js",
