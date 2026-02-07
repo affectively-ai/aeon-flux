@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-pages-runtime",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Bun/Cloudflare runtime for @affectively/aeon-pages",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "bun build ./src/index.ts ./src/server.ts ./src/router/index.ts --outdir ./dist --target bun && tsc --declaration --emitDeclarationOnly",
+    "build": "bun run build.ts && tsc --declaration --emitDeclarationOnly",
     "dev": "bun --watch ./src/index.ts",
     "test": "bun test",
     "prepublishOnly": "bun run build",

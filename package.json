@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-flux",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Collaborative page surface with CRDT-based flux state, Edge Side Inference, and zero-CLS rendering. Pages that think.",
   "type": "module",
   "workspaces": [
