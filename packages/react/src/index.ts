@@ -78,5 +78,12 @@ export {
   type CacheStatus,
 } from './hooks/useServiceWorker';
 
-// Re-export additional hooks
-export * from './hooks';
+// Pilot navigation hooks (AI-driven navigation with consent)
+export {
+  usePilotNavigation,
+  parseNavigationTags,
+  stripNavigationTags,
+  type PilotNavigationIntent,
+  type PilotNavigationOptions,
+  type PilotNavigationState,
+} from './hooks/usePilotNavigation';
