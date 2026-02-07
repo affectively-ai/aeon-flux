@@ -176,6 +176,51 @@ export interface PageSession {
 
   /** Active presence info */
   presence: PresenceInfo[];
+
+  /** Session version number (increments on each edit) */
+  version?: number;
+
+  /** Last modified timestamp */
+  updatedAt?: string;
+
+  /** Last modified by user/agent ID */
+  updatedBy?: string;
+}
+
+/** Webhook configuration for sync callbacks */
+export interface WebhookConfig {
+  /** URL to call when session changes */
+  url: string;
+
+  /** Secret for HMAC signature verification */
+  secret?: string;
+
+  /** Events to trigger webhook: 'edit', 'publish', 'all' */
+  events: ('edit' | 'publish' | 'merge' | 'all')[];
+}
+
+/** Webhook payload sent to callback URLs */
+export interface WebhookPayload {
+  /** Event type */
+  event: 'session.updated' | 'session.published' | 'session.merged' | 'github.push';
+
+  /** Session ID */
+  sessionId: string;
+
+  /** Route */
+  route: string;
+
+  /** Session version */
+  version: number;
+
+  /** Timestamp */
+  timestamp: string;
+
+  /** GitHub PR number (for publish/merge events) */
+  prNumber?: number;
+
+  /** User who triggered the event */
+  triggeredBy?: string;
 }
 
 /** Presence info for a user/agent */
@@ -207,3 +252,193 @@ export interface AeonCapability {
 
 /** Alias for PresenceInfo - used by react package */
 export type PresenceUser = PresenceInfo;
+
+// =============================================================================
+// API ROUTES - Server-side request handling
+// =============================================================================
+
+/** HTTP methods supported for API routes */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
+/** Cloudflare Workers environment bindings */
+export interface AeonEnv {
+  /** Durable Object namespace for page sessions */
+  PAGE_SESSIONS?: DurableObjectNamespace;
+  /** Durable Object namespace for routes registry */
+  ROUTES_REGISTRY?: DurableObjectNamespace;
+  /** D1 Database binding */
+  DB?: D1Database;
+  /** Workers KV namespace for caching */
+  CACHE?: KVNamespace;
+  /** Workers AI binding */
+  AI?: Ai;
+  /** Environment name (development, staging, production) */
+  ENVIRONMENT?: string;
+  /** Allow additional custom bindings */
+  [key: string]: unknown;
+}
+
+/** D1 Database interface */
+export interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  exec(query: string): Promise<D1ExecResult>;
+  batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+  dump(): Promise<ArrayBuffer>;
+}
+
+export interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  run(): Promise<D1Result>;
+  first<T = unknown>(colName?: string): Promise<T | null>;
+  all<T = unknown>(): Promise<D1Result<T>>;
+  raw<T = unknown>(): Promise<T[]>;
+}
+
+export interface D1Result<T = unknown> {
+  results?: T[];
+  success: boolean;
+  error?: string;
+  meta?: {
+    duration: number;
+    changes: number;
+    last_row_id: number;
+    served_by: string;
+  };
+}
+
+export interface D1ExecResult {
+  count: number;
+  duration: number;
+}
+
+/** KV Namespace interface */
+export interface KVNamespace {
+  get(key: string, options?: { type?: 'text' | 'json' | 'arrayBuffer' | 'stream' }): Promise<string | null>;
+  getWithMetadata<T = unknown>(key: string): Promise<{ value: string | null; metadata: T | null }>;
+  put(key: string, value: string | ArrayBuffer | ReadableStream, options?: { expirationTtl?: number; metadata?: unknown }): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{ keys: { name: string }[]; list_complete: boolean; cursor?: string }>;
+}
+
+/** Durable Object Namespace interface */
+export interface DurableObjectNamespace {
+  idFromName(name: string): DurableObjectId;
+  idFromString(id: string): DurableObjectId;
+  newUniqueId(): DurableObjectId;
+  get(id: DurableObjectId): DurableObjectStub;
+}
+
+export interface DurableObjectId {
+  toString(): string;
+  equals(other: DurableObjectId): boolean;
+}
+
+export interface DurableObjectStub {
+  fetch(input: RequestInfo, init?: RequestInit): Promise<Response>;
+  id: DurableObjectId;
+}
+
+/** Workers AI interface */
+export interface Ai {
+  run<T = unknown>(model: string, inputs: unknown, options?: { gateway?: { id: string } }): Promise<T>;
+}
+
+/** Context passed to API route handlers */
+export interface AeonContext<E extends AeonEnv = AeonEnv> {
+  /** The incoming request */
+  request: Request;
+  /** Environment bindings (D1, KV, AI, Durable Objects, etc.) */
+  env: E;
+  /** Extracted URL parameters from dynamic routes */
+  params: Record<string, string>;
+  /** The request URL parsed */
+  url: URL;
+  /** Execution context for waitUntil, etc. */
+  ctx: ExecutionContext;
+}
+
+/** Execution context for Cloudflare Workers */
+export interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+}
+
+/** API route handler function */
+export type ApiRouteHandler<E extends AeonEnv = AeonEnv> = (
+  context: AeonContext<E>
+) => Response | Promise<Response>;
+
+/** API route module - exports handlers for each HTTP method */
+export interface ApiRouteModule<E extends AeonEnv = AeonEnv> {
+  GET?: ApiRouteHandler<E>;
+  POST?: ApiRouteHandler<E>;
+  PUT?: ApiRouteHandler<E>;
+  PATCH?: ApiRouteHandler<E>;
+  DELETE?: ApiRouteHandler<E>;
+  HEAD?: ApiRouteHandler<E>;
+  OPTIONS?: ApiRouteHandler<E>;
+  /** Catch-all handler for any method */
+  default?: ApiRouteHandler<E>;
+}
+
+/** Registered API route */
+export interface ApiRoute {
+  /** Route pattern (e.g., "/api/chat", "/api/users/[id]") */
+  pattern: string;
+  /** Parsed path segments for matching */
+  segments: ApiRouteSegment[];
+  /** The route module with handlers */
+  module: ApiRouteModule;
+}
+
+/** Segment of an API route pattern */
+export interface ApiRouteSegment {
+  /** The segment text */
+  value: string;
+  /** Is this a dynamic parameter? */
+  isDynamic: boolean;
+  /** Is this a catch-all segment? */
+  isCatchAll: boolean;
+}
+
+/** API route match result */
+export interface ApiRouteMatch {
+  /** The matched route */
+  route: ApiRoute;
+  /** Extracted parameters */
+  params: Record<string, string>;
+  /** The handler for the request method */
+  handler: ApiRouteHandler;
+}
+
+/** Server route module - for page-level server logic */
+export interface ServerRouteModule<E extends AeonEnv = AeonEnv> {
+  /** Called before page render - can return data or redirect */
+  loader?: (context: AeonContext<E>) => Promise<ServerLoaderResult>;
+  /** Called on form submission or POST to the page */
+  action?: (context: AeonContext<E>) => Promise<ServerActionResult>;
+}
+
+/** Result from a server loader */
+export interface ServerLoaderResult {
+  /** Data to pass to the page */
+  data?: Record<string, unknown>;
+  /** Redirect to another URL */
+  redirect?: string;
+  /** Response status code */
+  status?: number;
+  /** Additional headers */
+  headers?: Record<string, string>;
+}
+
+/** Result from a server action */
+export interface ServerActionResult {
+  /** Data to return */
+  data?: Record<string, unknown>;
+  /** Errors to display */
+  errors?: Record<string, string>;
+  /** Redirect after action */
+  redirect?: string;
+  /** Response status code */
+  status?: number;
+}

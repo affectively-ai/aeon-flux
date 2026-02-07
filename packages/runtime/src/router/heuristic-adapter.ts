@@ -542,8 +542,3 @@ export class HeuristicAdapter implements RouterAdapter {
   }
 }
 
-// ============================================================================
-// Exports
-// ============================================================================
-
-export type { TierFeatures, SignalProcessor };

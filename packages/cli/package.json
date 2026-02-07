@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-flux-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for Aeon Flux - The CMS IS the website",
   "type": "module",
   "bin": {
@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@affectively/aeon-flux-runtime": "workspace:*"
+    "@affectively/aeon-flux-runtime": "workspace:*",
+    "@affectively/aeon-build": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.0.0",

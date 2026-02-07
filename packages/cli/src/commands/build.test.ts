@@ -512,3 +512,138 @@ export default function Test() {
     expect(seed).toContain(`'${homeRoute.sessionId}'`);
   });
 });
+
+describe('Multi-layer caching', () => {
+  const originalCwd = process.cwd();
+  const testDir = resolve(originalCwd, '.aeon-test-cache');
+  const pagesDir = join(testDir, 'pages');
+  const outputDir = join(testDir, '.aeon');
+
+  beforeEach(async () => {
+    await rm(testDir, { recursive: true, force: true });
+    await mkdir(pagesDir, { recursive: true });
+    await writeFile(
+      join(pagesDir, 'page.tsx'),
+      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`
+    );
+    await writeFile(
+      join(testDir, 'aeon.config.ts'),
+      `export default { pagesDir: './pages', runtime: 'cloudflare' };`
+    );
+    process.chdir(testDir);
+  });
+
+  afterEach(async () => {
+    process.chdir(originalCwd);
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  test('wrangler.toml includes KV namespace for page cache', async () => {
+    await build({});
+
+    const wrangler = await readFile(join(outputDir, 'wrangler.toml'), 'utf-8');
+
+    expect(wrangler).toContain('[[kv_namespaces]]');
+    expect(wrangler).toContain('binding = "PAGES_CACHE"');
+    expect(wrangler).toContain('# KV Namespace - edge page cache');
+  });
+
+  test('worker includes KV cache layer logic', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    // Check for KV cache first check
+    expect(worker).toContain('env.PAGES_CACHE');
+    expect(worker).toContain('getFromKV');
+    expect(worker).toContain("'X-Aeon-Cache': 'HIT-KV'");
+  });
+
+  test('worker includes D1 pre-rendered page layer', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('getPreRenderedPage');
+    expect(worker).toContain("'X-Aeon-Cache': 'HIT-D1'");
+    expect(worker).toContain('rendered_pages');
+  });
+
+  test('worker includes session-based fallback layer', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('getSession');
+    expect(worker).toContain("'X-Aeon-Cache': 'MISS'");
+    expect(worker).toContain('renderPage');
+  });
+
+  test('worker includes build version for cache invalidation', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('BUILD_VERSION');
+    expect(worker).toContain('cached.version === BUILD_VERSION');
+  });
+
+  test('worker caches KV-miss to KV after D1 hit', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    // After D1 hit, should cache in KV
+    expect(worker).toContain('ctx.waitUntil');
+    expect(worker).toContain('env.PAGES_CACHE.put');
+    expect(worker).toContain('expirationTtl: CACHE_TTL');
+  });
+
+  test('worker caches session-rendered pages to KV', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    // After session render, should cache in KV
+    expect(worker).toContain('JSON.stringify(cacheData)');
+    expect(worker).toContain('html, version: BUILD_VERSION');
+  });
+
+  test('worker returns proper cache headers', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    // Check for cache control headers
+    expect(worker).toContain('Cache-Control');
+    expect(worker).toContain('max-age=3600');
+    expect(worker).toContain('stale-while-revalidate');
+    expect(worker).toContain('X-Aeon-Version');
+  });
+
+  test('getFromKV helper parses cached JSON correctly', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('async function getFromKV');
+    expect(worker).toContain('JSON.parse(value)');
+    expect(worker).toContain('return null'); // Returns null on miss or parse error
+  });
+
+  test('cache key uses route pattern', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('const cacheKey = `page:${match.pattern}`');
+  });
+
+  test('CACHE_TTL is configurable', async () => {
+    await build({});
+
+    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+
+    expect(worker).toContain('const CACHE_TTL = 3600');
+  });
+});

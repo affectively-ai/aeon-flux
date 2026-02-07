@@ -341,6 +341,9 @@ export interface ESIDirective {
 
   /** Personalization signals to include */
   signals?: Array<'emotion' | 'preferences' | 'history' | 'time' | 'device'>;
+
+  /** Cache key for this directive (auto-generated if not provided) */
+  cacheKey?: string;
 }
 
 export interface ESIResult {
@@ -474,4 +477,38 @@ export const DEFAULT_ESI_CONFIG: ESIConfig = {
 // Extended router config with ESI
 export interface RouterConfigWithESI extends RouterConfig {
   esi?: ESIConfig;
+}
+
+// ============================================================================
+// Presence Types (for ESI Collaborative)
+// ============================================================================
+
+/** Presence info for a user/agent */
+export interface PresenceUser {
+  /** User or agent ID */
+  userId: string;
+
+  /** User or agent role */
+  role: 'user' | 'assistant' | 'monitor' | 'admin';
+
+  /** Cursor position */
+  cursor?: { x: number; y: number };
+
+  /** Currently editing element path */
+  editingPath?: string;
+
+  /** User display name */
+  name?: string;
+
+  /** Avatar URL or initials */
+  avatar?: string;
+
+  /** Last active timestamp */
+  lastActive?: Date;
+
+  /** Is this a real-time presence (vs cached) */
+  isLive?: boolean;
+
+  /** User status (online, idle, etc.) */
+  status?: 'online' | 'idle' | 'away' | 'busy' | 'offline';
 }

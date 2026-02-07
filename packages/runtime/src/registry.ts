@@ -67,8 +67,8 @@ export class AeonRouteRegistry {
       const aeon = await import('@affectively/aeon');
 
       if (this.syncMode === 'distributed') {
-        this.coordinator = new aeon.SyncCoordinator() as SyncCoordinatorLike;
-        this.reconciler = new aeon.StateReconciler() as StateReconcilerLike;
+        this.coordinator = new aeon.SyncCoordinator() as unknown as SyncCoordinatorLike;
+        this.reconciler = new aeon.StateReconciler() as unknown as StateReconcilerLike;
 
         // Subscribe to sync events
         this.coordinator.on('sync-completed', (session: unknown) => {
@@ -77,7 +77,7 @@ export class AeonRouteRegistry {
       }
 
       if (this.versioningEnabled) {
-        this.versions = new aeon.SchemaVersionManager() as SchemaVersionManagerLike;
+        this.versions = new aeon.SchemaVersionManager() as unknown as SchemaVersionManagerLike;
         this.versions.registerVersion('1.0.0', {
           description: 'Initial route schema',
         });

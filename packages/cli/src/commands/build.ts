@@ -6,15 +6,46 @@
  * Build process:
  * 1. Parse JSX/TSX pages into AST
  * 2. Serialize component trees to Aeon session format
- * 3. Seed D1 database with routes and sessions
- * 4. Bundle WASM runtime (~20KB)
- * 5. Generate Cloudflare Worker entry point
+ * 3. Build CSS manifest (on-demand, tree-shaken)
+ * 4. Build asset manifest (inline SVG, images as data URIs)
+ * 5. Build font manifest (embedded fonts with @font-face)
+ * 6. Pre-render all pages with inline CSS, assets, fonts
+ * 7. Seed D1 database with routes, sessions, and pre-rendered HTML
+ * 8. Bundle WASM runtime (~20KB)
+ * 9. Generate Cloudflare Worker entry point
  *
  * Output: Everything needed for `wrangler deploy`
  */
 
 import { readFile, readdir, writeFile, mkdir, copyFile, stat } from 'fs/promises';
 import { join, resolve, relative } from 'path';
+// Import from build package (relative path for workspace development)
+import {
+  // CSS Manifest
+  buildCSSManifest,
+  extractClassesFromTree,
+  generateCSSForClasses,
+  generateCriticalCSS,
+  type CSSManifest,
+  // Asset Manifest
+  buildAssetManifest,
+  resolveAssetsInTree,
+  type AssetManifest,
+  // Font Manifest
+  buildFontManifest,
+  getFontFaceCSS,
+  type FontManifest,
+  // Pre-render
+  prerenderPage,
+  prerenderAllPages,
+  generatePreRenderSeedSQL,
+  generatePreRenderMigrationSQL,
+  generateManifestSeedSQL,
+  type PreRenderOptions,
+  // Types
+  type PageSession,
+  type PreRenderedPage,
+} from '../../../build/src/index';
 
 interface BuildOptions {
   config?: string;
@@ -23,11 +54,19 @@ interface BuildOptions {
 interface AeonConfig {
   pagesDir: string;
   componentsDir?: string;
+  assetsDir?: string;
+  fontsDir?: string;
   runtime: 'bun' | 'cloudflare';
   output?: { dir?: string };
   aeon?: {
     sync?: { mode: string };
   };
+  prerender?: {
+    enabled?: boolean;
+    hydration?: boolean;
+    fontFamilies?: string[];
+  };
+  env?: Record<string, string>;
 }
 
 interface ParsedPage {
@@ -55,10 +94,15 @@ export async function build(options: BuildOptions): Promise<void> {
   const config = await loadConfig(resolve(cwd, configPath));
   const outputDir = resolve(cwd, config.output?.dir || '.aeon');
   const pagesDir = resolve(cwd, config.pagesDir || './pages');
+  const assetsDir = config.assetsDir ? resolve(cwd, config.assetsDir) : resolve(cwd, './public');
+  const fontsDir = config.fontsDir ? resolve(cwd, config.fontsDir) : resolve(cwd, './fonts');
+  const prerenderEnabled = config.prerender?.enabled !== false;
+  const version = `${Date.now().toString(36)}`;
 
   // Create output directories
   await mkdir(join(outputDir, 'dist'), { recursive: true });
   await mkdir(join(outputDir, 'migrations'), { recursive: true });
+  await mkdir(join(outputDir, 'manifests'), { recursive: true });
 
   console.log('📁 Output: ' + relative(cwd, outputDir));
   console.log('');
@@ -68,8 +112,65 @@ export async function build(options: BuildOptions): Promise<void> {
   const pages = await parsePages(pagesDir);
   console.log(`   Found ${pages.length} page(s)`);
 
-  // Step 2: Generate route manifest
-  console.log('2️⃣  Generating route manifest...');
+  // Step 2: Build manifests (CSS, assets, fonts)
+  console.log('2️⃣  Building manifests...');
+
+  // Build CSS manifest
+  const allClasses = new Set<string>();
+  for (const page of pages) {
+    const classes = extractClassesFromTree(page.componentTree);
+    classes.forEach(c => allClasses.add(c));
+  }
+  const cssManifest = buildCSSManifest(allClasses);
+  await writeFile(
+    join(outputDir, 'manifests', 'css.json'),
+    JSON.stringify(cssManifest, null, 2)
+  );
+  console.log(`   ✓ CSS manifest (${allClasses.size} classes)`);
+
+  // Build asset manifest
+  let assetManifest: AssetManifest;
+  try {
+    assetManifest = await buildAssetManifest(assetsDir);
+    await writeFile(
+      join(outputDir, 'manifests', 'assets.json'),
+      JSON.stringify(assetManifest, null, 2)
+    );
+    console.log(`   ✓ Asset manifest (${assetManifest.totalCount} assets, ${(assetManifest.totalSize / 1024).toFixed(1)}KB)`);
+  } catch {
+    assetManifest = {
+      version: '1.0.0',
+      generatedAt: new Date().toISOString(),
+      assets: {},
+      totalSize: 0,
+      totalCount: 0,
+    };
+    console.log('   ⚠️  No assets directory found, skipping');
+  }
+
+  // Build font manifest
+  let fontManifest: FontManifest;
+  try {
+    fontManifest = await buildFontManifest(fontsDir);
+    await writeFile(
+      join(outputDir, 'manifests', 'fonts.json'),
+      JSON.stringify(fontManifest, null, 2)
+    );
+    console.log(`   ✓ Font manifest (${fontManifest.totalCount} fonts, ${(fontManifest.totalSize / 1024).toFixed(1)}KB)`);
+  } catch {
+    fontManifest = {
+      version: '1.0.0',
+      generatedAt: new Date().toISOString(),
+      fonts: {},
+      fontFaceCSS: '',
+      totalSize: 0,
+      totalCount: 0,
+    };
+    console.log('   ⚠️  No fonts directory found, skipping');
+  }
+
+  // Step 3: Generate route manifest
+  console.log('3️⃣  Generating route manifest...');
   const manifest = generateManifest(pages);
   await writeFile(
     join(outputDir, 'manifest.json'),
@@ -77,17 +178,64 @@ export async function build(options: BuildOptions): Promise<void> {
   );
   console.log('   ✓ manifest.json');
 
-  // Step 3: Generate D1 migration
-  console.log('3️⃣  Generating D1 migration...');
+  // Step 4: Generate D1 migration
+  console.log('4️⃣  Generating D1 migration...');
   const migration = generateMigration(pages);
+  const prerenderMigration = generatePreRenderMigrationSQL();
   await writeFile(
     join(outputDir, 'migrations', '0001_initial.sql'),
-    migration
+    migration + '\n' + prerenderMigration
   );
   console.log('   ✓ migrations/0001_initial.sql');
 
-  // Step 4: Generate seed data
-  console.log('4️⃣  Generating D1 seed data...');
+  // Step 5: Pre-render pages (if enabled)
+  let preRenderedPages: PreRenderedPage[] = [];
+  if (prerenderEnabled && pages.length > 0) {
+    console.log('5️⃣  Pre-rendering pages...');
+    const sessions: PageSession[] = pages.map(page => ({
+      route: page.route,
+      tree: page.componentTree,
+      data: {
+        title: extractTitle(page.componentTree) || 'Aeon Flux',
+        description: '',
+      },
+      schema: { version: '1.0.0' },
+    }));
+
+    const prerenderOptions: PreRenderOptions = {
+      cssManifest,
+      assetManifest,
+      fontManifest,
+      fontFamilies: config.prerender?.fontFamilies,
+      addHydrationScript: config.prerender?.hydration !== false,
+      env: config.env,
+    };
+
+    const result = await prerenderAllPages(sessions, prerenderOptions);
+    preRenderedPages = result.pages;
+
+    // Write pre-render seed SQL
+    const prerenderSeed = generatePreRenderSeedSQL(preRenderedPages, version);
+    await writeFile(
+      join(outputDir, 'prerender-seed.sql'),
+      prerenderSeed
+    );
+    console.log(`   ✓ prerender-seed.sql (${preRenderedPages.length} pages, ${(result.totalSize / 1024).toFixed(1)}KB total)`);
+  } else {
+    console.log('5️⃣  Pre-rendering skipped (disabled or no pages)');
+  }
+
+  // Step 6: Store manifests for D1 (for runtime re-rendering)
+  console.log('6️⃣  Generating manifest seed SQL...');
+  const manifestSeed = generateManifestSeedSQL(cssManifest, assetManifest, fontManifest, version);
+  await writeFile(
+    join(outputDir, 'manifest-seed.sql'),
+    manifestSeed
+  );
+  console.log('   ✓ manifest-seed.sql (CSS, assets, fonts)');
+
+  // Step 7: Generate seed data
+  console.log('7️⃣  Generating D1 seed data...');
   const seedData = generateSeedData(pages);
   await writeFile(
     join(outputDir, 'seed.sql'),
@@ -95,8 +243,8 @@ export async function build(options: BuildOptions): Promise<void> {
   );
   console.log('   ✓ seed.sql');
 
-  // Step 5: Copy WASM runtime
-  console.log('5️⃣  Bundling WASM runtime...');
+  // Step 8: Copy WASM runtime
+  console.log('8️⃣  Bundling WASM runtime...');
   try {
     // Try to find the WASM package
     const wasmPkgPath = resolve(cwd, 'node_modules/@affectively/aeon-pages-runtime-wasm');
@@ -113,14 +261,14 @@ export async function build(options: BuildOptions): Promise<void> {
     console.log('   ⚠️  WASM runtime not found, skipping');
   }
 
-  // Step 6: Generate Cloudflare Worker
-  console.log('6️⃣  Generating Cloudflare Worker...');
-  const workerCode = generateWorker(pages);
+  // Step 9: Generate Cloudflare Worker
+  console.log('9️⃣  Generating Cloudflare Worker...');
+  const workerCode = generateWorker(pages, prerenderEnabled);
   await writeFile(join(outputDir, 'dist', 'worker.js'), workerCode);
   console.log('   ✓ worker.js');
 
-  // Step 7: Generate wrangler.toml
-  console.log('7️⃣  Generating wrangler config...');
+  // Step 10: Generate wrangler.toml
+  console.log('🔟 Generating wrangler config...');
   const wranglerConfig = generateWranglerConfig();
   await writeFile(join(outputDir, 'wrangler.toml'), wranglerConfig);
   console.log('   ✓ wrangler.toml');
@@ -128,19 +276,57 @@ export async function build(options: BuildOptions): Promise<void> {
   const elapsed = Date.now() - startTime;
   console.log(`\n✨ Build complete in ${elapsed}ms\n`);
 
+  if (prerenderEnabled && preRenderedPages.length > 0) {
+    console.log('📊 Pre-render stats:');
+    console.log(`   Pages: ${preRenderedPages.length}`);
+    console.log(`   Total size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / 1024).toFixed(1)}KB`);
+    console.log(`   Avg size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / preRenderedPages.length / 1024).toFixed(1)}KB per page`);
+    console.log('');
+  }
+
   console.log('Next steps:');
   console.log('  1. Create D1 database:');
   console.log('     wrangler d1 create aeon-flux');
   console.log('');
-  console.log('  2. Run migration:');
+  console.log('  2. Create KV namespace (edge cache):');
+  console.log('     wrangler kv:namespace create PAGES_CACHE');
+  console.log('');
+  console.log('  3. Run migration:');
   console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'migrations/0001_initial.sql'))}`);
   console.log('');
-  console.log('  3. Seed data:');
+  console.log('  4. Seed data:');
   console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'seed.sql'))}`);
+  console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'manifest-seed.sql'))}`);
+  if (prerenderEnabled && preRenderedPages.length > 0) {
+    console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'prerender-seed.sql'))}`);
+  }
   console.log('');
-  console.log('  4. Deploy:');
+  console.log('  5. Update wrangler.toml with your IDs:');
+  console.log('     - database_id: from step 1 output');
+  console.log('     - kv namespace id: from step 2 output');
+  console.log('');
+  console.log('  6. Deploy:');
   console.log(`     cd ${relative(cwd, outputDir)} && wrangler deploy`);
   console.log('');
+}
+
+// Extract title from component tree
+function extractTitle(tree: SerializedComponent): string | undefined {
+  if (tree.type === 'title' && tree.children?.[0]) {
+    return String(tree.children[0]);
+  }
+  if (tree.type === 'h1' && tree.children?.[0]) {
+    return String(tree.children[0]);
+  }
+  if (tree.children) {
+    for (const child of tree.children) {
+      if (typeof child !== 'string') {
+        const title = extractTitle(child);
+        if (title) return title;
+      }
+    }
+  }
+  return undefined;
 }
 
 async function loadConfig(configPath: string): Promise<AeonConfig> {
@@ -349,7 +535,7 @@ function generateSeedData(pages: ParsedPage[]): string {
   return lines.join('\n');
 }
 
-function generateWorker(pages: ParsedPage[]): string {
+function generateWorker(pages: ParsedPage[], prerenderEnabled: boolean = true): string {
   const routes = pages.map((p) => ({
     pattern: p.route,
     sessionId: routeToSessionId(p.route),
@@ -360,12 +546,23 @@ function generateWorker(pages: ParsedPage[]): string {
  * Aeon Flux Cloudflare Worker
  * Generated: ${new Date().toISOString()}
  *
- * Pages come from D1, not files!
- * Runtime: ~20KB WASM
+ * Zero-dependency rendering with multi-layer caching:
+ * 1. First, try KV cache (edge, ~1ms)
+ * 2. Then, try D1 pre-rendered pages (~5ms)
+ * 3. Fallback to session-based rendering (~50ms)
+ *
+ * Pre-rendered pages include:
+ * - Inline CSS (tree-shaken, only what's needed)
+ * - Inline assets (SVG, images as data URIs)
+ * - Inline fonts (@font-face with data URIs)
+ * - Minimal hydration script for interactivity
  */
 
 // Route manifest (baked in at build time)
 const ROUTES = ${JSON.stringify(routes, null, 2)};
+const PRERENDER_ENABLED = ${prerenderEnabled};
+const CACHE_TTL = 3600; // 1 hour in KV
+const BUILD_VERSION = '${Date.now().toString(36)}'; // For cache invalidation
 
 export default {
   async fetch(request, env, ctx) {
@@ -382,7 +579,49 @@ export default {
       return new Response('Not Found', { status: 404 });
     }
 
-    // Get session from D1
+    const cacheKey = \`page:\${match.pattern}\`;
+
+    // Layer 1: Try KV cache first (edge, fastest ~1ms)
+    // Only use cache if version matches current build (auto-invalidation on deploy)
+    if (env.PAGES_CACHE) {
+      const cached = await getFromKV(env.PAGES_CACHE, cacheKey);
+      if (cached && cached.version === BUILD_VERSION) {
+        return new Response(cached.html, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Aeon-Cache': 'HIT-KV',
+            'X-Aeon-Version': cached.version,
+            'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+          },
+        });
+      }
+      // Stale cache from old version - will be replaced with fresh content
+    }
+
+    // Layer 2: Try D1 pre-rendered page (~5ms)
+    if (PRERENDER_ENABLED) {
+      const preRendered = await getPreRenderedPage(env.DB, match.pattern);
+      if (preRendered) {
+        // Cache in KV for next request
+        if (env.PAGES_CACHE) {
+          ctx.waitUntil(
+            env.PAGES_CACHE.put(cacheKey, JSON.stringify(preRendered), {
+              expirationTtl: CACHE_TTL
+            })
+          );
+        }
+        return new Response(preRendered.html, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Aeon-Cache': 'HIT-D1',
+            'X-Aeon-Version': preRendered.version,
+            'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+          },
+        });
+      }
+    }
+
+    // Layer 3: Fallback to session-based rendering (~50ms)
     const session = await getSession(env.DB, match.sessionId);
     if (!session) {
       return new Response('Session not found', { status: 404 });
@@ -391,11 +630,37 @@ export default {
     // Render page
     const html = renderPage(session, match);
 
+    // Cache the rendered page in KV for next request
+    if (env.PAGES_CACHE) {
+      const cacheData = { html, version: BUILD_VERSION };
+      ctx.waitUntil(
+        env.PAGES_CACHE.put(cacheKey, JSON.stringify(cacheData), {
+          expirationTtl: CACHE_TTL
+        })
+      );
+    }
+
     return new Response(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'X-Aeon-Cache': 'MISS',
+      },
     });
   },
 };
+
+// Get page from KV cache
+async function getFromKV(kv, key) {
+  try {
+    const value = await kv.get(key);
+    if (value) {
+      return JSON.parse(value);
+    }
+  } catch {
+    // Cache miss or parse error
+  }
+  return null;
+}
 
 function matchRoute(path, routes) {
   const pathParts = path.split('/').filter(Boolean);
@@ -451,6 +716,20 @@ function matchPattern(pathParts, pattern) {
   }
 
   return pi === pathParts.length && pati === patternParts.length ? params : null;
+}
+
+// Get pre-rendered page from D1 (zero-rendering path)
+async function getPreRenderedPage(db, route) {
+  try {
+    const result = await db
+      .prepare('SELECT html, version FROM rendered_pages WHERE route = ?')
+      .bind(route)
+      .first();
+
+    return result ? { html: result.html, version: result.version } : null;
+  } catch {
+    return null;
+  }
 }
 
 async function getSession(db, sessionId) {
@@ -547,6 +826,11 @@ compatibility_date = "2024-01-01"
 binding = "DB"
 database_name = "aeon-flux"
 database_id = "YOUR_DATABASE_ID"  # Replace after \`wrangler d1 create\`
+
+# KV Namespace - edge page cache (~1ms)
+[[kv_namespaces]]
+binding = "PAGES_CACHE"
+id = "YOUR_KV_ID"  # Replace after \`wrangler kv:namespace create PAGES_CACHE\`
 
 # Durable Objects - real-time collaboration
 [durable_objects]

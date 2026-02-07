@@ -1,0 +1,46 @@
+{
+  "name": "@affectively/aeon-build",
+  "version": "0.2.0",
+  "description": "Build-time optimizations for Aeon Pages - CSS tree-shaking, asset inlining, pre-rendering",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./css": {
+      "import": "./dist/css-manifest.js",
+      "types": "./dist/css-manifest.d.ts"
+    },
+    "./assets": {
+      "import": "./dist/asset-manifest.js",
+      "types": "./dist/asset-manifest.d.ts"
+    },
+    "./fonts": {
+      "import": "./dist/font-manifest.js",
+      "types": "./dist/font-manifest.d.ts"
+    },
+    "./prerender": {
+      "import": "./dist/prerender.js",
+      "types": "./dist/prerender.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target node --watch",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "postcss": "^8.4.35",
+    "svgo": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "bun": ">=1.0.0"
+  }
+}

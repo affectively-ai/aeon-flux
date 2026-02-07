@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-flux",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The CMS IS the website. Collaborative page framework with CRDT-based flux state.",
   "type": "module",
   "workspaces": [

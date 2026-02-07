@@ -589,6 +589,37 @@ export function esiWithContext(
 }
 
 // ============================================================================
+// Cyrano Whisper Channel (Re-exports)
+// ============================================================================
+
+export {
+  esiContext,
+  esiCyrano,
+  esiHalo,
+  evaluateTrigger,
+  createExhaustEntry,
+  getToolSuggestions,
+} from './esi-cyrano';
+
+export type {
+  SessionContext,
+  EmotionContext,
+  BehaviorContext,
+  EnvironmentContext,
+  BiometricContext,
+  CyranoWhisperConfig,
+  CyranoIntent,
+  CyranoTone,
+  CyranoTrigger,
+  HaloInsightConfig,
+  HaloObservation,
+  HaloAction,
+  ChatExhaustType,
+  ChatExhaustEntry,
+  ESIWhisperResult,
+} from './esi-cyrano';
+
+// ============================================================================
 // Exports
 // ============================================================================
 

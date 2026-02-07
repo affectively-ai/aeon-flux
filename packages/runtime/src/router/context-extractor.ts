@@ -392,9 +392,3 @@ export function addSpeculationHeaders(
     headers,
   });
 }
-
-// ============================================================================
-// Exports
-// ============================================================================
-
-export type { ContextExtractorOptions };

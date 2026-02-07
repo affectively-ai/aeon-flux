@@ -1,6 +1,6 @@
 # RFC-001: Zero-Dependency Page Rendering
 
-**Status**: Draft
+**Status**: In Progress
 **Author**: AFFECTIVELY Engineering
 **Created**: 2026-02-06
 **Target**: aeon-pages v2.0.0
@@ -1393,5 +1393,54 @@ CREATE INDEX IF NOT EXISTS idx_rendered_pages_time ON rendered_pages(rendered_at
 
 ---
 
-*Document Version: 1.0.0*
+## Implementation Status
+
+### Phase 1: Build-Time Manifests ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| CSS Manifest Generator | ✅ Complete | `packages/build/src/css-manifest.ts` - Generates CSS rules for Tailwind classes on-demand |
+| Asset Manifest Generator | ✅ Complete | `packages/build/src/asset-manifest.ts` - Inlines SVG/images as data URIs |
+| Font Manifest Generator | ✅ Complete | `packages/build/src/font-manifest.ts` - Embeds fonts as base64 data URIs |
+| Pre-render Module | ✅ Complete | `packages/build/src/prerender.ts` - Full page pre-rendering with inline CSS/assets/fonts |
+| Build Package Tests | ✅ Complete | 50 tests covering CSS generation, asset handling, pre-rendering |
+| CLI Integration | ✅ Complete | `packages/cli/src/commands/build.ts` - Integrated manifest building and pre-rendering |
+| D1 Manifest Storage | ✅ Complete | `generateManifestSeedSQL()` - Stores CSS/asset/font manifests in D1 |
+
+### Phase 2: WASM Renderer ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Port AST walker to Rust/WASM | ✅ Complete | `render.rs` - `extract_css_classes()`, `walk_tree_for_classes()` |
+| Implement CSS collection in WASM | ✅ Complete | `render.rs` - `generate_css_for_classes()` |
+| Implement asset resolution in WASM | ✅ Complete | `render.rs` - `resolve_assets()`, `resolve_assets_in_value()` |
+| WASM renderer tests | ✅ Complete | 4 tests for rendering, CSS extraction, HTML escaping |
+
+### Phase 3: Cache Layers ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| KV page cache | ✅ Complete | `generateWorker()` - Layer 1 cache with `PAGES_CACHE` KV namespace |
+| D1 page cache | ✅ Complete | `getPreRenderedPage()` - Layer 2 cache from `rendered_pages` table |
+| Cache invalidation on deploy | ✅ Complete | `BUILD_VERSION` checking - stale cache auto-invalidated on new deploy |
+| Cache layer tests | ✅ Complete | 11 tests for multi-layer caching, version invalidation, cache headers |
+
+### Phase 4: Build-Time Pre-Rendering ✅ COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Pre-render all pages at build | ✅ Complete | `prerenderAllPages()` - All pages pre-rendered during build |
+| Integration tests | ✅ Complete | 32 tests covering full build pipeline including pre-rendering |
+
+### Phase 5: Speculative Pre-Rendering ⏳ IN PROGRESS
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Runtime speculative pre-rendering | ⏳ Pending | |
+| Lazy hydration | ✅ Complete | `generateHydrationScript()` - IntersectionObserver-based lazy hydration |
+| E2E tests | ⏳ Pending | |
+
+---
+
+*Document Version: 1.0.1*
 *Last Updated: 2026-02-06*

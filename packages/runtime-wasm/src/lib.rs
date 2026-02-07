@@ -9,9 +9,11 @@ use std::collections::HashMap;
 
 mod router;
 mod hydrate;
+mod render;
 
 pub use router::*;
 pub use hydrate::*;
+pub use render::*;
 
 #[wasm_bindgen(start)]
 pub fn init() {

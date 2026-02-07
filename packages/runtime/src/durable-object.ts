@@ -10,11 +10,23 @@
  * Deploy this alongside your Cloudflare Worker.
  */
 
-import type { PageSession, SerializedComponent, PresenceUser } from './types';
+import type { PageSession, SerializedComponent, PresenceUser, WebhookConfig, WebhookPayload } from './types';
+import { compileTreeToTSX } from './tree-compiler';
 
 interface Env {
   // D1 database for async propagation
   DB?: D1Database;
+  // GitHub integration for tree PRs
+  GITHUB_TOKEN?: string;
+  GITHUB_REPO?: string;        // "owner/repo"
+  GITHUB_TREE_PATH?: string;   // e.g., "apps/web/trees" or "packages/app/src/trees"
+  GITHUB_BASE_BRANCH?: string; // Target branch for PRs (default: repo default)
+  GITHUB_DEV_BRANCH?: string;  // Branch to create from (default: base branch)
+  GITHUB_AUTO_MERGE?: string;  // "true" to auto-merge PRs
+  // Webhook secret for GitHub verification
+  GITHUB_WEBHOOK_SECRET?: string;
+  // Callback URL when session changes (for sync)
+  SYNC_WEBHOOK_URL?: string;
 }
 
 interface D1Database {
@@ -27,8 +39,12 @@ interface D1PreparedStatement {
 }
 
 interface WebSocketMessage {
-  type: 'cursor' | 'edit' | 'presence' | 'sync' | 'ping';
+  type: 'cursor' | 'edit' | 'presence' | 'sync' | 'ping' | 'publish' | 'merge';
   payload: unknown;
+}
+
+interface PublishPayload {
+  prNumber?: number; // For merge operations
 }
 
 interface CursorPayload {
@@ -61,10 +77,16 @@ export class AeonPageSession {
   private env: Env;
   private sessions: Map<WebSocket, PresenceUser> = new Map();
   private session: PageSession | null = null;
+  private webhooks: WebhookConfig[] = [];
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
+
+    // Load webhooks from storage on init
+    this.state.blockConcurrencyWhile(async () => {
+      this.webhooks = await this.state.storage.get<WebhookConfig[]>('webhooks') || [];
+    });
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -83,6 +105,12 @@ export class AeonPageSession {
         return this.handleTreeRequest(request);
       case '/presence':
         return this.handlePresenceRequest(request);
+      case '/webhook':
+        return this.handleWebhookEndpoint(request);
+      case '/webhooks':
+        return this.handleWebhooksConfig(request);
+      case '/version':
+        return this.handleVersionRequest(request);
       default:
         return new Response('Not found', { status: 404 });
     }
@@ -132,7 +160,7 @@ export class AeonPageSession {
     }, server);
 
     // Handle messages
-    server.addEventListener('message', async (event) => {
+    server.addEventListener('message', async (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data as string) as WebSocketMessage;
         await this.handleMessage(server, message);
@@ -157,6 +185,7 @@ export class AeonPageSession {
       }
     });
 
+    // @ts-expect-error - Cloudflare Workers WebSocket Response
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -183,7 +212,7 @@ export class AeonPageSession {
 
       case 'edit': {
         const payload = message.payload as EditPayload;
-        await this.applyEdit(payload);
+        await this.applyEdit(payload, user.userId);
         this.broadcast({
           type: 'edit',
           payload: {
@@ -212,6 +241,40 @@ export class AeonPageSession {
         ws.send(JSON.stringify({ type: 'pong', payload: { timestamp: Date.now() } }));
         break;
       }
+
+      case 'publish': {
+        // Trigger a PR for current tree state
+        const session = await this.getSession();
+        if (session) {
+          const prNumber = await this.createTreePR(session);
+          const autoMerged = this.env.GITHUB_AUTO_MERGE === 'true';
+          ws.send(JSON.stringify({ type: 'publish', payload: { status: 'created', route: session.route, prNumber, autoMerged } }));
+          this.broadcast({ type: 'publish', payload: { status: 'created', userId: user.userId, route: session.route, prNumber, autoMerged } }, ws);
+
+          // Fire webhook for publish event
+          await this.fireWebhook('session.published', session, prNumber as number | undefined, user.userId);
+        }
+        break;
+      }
+
+      case 'merge': {
+        // Merge a specific PR
+        const payload = message.payload as PublishPayload;
+        if (payload.prNumber) {
+          const merged = await this.mergePR(payload.prNumber);
+          ws.send(JSON.stringify({ type: 'merge', payload: { status: merged ? 'merged' : 'failed', prNumber: payload.prNumber } }));
+          if (merged) {
+            this.broadcast({ type: 'merge', payload: { status: 'merged', userId: user.userId, prNumber: payload.prNumber } }, ws);
+
+            // Fire webhook for merge event
+            const session = await this.getSession();
+            if (session) {
+              await this.fireWebhook('session.merged', session, payload.prNumber, user.userId);
+            }
+          }
+        }
+        break;
+      }
     }
   }
 
@@ -224,7 +287,7 @@ export class AeonPageSession {
     }
   }
 
-  private async applyEdit(edit: EditPayload): Promise<void> {
+  private async applyEdit(edit: EditPayload, userId?: string): Promise<void> {
     const session = await this.getSession();
     if (!session) return;
 
@@ -244,8 +307,8 @@ export class AeonPageSession {
       (current as Record<string, unknown>)[lastPart] = edit.value;
     }
 
-    // Save updated session
-    await this.saveSession(session);
+    // Save updated session with version increment and webhook
+    await this.saveSession(session, userId);
 
     // Async propagate to D1
     if (this.env.DB) {
@@ -273,6 +336,347 @@ export class AeonPageSession {
     } catch (err) {
       console.error('Failed to propagate to D1:', err);
     }
+  }
+
+  /**
+   * Create a GitHub PR when tree changes
+   */
+  private async createTreePR(session: PageSession): Promise<number | undefined> {
+    if (!this.env.GITHUB_TOKEN || !this.env.GITHUB_REPO) return undefined;
+
+    const [owner, repo] = this.env.GITHUB_REPO.split('/');
+    const branch = `tree/${session.route.replace(/\//g, '-') || 'index'}-${Date.now()}`;
+    const basePath = this.env.GITHUB_TREE_PATH || 'pages';
+    const routePath = session.route === '/' ? '/index' : session.route;
+    const path = `${basePath}${routePath}/page.tsx`;
+
+    // Compile tree to TSX
+    const tsx = compileTreeToTSX(session.tree as any, {
+      route: session.route,
+      useAeon: true,
+    });
+    const content = btoa(tsx);
+
+    try {
+      const headers = { 'Authorization': `token ${this.env.GITHUB_TOKEN}`, 'User-Agent': 'aeon-flux' };
+
+      // Get repo info for default branch
+      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+      const repoData = await repoRes.json() as { default_branch: string };
+
+      // Determine branches
+      const baseBranch = this.env.GITHUB_BASE_BRANCH || repoData.default_branch;
+      const devBranch = this.env.GITHUB_DEV_BRANCH || baseBranch;
+
+      // Get SHA from dev branch (branch off from here)
+      const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${devBranch}`, { headers });
+      const refData = await refRes.json() as { object: { sha: string } };
+
+      // Create feature branch
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: refData.object.sha }),
+      });
+
+      // Create/update file
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `Update tree: ${session.route}`, content, branch }),
+      });
+
+      // Create PR targeting base branch
+      const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `🌳 Tree update: ${session.route}`,
+          head: branch,
+          base: baseBranch,
+          body: `Automated PR from aeon-flux collaborative editing.\n\n**Route:** \`${session.route}\`\n**Session:** \`${this.state.id.toString()}\`\n**From:** \`${devBranch}\` → \`${baseBranch}\``,
+        }),
+      });
+      const prData = await prRes.json() as { number: number };
+
+      // Auto-merge if enabled
+      if (this.env.GITHUB_AUTO_MERGE === 'true' && prData.number) {
+        await this.mergePR(prData.number);
+      }
+
+      return prData.number;
+    } catch (err) {
+      console.error('Failed to create PR:', err);
+      return undefined;
+    }
+  }
+
+  /**
+   * Merge a GitHub PR
+   */
+  private async mergePR(prNumber: number): Promise<boolean> {
+    if (!this.env.GITHUB_TOKEN || !this.env.GITHUB_REPO) return false;
+
+    const [owner, repo] = this.env.GITHUB_REPO.split('/');
+    const headers = { 'Authorization': `token ${this.env.GITHUB_TOKEN}`, 'User-Agent': 'aeon-flux' };
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          commit_title: `🌳 Merge tree update #${prNumber}`,
+          merge_method: 'squash',
+        }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.error('Failed to merge PR:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Handle GitHub webhook callbacks (push events)
+   * This is called when GitHub pushes changes to the repo
+   */
+  private async handleWebhookEndpoint(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    // Verify GitHub signature if secret is configured
+    if (this.env.GITHUB_WEBHOOK_SECRET) {
+      const signature = request.headers.get('X-Hub-Signature-256');
+      if (!signature) {
+        return new Response('Missing signature', { status: 401 });
+      }
+
+      const body = await request.text();
+      const isValid = await this.verifyGitHubSignature(body, signature);
+      if (!isValid) {
+        return new Response('Invalid signature', { status: 401 });
+      }
+
+      // Parse the verified body
+      const payload = JSON.parse(body);
+      return this.processGitHubWebhook(payload, request.headers.get('X-GitHub-Event') || 'push');
+    }
+
+    // No secret configured, process directly
+    const payload = await request.json();
+    return this.processGitHubWebhook(payload, request.headers.get('X-GitHub-Event') || 'push');
+  }
+
+  /**
+   * Verify GitHub webhook signature
+   */
+  private async verifyGitHubSignature(body: string, signature: string): Promise<boolean> {
+    if (!this.env.GITHUB_WEBHOOK_SECRET) return false;
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(this.env.GITHUB_WEBHOOK_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+    const computed = 'sha256=' + Array.from(new Uint8Array(sig))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    return signature === computed;
+  }
+
+  /**
+   * Process GitHub webhook events
+   */
+  private async processGitHubWebhook(
+    payload: { ref?: string; commits?: Array<{ modified?: string[]; added?: string[] }> },
+    event: string
+  ): Promise<Response> {
+    // Only process push events
+    if (event !== 'push') {
+      return Response.json({ status: 'ignored', event });
+    }
+
+    // Check if this push affects our tree path
+    const treePath = this.env.GITHUB_TREE_PATH || 'pages';
+    const affectedFiles = [
+      ...(payload.commits?.flatMap(c => c.modified || []) || []),
+      ...(payload.commits?.flatMap(c => c.added || []) || []),
+    ];
+
+    const relevantFiles = affectedFiles.filter(f => f.startsWith(treePath));
+    if (relevantFiles.length === 0) {
+      return Response.json({ status: 'ignored', reason: 'no relevant files' });
+    }
+
+    // Fire webhook to notify sync system
+    const session = await this.getSession();
+    if (session) {
+      await this.fireWebhook('github.push', session, undefined, 'github');
+    }
+
+    // Broadcast to connected clients
+    this.broadcast({
+      type: 'sync',
+      payload: {
+        action: 'github-push',
+        files: relevantFiles,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return Response.json({ status: 'processed', files: relevantFiles });
+  }
+
+  /**
+   * Handle webhook configuration (register/list)
+   */
+  private async handleWebhooksConfig(request: Request): Promise<Response> {
+    switch (request.method) {
+      case 'GET': {
+        // List registered webhooks (without secrets)
+        const safeWebhooks = this.webhooks.map(w => ({
+          url: w.url,
+          events: w.events,
+          hasSecret: !!w.secret,
+        }));
+        return Response.json(safeWebhooks);
+      }
+
+      case 'POST': {
+        // Register a new webhook
+        const config = await request.json() as WebhookConfig;
+        if (!config.url || !config.events || config.events.length === 0) {
+          return new Response('Invalid webhook config', { status: 400 });
+        }
+
+        // Add webhook
+        this.webhooks.push(config);
+        await this.state.storage.put('webhooks', this.webhooks);
+
+        return Response.json({ status: 'registered', url: config.url });
+      }
+
+      case 'DELETE': {
+        // Remove a webhook by URL
+        const { url } = await request.json() as { url: string };
+        this.webhooks = this.webhooks.filter(w => w.url !== url);
+        await this.state.storage.put('webhooks', this.webhooks);
+
+        return Response.json({ status: 'removed', url });
+      }
+
+      default:
+        return new Response('Method not allowed', { status: 405 });
+    }
+  }
+
+  /**
+   * Handle version request
+   */
+  private async handleVersionRequest(request: Request): Promise<Response> {
+    if (request.method !== 'GET') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    const session = await this.getSession();
+    if (!session) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    return Response.json({
+      version: session.version || 0,
+      updatedAt: session.updatedAt,
+      updatedBy: session.updatedBy,
+      schemaVersion: session.schema.version,
+    });
+  }
+
+  /**
+   * Fire webhooks for an event
+   */
+  private async fireWebhook(
+    event: WebhookPayload['event'],
+    session: PageSession,
+    prNumber?: number,
+    triggeredBy?: string
+  ): Promise<void> {
+    const payload: WebhookPayload = {
+      event,
+      sessionId: this.state.id.toString(),
+      route: session.route,
+      version: session.version || 0,
+      timestamp: new Date().toISOString(),
+      prNumber,
+      triggeredBy,
+    };
+
+    // Fire to registered webhooks
+    const eventType = event.split('.')[1] as 'edit' | 'publish' | 'merge' | 'all';
+    const relevantWebhooks = this.webhooks.filter(
+      w => w.events.includes('all') || w.events.includes(eventType as any)
+    );
+
+    const webhookPromises = relevantWebhooks.map(async (webhook) => {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Aeon-Event': event,
+          'X-Aeon-Session': this.state.id.toString(),
+        };
+
+        // Add HMAC signature if secret is configured
+        if (webhook.secret) {
+          const body = JSON.stringify(payload);
+          const encoder = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            'raw',
+            encoder.encode(webhook.secret),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+          );
+          const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+          headers['X-Aeon-Signature'] = Array.from(new Uint8Array(sig))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+        }
+
+        await fetch(webhook.url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.error(`Failed to fire webhook to ${webhook.url}:`, err);
+      }
+    });
+
+    // Also fire to env-configured sync webhook
+    if (this.env.SYNC_WEBHOOK_URL) {
+      webhookPromises.push(
+        fetch(this.env.SYNC_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Aeon-Event': event,
+            'X-Aeon-Session': this.state.id.toString(),
+          },
+          body: JSON.stringify(payload),
+        })
+          .then(() => {})
+          .catch(err => console.error('Failed to fire sync webhook:', err))
+      );
+    }
+
+    // Fire all webhooks in parallel, don't wait
+    this.state.waitUntil(Promise.all(webhookPromises));
   }
 
   private async handleSessionRequest(request: Request): Promise<Response> {
@@ -331,9 +735,21 @@ export class AeonPageSession {
     return this.session;
   }
 
-  private async saveSession(session: PageSession): Promise<void> {
+  private async saveSession(session: PageSession, triggeredBy?: string, fireWebhooks = true): Promise<void> {
+    // Increment version
+    session.version = (session.version || 0) + 1;
+    session.updatedAt = new Date().toISOString();
+    if (triggeredBy) {
+      session.updatedBy = triggeredBy;
+    }
+
     this.session = session;
     await this.state.storage.put('session', session);
+
+    // Fire webhooks for session update
+    if (fireWebhooks) {
+      await this.fireWebhook('session.updated', session, undefined, triggeredBy);
+    }
   }
 }
 
@@ -411,6 +827,7 @@ interface DurableObjectState {
   storage: DurableObjectStorage;
   id: DurableObjectId;
   waitUntil(promise: Promise<unknown>): void;
+  blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T>;
 }
 
 interface DurableObjectStorage {

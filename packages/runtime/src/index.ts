@@ -24,7 +24,7 @@
 
 // Core exports
 export { createAeonServer } from './server';
-export { AeonRouter } from './router';
+export { AeonRouter } from './router.js';
 export { AeonRouteRegistry } from './registry';
 
 // Navigation engine (cutting-edge navigation)
@@ -64,6 +64,18 @@ export type {
   PredictorConfig,
 } from './predictor';
 
+// Speculative pre-rendering (zero-latency navigation)
+export {
+  SpeculativeRenderer,
+  getSpeculativeRenderer,
+  setSpeculativeRenderer,
+  initSpeculativeRendering,
+} from './speculation';
+export type {
+  PreRenderedPage,
+  SpeculativeRendererConfig,
+} from './speculation';
+
 // Storage adapters
 export {
   createStorageAdapter,
@@ -78,8 +90,46 @@ export type { StorageAdapter } from './storage';
 // Cloudflare Durable Object classes (for deployment)
 export { AeonPageSession, AeonRoutesRegistry } from './durable-object';
 
+// API Routes - server-side request handling
+export {
+  ApiRouter,
+  createApiRouter,
+  // Response helpers
+  json,
+  redirect,
+  error,
+  notFound,
+  badRequest,
+  unauthorized,
+  forbidden,
+  // Middleware
+  composeMiddleware,
+  cors,
+  requireAuth,
+  rateLimit,
+} from './api-routes';
+export type { Middleware } from './api-routes';
+
+// Worker factory
+export { createAeonWorker } from './worker';
+export type { AeonWorkerOptions } from './worker';
+
+// Next.js adapter - run Next.js API routes on Cloudflare Workers
+export {
+  adaptRequest,
+  adaptHandler,
+  adaptRouteModule,
+  NextResponse,
+} from './nextjs-adapter';
+export type {
+  NextRequest,
+  NextRouteHandler,
+  NextRouteModule,
+} from './nextjs-adapter';
+
 // Type exports
 export type {
+  // Config types
   AeonConfig,
   AeonOptions,
   SyncOptions,
@@ -88,15 +138,40 @@ export type {
   OfflineOptions,
   ComponentOptions,
   OutputOptions,
+  // Route types
   RouteDefinition,
   RouteMatch,
   RouteMetadata,
   RouteOperation,
+  // Component types
   SerializedComponent,
   PageSession,
   PresenceInfo,
   PresenceUser,
   AeonCapability,
+  // API Route types
+  HttpMethod,
+  AeonEnv,
+  AeonContext,
+  ExecutionContext,
+  ApiRouteHandler,
+  ApiRouteModule,
+  ApiRoute,
+  ApiRouteMatch,
+  ApiRouteSegment,
+  ServerRouteModule,
+  ServerLoaderResult,
+  ServerActionResult,
+  // Cloudflare binding types
+  D1Database,
+  D1PreparedStatement,
+  D1Result,
+  D1ExecResult,
+  KVNamespace,
+  DurableObjectNamespace,
+  DurableObjectId,
+  DurableObjectStub,
+  Ai,
 } from './types';
 
 // Personalized Router (hyperpersonalized routing)
@@ -114,7 +189,7 @@ export {
   esiEmotion,
   esiVision,
   esiWithContext,
-} from './router';
+} from './router/index';
 export type {
   // User context
   EmotionState,
@@ -154,7 +229,7 @@ export type {
   ESIResult,
   ESIProcessor,
   ESIConfig,
-} from './router';
+} from './router/index';
 
 // Version
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';

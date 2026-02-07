@@ -9,7 +9,8 @@
  * - Predictive navigation
  */
 
-import { AeonRouter, type RouteMatch } from './router';
+import { AeonRouter } from './router.js';
+import type { RouteMatch } from './types';
 import { NavigationCache, type CachedSession, getNavigationCache } from './cache';
 
 export interface NavigationOptions {

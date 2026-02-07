@@ -1,0 +1,41 @@
+name = "aeon-flux"
+main = "src/worker.ts"
+compatibility_date = "2024-01-01"
+
+# Durable Objects
+[durable_objects]
+bindings = [
+  { name = "PAGE_SESSIONS", class_name = "AeonPageSession" },
+  { name = "ROUTES_REGISTRY", class_name = "AeonRoutesRegistry" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AeonPageSession", "AeonRoutesRegistry"]
+
+# D1 Database - uncomment after creating:
+# wrangler d1 create aeon-flux
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "aeon-flux"
+# database_id = "YOUR_DATABASE_ID"
+
+# KV for caching - uncomment after creating:
+# wrangler kv:namespace create CACHE
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "YOUR_KV_ID"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+GITHUB_REPO = "buley/emotions"
+GITHUB_TREE_PATH = "apps/edge-web-app/pages"
+GITHUB_BASE_BRANCH = "staging"
+GITHUB_DEV_BRANCH = "development"
+GITHUB_AUTO_MERGE = "false"
+
+# Dev settings
+[dev]
+port = 8787
+local_protocol = "http"

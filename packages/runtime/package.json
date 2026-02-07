@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-pages-runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bun/Cloudflare runtime for @affectively/aeon-pages",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,24 +15,44 @@
       "types": "./dist/server.d.ts"
     },
     "./router": {
-      "import": "./dist/router.js",
-      "types": "./dist/router.d.ts"
+      "import": "./dist/router/index.js",
+      "types": "./dist/router/index.d.ts"
     }
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "build": "bun build ./src/index.ts ./src/server.ts ./src/router/index.ts --outdir ./dist --target bun && tsc --declaration --emitDeclarationOnly",
     "dev": "bun --watch ./src/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "prepublishOnly": "bun run build",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "dev:worker": "wrangler dev",
+    "db:create": "wrangler d1 create aeon-pages",
+    "db:migrate": "wrangler d1 execute aeon-pages --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute aeon-pages --local --file=./schema.sql",
+    "tail": "wrangler tail"
   },
-  "dependencies": {
-    "@affectively/aeon": "workspace:*"
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "bun": ">=1.0.0",
+    "react": ">=18.0.0",
+    "zod": ">=3.0.0",
+    "@affectively/aeon": ">=0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@affectively/aeon": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "bun": ">=1.0.0"
+    "@types/bun": "latest",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "zod": "^3.24.0"
   },
   "license": "MIT",
   "repository": {

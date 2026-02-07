@@ -233,8 +233,7 @@ function handleStaticAsset(path: string, config: AeonConfig): Response {
 function handleWebSocketUpgrade(req: Request, _registry: AeonRouteRegistry): Response {
   const server = Bun.serve.prototype; // This is a placeholder - actual upgrade happens in Bun
   if ('upgrade' in server) {
-    // @ts-expect-error - Bun-specific API
-    const success = server.upgrade(req);
+    const success = (server as { upgrade: (req: Request) => boolean }).upgrade(req);
     if (success) {
       return new Response(null, { status: 101 });
     }

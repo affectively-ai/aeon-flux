@@ -1,0 +1,51 @@
+{
+  "name": "@aeon/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for aeon-flux site navigation - enables Cyrano to suggest and invoke navigation",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "aeon-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/navigation.d.ts",
+      "import": "./dist/tools/navigation.js"
+    },
+    "./resources": {
+      "types": "./dist/resources.d.ts",
+      "import": "./dist/resources.js"
+    }
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "aeon-flux",
+    "cyrano",
+    "navigation",
+    "ai"
+  ],
+  "author": "AFFECTIVELY",
+  "license": "MIT"
+}
