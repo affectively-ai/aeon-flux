@@ -1,0 +1,50 @@
+{
+  "name": "@affectively/aeon-pages-analytics",
+  "version": "0.1.0",
+  "description": "Automatic click tracking and GTM integration for @affectively/aeon-pages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/provider.js",
+      "types": "./dist/provider.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun run build.ts && tsc --declaration --emitDeclarationOnly",
+    "dev": "bun --watch ./src/index.ts",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/affectively/aeon-pages"
+  },
+  "keywords": [
+    "aeon",
+    "pages",
+    "analytics",
+    "gtm",
+    "google-tag-manager",
+    "click-tracking",
+    "merkle-tree"
+  ]
+}

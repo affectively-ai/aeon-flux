@@ -1087,7 +1087,7 @@ var require_jsx_dev_runtime = __commonJS((exports, module) => {
   }
 });
 
-// ../runtime/dist/chunk-z57r8rre.js
+// ../runtime/dist/chunk-6awcmjc3.js
 function getCacheKey(directive, context) {
   const contextParts = directive.contextAware ? [
     context.tier,
@@ -2172,12 +2172,14 @@ class SpeculationManager {
     };
   }
 }
-var import_react, import_jsx_dev_runtime, import_react2, import_jsx_dev_runtime2, DEFAULT_ROUTER_CONFIG, DEFAULT_ESI_CONFIG, esiCache, ESIContext, DEFAULT_ESI_STATE, DEFAULT_CONFIG, PresenceContext;
-var init_chunk_z57r8rre = __esm(() => {
+var import_react, import_react2, import_jsx_dev_runtime, import_react3, import_jsx_dev_runtime2, import_jsx_dev_runtime3, DEFAULT_ROUTER_CONFIG, DEFAULT_ESI_CONFIG, esiCache, PresenceContext, ESIContext, DEFAULT_ESI_STATE, DEFAULT_CONFIG;
+var init_chunk_6awcmjc3 = __esm(() => {
   import_react = __toESM(require_react(), 1);
-  import_jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
   import_react2 = __toESM(require_react(), 1);
+  import_jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
+  import_react3 = __toESM(require_react(), 1);
   import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
+  import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime(), 1);
   DEFAULT_ROUTER_CONFIG = {
     adapter: "heuristic",
     speculation: {
@@ -2224,6 +2226,7 @@ var init_chunk_z57r8rre = __esm(() => {
     }
   };
   esiCache = new Map;
+  PresenceContext = import_react2.createContext(null);
   ESIContext = import_react.createContext(null);
   DEFAULT_ESI_STATE = {
     userTier: "free",
@@ -2260,7 +2263,6 @@ var init_chunk_z57r8rre = __esm(() => {
     defaultPaths: ["/"],
     maxSpeculationPaths: 5
   };
-  PresenceContext = import_react2.createContext(null);
 });
 
 // ../runtime/dist/chunk-e71hvfe9.js
@@ -6546,7 +6548,7 @@ var init_chunk_sa09hmwb = __esm(() => {
   init_chunk_m17t3vjq();
 });
 
-// ../runtime/dist/chunk-q2dqk224.js
+// ../runtime/dist/chunk-gpw5swh8.js
 class AeonRouter {
   routes = [];
   routesDir;
@@ -7195,8 +7197,8 @@ function generateStaticPageHtml(match, _config, decision) {
 </html>`;
 }
 var { readdir } = () => ({});
-var init_chunk_q2dqk224 = __esm(() => {
-  init_chunk_z57r8rre();
+var init_chunk_gpw5swh8 = __esm(() => {
+  init_chunk_6awcmjc3();
   init_chunk_e71hvfe9();
   init_chunk_m17t3vjq();
 });
@@ -10699,8 +10701,8 @@ var globalCache = null, globalSkeletonCache = null, globalNavigator = null, stat
   promise.catch(() => {});
 }, worker_default, NextResponse, ENCRYPTION_VERSION = 1, NONCE_LENGTH = 12, TAG_LENGTH = 16, _instance = null, DEFAULT_CONFIG3, EncryptedOfflineQueue, _queueInstance = null, DEFAULT_CONFIG4, ConflictResolver, _instance2 = null, DEFAULT_CONFIG5, SyncCoordinator2, _instance3 = null, VERSION = "1.0.0";
 var init_dist2 = __esm(() => {
-  init_chunk_q2dqk224();
-  init_chunk_z57r8rre();
+  init_chunk_gpw5swh8();
+  init_chunk_6awcmjc3();
   init_chunk_e71hvfe9();
   init_chunk_m17t3vjq();
   if (typeof window !== "undefined") {
@@ -11530,35 +11532,35 @@ var init_dist2 = __esm(() => {
 });
 
 // src/Link.tsx
-var import_react4 = __toESM(require_react(), 1);
+var import_react5 = __toESM(require_react(), 1);
 
 // src/hooks/useAeonNavigation.ts
 init_dist2();
-var import_react3 = __toESM(require_react(), 1);
-var AeonNavigationContext = import_react3.createContext(null);
+var import_react4 = __toESM(require_react(), 1);
+var AeonNavigationContext = import_react4.createContext(null);
 function useNavigator() {
-  const context = import_react3.useContext(AeonNavigationContext);
+  const context = import_react4.useContext(AeonNavigationContext);
   return context?.navigator ?? getNavigator();
 }
 function useAeonNavigation() {
   const navigator2 = useNavigator();
-  const state2 = import_react3.useSyncExternalStore(import_react3.useCallback((callback) => navigator2.subscribe(callback), [navigator2]), () => navigator2.getState(), () => navigator2.getState());
-  const navigate = import_react3.useCallback(async (href, options) => {
+  const state2 = import_react4.useSyncExternalStore(import_react4.useCallback((callback) => navigator2.subscribe(callback), [navigator2]), () => navigator2.getState(), () => navigator2.getState());
+  const navigate = import_react4.useCallback(async (href, options) => {
     await navigator2.navigate(href, options);
   }, [navigator2]);
-  const prefetch = import_react3.useCallback(async (href, options) => {
+  const prefetch = import_react4.useCallback(async (href, options) => {
     await navigator2.prefetch(href, options);
   }, [navigator2]);
-  const back = import_react3.useCallback(async () => {
+  const back = import_react4.useCallback(async () => {
     await navigator2.back();
   }, [navigator2]);
-  const isPreloaded = import_react3.useCallback((href) => {
+  const isPreloaded = import_react4.useCallback((href) => {
     return navigator2.isPreloaded(href);
   }, [navigator2]);
-  const preloadAll = import_react3.useCallback(async (onProgress) => {
+  const preloadAll = import_react4.useCallback(async (onProgress) => {
     await navigator2.preloadAll(onProgress);
   }, [navigator2]);
-  const getCacheStats = import_react3.useCallback(() => {
+  const getCacheStats = import_react4.useCallback(() => {
     return navigator2.getCacheStats();
   }, [navigator2]);
   return {
@@ -11576,10 +11578,10 @@ function useAeonNavigation() {
 }
 function useRoutePresence() {
   const navigator2 = useNavigator();
-  const getPresence = import_react3.useCallback((route) => {
+  const getPresence = import_react4.useCallback((route) => {
     return navigator2.getPresence(route);
   }, [navigator2]);
-  const subscribePresence = import_react3.useCallback((callback) => {
+  const subscribePresence = import_react4.useCallback((callback) => {
     return navigator2.subscribePresence(callback);
   }, [navigator2]);
   return {
@@ -11589,7 +11591,7 @@ function useRoutePresence() {
 }
 function useNavigationPrediction() {
   const navigator2 = useNavigator();
-  const predict = import_react3.useCallback((fromRoute) => {
+  const predict = import_react4.useCallback((fromRoute) => {
     const state2 = navigator2.getState();
     return navigator2.predict(fromRoute ?? state2.current);
   }, [navigator2]);
@@ -11599,7 +11601,7 @@ function useNavigationPrediction() {
 }
 function useLinkObserver(containerRef) {
   const navigator2 = useNavigator();
-  const observe = import_react3.useCallback(() => {
+  const observe = import_react4.useCallback(() => {
     if (!containerRef.current)
       return () => {};
     return navigator2.observeLinks(containerRef.current);
@@ -11608,7 +11610,7 @@ function useLinkObserver(containerRef) {
 }
 function useTotalPreload() {
   const { preloadAll, getCacheStats } = useAeonNavigation();
-  const startPreload = import_react3.useCallback(async (onProgress) => {
+  const startPreload = import_react4.useCallback(async (onProgress) => {
     await preloadAll(onProgress);
   }, [preloadAll]);
   return {
@@ -11619,7 +11621,7 @@ function useTotalPreload() {
 
 // src/Link.tsx
 var jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
-var Link = import_react4.forwardRef(({
+var Link = import_react5.forwardRef(({
   href,
   prefetch = "visible",
   transition = "fade",
@@ -11635,10 +11637,10 @@ var Link = import_react4.forwardRef(({
   className,
   ...props
 }, ref) => {
-  const internalRef = import_react4.useRef(null);
+  const internalRef = import_react5.useRef(null);
   const linkRef = ref ?? internalRef;
-  const trajectoryRef = import_react4.useRef([]);
-  const intentTimeoutRef = import_react4.useRef(null);
+  const trajectoryRef = import_react5.useRef([]);
+  const intentTimeoutRef = import_react5.useRef(null);
   const {
     navigate,
     prefetch: doPrefetch,
@@ -11646,12 +11648,12 @@ var Link = import_react4.forwardRef(({
     isNavigating
   } = useAeonNavigation();
   const { getPresence, subscribePresence } = useRoutePresence();
-  const [presence, setPresence] = import_react4.useState(null);
-  const [isPrefetched, setIsPrefetched] = import_react4.useState(false);
-  import_react4.useEffect(() => {
+  const [presence, setPresence] = import_react5.useState(null);
+  const [isPrefetched, setIsPrefetched] = import_react5.useState(false);
+  import_react5.useEffect(() => {
     setIsPrefetched(isPreloaded(href));
   }, [href, isPreloaded]);
-  import_react4.useEffect(() => {
+  import_react5.useEffect(() => {
     if (prefetch !== "visible" || typeof IntersectionObserver === "undefined") {
       return;
     }
@@ -11666,7 +11668,7 @@ var Link = import_react4.forwardRef(({
       observer.observe(element);
     return () => observer.disconnect();
   }, [href, prefetch, preloadData, showPresence, doPrefetch, linkRef]);
-  import_react4.useEffect(() => {
+  import_react5.useEffect(() => {
     if (!showPresence)
       return;
     const initialPresence = getPresence(href);
@@ -11682,14 +11684,14 @@ var Link = import_react4.forwardRef(({
     });
     return unsubscribe;
   }, [href, showPresence, getPresence, subscribePresence]);
-  const handleMouseEnter = import_react4.useCallback((e) => {
+  const handleMouseEnter = import_react5.useCallback((e) => {
     onMouseEnter?.(e);
     if (prefetch === "hover" || prefetch === "intent") {
       doPrefetch(href, { data: preloadData, presence: showPresence });
       setIsPrefetched(true);
     }
   }, [href, prefetch, preloadData, showPresence, doPrefetch, onMouseEnter]);
-  const handleMouseMove = import_react4.useCallback((e) => {
+  const handleMouseMove = import_react5.useCallback((e) => {
     onMouseMove?.(e);
     if (prefetch !== "intent")
       return;
@@ -11729,7 +11731,7 @@ var Link = import_react4.forwardRef(({
       }
     }, 50);
   }, [href, prefetch, preloadData, showPresence, doPrefetch, onMouseMove, linkRef]);
-  const handleClick = import_react4.useCallback(async (e) => {
+  const handleClick = import_react5.useCallback(async (e) => {
     onClick?.(e);
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
       return;
@@ -11742,7 +11744,7 @@ var Link = import_react4.forwardRef(({
       onNavigateEnd?.();
     }
   }, [href, transition, replace, navigate, onClick, onNavigateStart, onNavigateEnd]);
-  import_react4.useEffect(() => {
+  import_react5.useEffect(() => {
     return () => {
       if (intentTimeoutRef.current) {
         clearTimeout(intentTimeoutRef.current);
@@ -11854,31 +11856,31 @@ if (typeof document !== "undefined") {
   }
 }
 // src/provider.tsx
-var import_react5 = __toESM(require_react(), 1);
+var import_react6 = __toESM(require_react(), 1);
 var jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
-var AeonPageContext = import_react5.createContext(null);
+var AeonPageContext = import_react6.createContext(null);
 function AeonPageProvider({ route, children, initialData = {} }) {
   const sessionId = route.replace(/^\/|\/$/g, "").replace(/\//g, "-") || "index";
-  const [presence, setPresence] = import_react5.useState([]);
-  const [localUser, setLocalUser] = import_react5.useState(null);
-  const [sync, setSync] = import_react5.useState({
+  const [presence, setPresence] = import_react6.useState([]);
+  const [localUser, setLocalUser] = import_react6.useState(null);
+  const [sync, setSync] = import_react6.useState({
     isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
     isSyncing: false,
     pendingOperations: 0
   });
-  const [version, setVersion] = import_react5.useState({
+  const [version, setVersion] = import_react6.useState({
     current: "1.0.0",
     latest: "1.0.0",
     needsMigration: false
   });
-  const [data, setDataState] = import_react5.useState(initialData);
-  const [tree, setTree] = import_react5.useState(null);
-  const syncCoordinatorRef = import_react5.useRef(null);
-  const presenceManagerRef = import_react5.useRef(null);
-  const offlineQueueRef = import_react5.useRef(null);
-  const versionManagerRef = import_react5.useRef(null);
-  const wsRef = import_react5.useRef(null);
-  import_react5.useEffect(() => {
+  const [data, setDataState] = import_react6.useState(initialData);
+  const [tree, setTree] = import_react6.useState(null);
+  const syncCoordinatorRef = import_react6.useRef(null);
+  const presenceManagerRef = import_react6.useRef(null);
+  const offlineQueueRef = import_react6.useRef(null);
+  const versionManagerRef = import_react6.useRef(null);
+  const wsRef = import_react6.useRef(null);
+  import_react6.useEffect(() => {
     const initAeon = async () => {
       try {
         const aeon = await Promise.resolve().then(() => (init_dist2(), exports_dist2));
@@ -11903,7 +11905,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       wsRef.current?.close();
     };
   }, [sessionId]);
-  import_react5.useEffect(() => {
+  import_react6.useEffect(() => {
     if (typeof window === "undefined")
       return;
     const handleOnline = () => {
@@ -11920,7 +11922,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
-  const connectWebSocket = import_react5.useCallback((sessionId2) => {
+  const connectWebSocket = import_react6.useCallback((sessionId2) => {
     if (typeof window === "undefined")
       return;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -11947,7 +11949,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       console.error("[aeon-provider] WebSocket error:", error2);
     };
   }, []);
-  const handleSyncMessage = import_react5.useCallback((message) => {
+  const handleSyncMessage = import_react6.useCallback((message) => {
     const msg = message;
     switch (msg.type) {
       case "presence-update":
@@ -11967,7 +11969,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
         break;
     }
   }, []);
-  const flushOfflineQueue = import_react5.useCallback(async () => {
+  const flushOfflineQueue = import_react6.useCallback(async () => {
     if (!offlineQueueRef.current)
       return;
     setSync((prev) => ({ ...prev, isSyncing: true }));
@@ -11984,7 +11986,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       setSync((prev) => ({ ...prev, isSyncing: false }));
     }
   }, []);
-  const updateCursor = import_react5.useCallback((position) => {
+  const updateCursor = import_react6.useCallback((position) => {
     if (!localUser)
       return;
     setLocalUser((prev) => prev ? { ...prev, cursor: position, lastActivity: new Date().toISOString() } : null);
@@ -11993,7 +11995,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       position
     }));
   }, [localUser]);
-  const updateEditing = import_react5.useCallback((elementPath) => {
+  const updateEditing = import_react6.useCallback((elementPath) => {
     if (!localUser)
       return;
     setLocalUser((prev) => prev ? { ...prev, editing: elementPath ?? undefined, lastActivity: new Date().toISOString() } : null);
@@ -12002,7 +12004,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       elementPath
     }));
   }, [localUser]);
-  const forceSync = import_react5.useCallback(async () => {
+  const forceSync = import_react6.useCallback(async () => {
     if (!sync.isOnline) {
       throw new Error("Cannot sync while offline");
     }
@@ -12019,7 +12021,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       throw error2;
     }
   }, [sync.isOnline]);
-  const migrate = import_react5.useCallback(async (toVersion) => {
+  const migrate = import_react6.useCallback(async (toVersion) => {
     await versionManagerRef.current?.migrate(toVersion);
     setVersion((prev) => ({
       ...prev,
@@ -12027,7 +12029,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       needsMigration: false
     }));
   }, []);
-  const setData = import_react5.useCallback((key, value) => {
+  const setData = import_react6.useCallback((key, value) => {
     setDataState((prev) => ({ ...prev, [key]: value }));
     if (sync.isOnline && wsRef.current) {
       wsRef.current.send(JSON.stringify({
@@ -12047,7 +12049,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
       }));
     }
   }, [sync.isOnline]);
-  const updateTree = import_react5.useCallback((path, value) => {
+  const updateTree = import_react6.useCallback((path, value) => {
     wsRef.current?.send(JSON.stringify({
       type: "tree-patch",
       path,
@@ -12076,7 +12078,7 @@ function AeonPageProvider({ route, children, initialData = {} }) {
   }, undefined, false, undefined, this);
 }
 function useAeonPage() {
-  const context = import_react5.useContext(AeonPageContext);
+  const context = import_react6.useContext(AeonPageContext);
   if (!context) {
     throw new Error("useAeonPage must be used within an AeonPageProvider");
   }
@@ -12093,7 +12095,7 @@ function useAeonSync() {
 function useAeonData(key) {
   const { data, setData } = useAeonPage();
   const value = data[key];
-  const setValue = import_react5.useCallback((newValue) => setData(key, newValue), [key, setData]);
+  const setValue = import_react6.useCallback((newValue) => setData(key, newValue), [key, setData]);
   return [value, setValue];
 }
 function generateUserId() {
@@ -12103,13 +12105,13 @@ function generateUserId() {
   return `user-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 // src/hooks/useServiceWorker.ts
-var import_react6 = __toESM(require_react(), 1);
+var import_react7 = __toESM(require_react(), 1);
 function useAeonServiceWorker() {
-  const [isRegistered, setIsRegistered] = import_react6.useState(false);
-  const [isActive, setIsActive] = import_react6.useState(false);
-  const [error2, setError] = import_react6.useState(null);
-  const registrationRef = import_react6.useRef(null);
-  import_react6.useEffect(() => {
+  const [isRegistered, setIsRegistered] = import_react7.useState(false);
+  const [isActive, setIsActive] = import_react7.useState(false);
+  const [error2, setError] = import_react7.useState(null);
+  const registrationRef = import_react7.useRef(null);
+  import_react7.useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12137,12 +12139,12 @@ function useAeonServiceWorker() {
     };
     registerSW();
   }, []);
-  const update = import_react6.useCallback(async () => {
+  const update = import_react7.useCallback(async () => {
     if (registrationRef.current) {
       await registrationRef.current.update();
     }
   }, []);
-  const unregister = import_react6.useCallback(async () => {
+  const unregister = import_react7.useCallback(async () => {
     if (registrationRef.current) {
       await registrationRef.current.unregister();
       setIsRegistered(false);
@@ -12158,14 +12160,14 @@ function useAeonServiceWorker() {
   };
 }
 function usePreloadProgress() {
-  const [progress, setProgress] = import_react6.useState({
+  const [progress, setProgress] = import_react7.useState({
     loaded: 0,
     total: 0,
     percentage: 0,
     isComplete: false,
     cachedRoutes: []
   });
-  import_react6.useEffect(() => {
+  import_react7.useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12197,13 +12199,13 @@ function usePreloadProgress() {
   return progress;
 }
 function useCacheStatus() {
-  const [status, setStatus] = import_react6.useState({
+  const [status, setStatus] = import_react7.useState({
     cached: 0,
     total: 0,
     routes: [],
     isReady: false
   });
-  const refresh = import_react6.useCallback(async () => {
+  const refresh = import_react7.useCallback(async () => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12223,7 +12225,7 @@ function useCacheStatus() {
     };
     controller.postMessage({ type: "GET_CACHE_STATUS" }, [channel.port2]);
   }, []);
-  import_react6.useEffect(() => {
+  import_react7.useEffect(() => {
     refresh();
     const interval = setInterval(refresh, 5000);
     return () => clearInterval(interval);
@@ -12231,9 +12233,9 @@ function useCacheStatus() {
   return { ...status, refresh };
 }
 function useManualPreload() {
-  const [isPreloading, setIsPreloading] = import_react6.useState(false);
+  const [isPreloading, setIsPreloading] = import_react7.useState(false);
   const progress = usePreloadProgress();
-  const triggerPreload = import_react6.useCallback(() => {
+  const triggerPreload = import_react7.useCallback(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12244,7 +12246,7 @@ function useManualPreload() {
     setIsPreloading(true);
     controller.postMessage({ type: "TRIGGER_PRELOAD" });
   }, []);
-  import_react6.useEffect(() => {
+  import_react7.useEffect(() => {
     if (progress.isComplete) {
       setIsPreloading(false);
     }
@@ -12256,7 +12258,7 @@ function useManualPreload() {
   };
 }
 function usePrefetchRoute() {
-  const prefetch = import_react6.useCallback((route) => {
+  const prefetch = import_react7.useCallback((route) => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12269,8 +12271,8 @@ function usePrefetchRoute() {
   return prefetch;
 }
 function useClearCache() {
-  const [isClearing, setIsClearing] = import_react6.useState(false);
-  const clearCache = import_react6.useCallback(async () => {
+  const [isClearing, setIsClearing] = import_react7.useState(false);
+  const clearCache = import_react7.useCallback(async () => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -12286,13 +12288,13 @@ function useClearCache() {
   return { clearCache, isClearing };
 }
 // src/hooks/usePilotNavigation.ts
-var import_react7 = __toESM(require_react(), 1);
+var import_react8 = __toESM(require_react(), 1);
 function usePilotNavigation(options) {
   const { onConsentRequired, maxHistory = 50 } = options ?? {};
   const navigation = useAeonNavigation();
-  const [pendingIntent, setPendingIntent] = import_react7.useState(null);
-  const [intentHistory, setIntentHistory] = import_react7.useState([]);
-  const pilot = import_react7.useCallback(async (destination, pilotOptions) => {
+  const [pendingIntent, setPendingIntent] = import_react8.useState(null);
+  const [intentHistory, setIntentHistory] = import_react8.useState([]);
+  const pilot = import_react8.useCallback(async (destination, pilotOptions) => {
     const {
       requireConsent = true,
       reason,
@@ -12339,7 +12341,7 @@ function usePilotNavigation(options) {
     }
     return false;
   }, [navigation, onConsentRequired, maxHistory]);
-  const approve = import_react7.useCallback(async () => {
+  const approve = import_react8.useCallback(async () => {
     if (!pendingIntent)
       return false;
     const destination = pendingIntent.destination;
@@ -12347,18 +12349,18 @@ function usePilotNavigation(options) {
     await navigation.navigate(destination);
     return true;
   }, [pendingIntent, navigation]);
-  const reject = import_react7.useCallback(() => {
+  const reject = import_react8.useCallback(() => {
     if (!pendingIntent)
       return;
     setPendingIntent(null);
   }, [pendingIntent]);
-  const clearPending = import_react7.useCallback(() => {
+  const clearPending = import_react8.useCallback(() => {
     setPendingIntent(null);
   }, []);
-  const navigateDirect = import_react7.useCallback(async (destination, navOptions) => {
+  const navigateDirect = import_react8.useCallback(async (destination, navOptions) => {
     await navigation.navigate(destination, navOptions);
   }, [navigation]);
-  return import_react7.useMemo(() => ({
+  return import_react8.useMemo(() => ({
     pendingIntent,
     intentHistory,
     isNavigating: navigation.isNavigating,
@@ -12402,23 +12404,23 @@ function stripNavigationTags(text) {
   return text.replace(/\[navigate:[^\]]+\]/g, "").trim();
 }
 // src/hooks/useNetworkState.ts
-var import_react8 = __toESM(require_react(), 1);
+var import_react9 = __toESM(require_react(), 1);
 function useNetworkState() {
-  const [state2, setState] = import_react8.useState("unknown");
-  const [lastChange, setLastChange] = import_react8.useState(Date.now());
-  const [bandwidth, setBandwidth] = import_react8.useState({
+  const [state2, setState] = import_react9.useState("unknown");
+  const [lastChange, setLastChange] = import_react9.useState(Date.now());
+  const [bandwidth, setBandwidth] = import_react9.useState({
     speedKbps: 1024,
     latencyMs: 50,
     reliability: 1,
     effectiveType: "unknown"
   });
-  const getConnection = import_react8.useCallback(() => {
+  const getConnection = import_react9.useCallback(() => {
     if (typeof navigator === "undefined")
       return;
     const nav = navigator;
     return nav.connection || nav.mozConnection || nav.webkitConnection;
   }, []);
-  const updateBandwidth = import_react8.useCallback(() => {
+  const updateBandwidth = import_react9.useCallback(() => {
     const conn = getConnection();
     if (!conn)
       return;
@@ -12469,7 +12471,7 @@ function useNetworkState() {
       });
     }
   }, [getConnection]);
-  const updateOnlineState = import_react8.useCallback(() => {
+  const updateOnlineState = import_react9.useCallback(() => {
     if (typeof navigator === "undefined")
       return;
     const isOnline = navigator.onLine;
@@ -12484,10 +12486,10 @@ function useNetworkState() {
       updateBandwidth();
     }
   }, [updateBandwidth]);
-  const refresh = import_react8.useCallback(() => {
+  const refresh = import_react9.useCallback(() => {
     updateOnlineState();
   }, [updateOnlineState]);
-  import_react8.useEffect(() => {
+  import_react9.useEffect(() => {
     updateOnlineState();
     const handleOnline = () => {
       setState("online");
@@ -12526,21 +12528,21 @@ function useNetworkState() {
   };
 }
 // src/hooks/useConflicts.ts
-var import_react9 = __toESM(require_react(), 1);
+var import_react10 = __toESM(require_react(), 1);
 var conflictStore = new Map;
 var listeners = new Set;
 function notifyListeners() {
   listeners.forEach((listener) => listener());
 }
 function useConflicts(sessionId) {
-  const [conflicts, setConflicts] = import_react9.useState([]);
-  const [isLoading, setIsLoading] = import_react9.useState(false);
-  const loadConflicts = import_react9.useCallback(() => {
+  const [conflicts, setConflicts] = import_react10.useState([]);
+  const [isLoading, setIsLoading] = import_react10.useState(false);
+  const loadConflicts = import_react10.useCallback(() => {
     const allConflicts = Array.from(conflictStore.values());
     const filtered = sessionId ? allConflicts.filter((c) => c.sessionId === sessionId) : allConflicts;
     setConflicts(filtered);
   }, [sessionId]);
-  import_react9.useEffect(() => {
+  import_react10.useEffect(() => {
     loadConflicts();
     const listener = () => loadConflicts();
     listeners.add(listener);
@@ -12548,9 +12550,9 @@ function useConflicts(sessionId) {
       listeners.delete(listener);
     };
   }, [loadConflicts]);
-  const unresolvedConflicts = import_react9.useMemo(() => conflicts.filter((c) => !c.resolution), [conflicts]);
-  const highSeverityConflicts = import_react9.useMemo(() => conflicts.filter((c) => !c.resolution && c.severity === "high"), [conflicts]);
-  const stats = import_react9.useMemo(() => {
+  const unresolvedConflicts = import_react10.useMemo(() => conflicts.filter((c) => !c.resolution), [conflicts]);
+  const highSeverityConflicts = import_react10.useMemo(() => conflicts.filter((c) => !c.resolution && c.severity === "high"), [conflicts]);
+  const stats = import_react10.useMemo(() => {
     const byType = {
       update_update: 0,
       delete_update: 0,
@@ -12585,7 +12587,7 @@ function useConflicts(sessionId) {
       byStrategy
     };
   }, [conflicts]);
-  const resolveConflict = import_react9.useCallback(async (conflictId, strategy, customData) => {
+  const resolveConflict = import_react10.useCallback(async (conflictId, strategy, customData) => {
     setIsLoading(true);
     try {
       const conflict = conflictStore.get(conflictId);
@@ -12626,11 +12628,11 @@ function useConflicts(sessionId) {
       setIsLoading(false);
     }
   }, []);
-  const dismissConflict = import_react9.useCallback((conflictId) => {
+  const dismissConflict = import_react10.useCallback((conflictId) => {
     conflictStore.delete(conflictId);
     notifyListeners();
   }, []);
-  const clearResolved = import_react9.useCallback(() => {
+  const clearResolved = import_react10.useCallback(() => {
     for (const [id, conflict] of conflictStore) {
       if (conflict.resolution) {
         conflictStore.delete(id);
@@ -12638,7 +12640,7 @@ function useConflicts(sessionId) {
     }
     notifyListeners();
   }, []);
-  const refresh = import_react9.useCallback(() => {
+  const refresh = import_react10.useCallback(() => {
     loadConflicts();
   }, [loadConflicts]);
   return {
@@ -12665,15 +12667,15 @@ function clearAllConflicts() {
   notifyListeners();
 }
 // src/components/InstallPrompt.tsx
-var import_react10 = __toESM(require_react(), 1);
+var import_react11 = __toESM(require_react(), 1);
 var jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime(), 1);
 "use client";
 function useInstallPrompt() {
-  const [isIOS, setIsIOS] = import_react10.useState(false);
-  const [isInstalled, setIsInstalled] = import_react10.useState(false);
-  const [deferredPrompt, setDeferredPrompt] = import_react10.useState(null);
-  const [canInstall, setCanInstall] = import_react10.useState(false);
-  import_react10.useEffect(() => {
+  const [isIOS, setIsIOS] = import_react11.useState(false);
+  const [isInstalled, setIsInstalled] = import_react11.useState(false);
+  const [deferredPrompt, setDeferredPrompt] = import_react11.useState(null);
+  const [canInstall, setCanInstall] = import_react11.useState(false);
+  import_react11.useEffect(() => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
       return;
     }
@@ -12701,7 +12703,7 @@ function useInstallPrompt() {
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
-  const install = import_react10.useCallback(async () => {
+  const install = import_react11.useCallback(async () => {
     if (!deferredPrompt) {
       return "unavailable";
     }
@@ -12713,7 +12715,7 @@ function useInstallPrompt() {
     }
     return outcome;
   }, [deferredPrompt]);
-  const dismiss = import_react10.useCallback(() => {
+  const dismiss = import_react11.useCallback(() => {
     setCanInstall(false);
     setDeferredPrompt(null);
   }, []);
@@ -12829,7 +12831,7 @@ function InstallPrompt({
   }, undefined, true, undefined, this);
 }
 // src/components/PushNotifications.tsx
-var import_react11 = __toESM(require_react(), 1);
+var import_react12 = __toESM(require_react(), 1);
 var jsx_dev_runtime4 = __toESM(require_jsx_dev_runtime(), 1);
 "use client";
 function urlBase64ToUint8Array2(base64String) {
@@ -12854,13 +12856,13 @@ function serializeSubscription(sub) {
   };
 }
 function usePushNotifications(config = {}) {
-  const [isSupported, setIsSupported] = import_react11.useState(false);
-  const [permission, setPermission] = import_react11.useState("unsupported");
-  const [subscription, setSubscription] = import_react11.useState(null);
-  const [isLoading, setIsLoading] = import_react11.useState(false);
-  const [error2, setError] = import_react11.useState(null);
+  const [isSupported, setIsSupported] = import_react12.useState(false);
+  const [permission, setPermission] = import_react12.useState("unsupported");
+  const [subscription, setSubscription] = import_react12.useState(null);
+  const [isLoading, setIsLoading] = import_react12.useState(false);
+  const [error2, setError] = import_react12.useState(null);
   const { vapidPublicKey, serviceWorkerUrl = "/sw.js" } = config;
-  import_react11.useEffect(() => {
+  import_react12.useEffect(() => {
     if (typeof window === "undefined")
       return;
     const supported = "serviceWorker" in navigator && "PushManager" in window;
@@ -12881,7 +12883,7 @@ function usePushNotifications(config = {}) {
       }
     });
   }, []);
-  const requestPermission = import_react11.useCallback(async () => {
+  const requestPermission = import_react12.useCallback(async () => {
     if (!isSupported) {
       return "denied";
     }
@@ -12889,7 +12891,7 @@ function usePushNotifications(config = {}) {
     setPermission(result);
     return result;
   }, [isSupported]);
-  const subscribe = import_react11.useCallback(async () => {
+  const subscribe = import_react12.useCallback(async () => {
     if (!isSupported) {
       setError("Push notifications are not supported");
       return null;
@@ -12933,7 +12935,7 @@ function usePushNotifications(config = {}) {
       setIsLoading(false);
     }
   }, [isSupported, vapidPublicKey, serviceWorkerUrl]);
-  const unsubscribe = import_react11.useCallback(async () => {
+  const unsubscribe = import_react12.useCallback(async () => {
     if (!isSupported) {
       return false;
     }
@@ -12955,7 +12957,7 @@ function usePushNotifications(config = {}) {
       setIsLoading(false);
     }
   }, [isSupported]);
-  const clearError = import_react11.useCallback(() => {
+  const clearError = import_react12.useCallback(() => {
     setError(null);
   }, []);
   return {
@@ -13100,7 +13102,7 @@ function PushNotifications({
   }, undefined, true, undefined, this);
 }
 // src/components/OfflineDiagnostics.tsx
-var import_react12 = __toESM(require_react(), 1);
+var import_react13 = __toESM(require_react(), 1);
 var jsx_dev_runtime5 = __toESM(require_jsx_dev_runtime(), 1);
 "use client";
 function NetworkStatusPanel() {
@@ -13219,14 +13221,14 @@ function NetworkStatusPanel() {
   }, undefined, true, undefined, this);
 }
 function ServiceWorkerPanel() {
-  const [swState, setSwState] = import_react12.useState({
+  const [swState, setSwState] = import_react13.useState({
     isSupported: false,
     registration: "none",
     updateAvailable: false,
     controller: false
   });
-  const [isChecking, setIsChecking] = import_react12.useState(false);
-  const checkServiceWorker = import_react12.useCallback(async () => {
+  const [isChecking, setIsChecking] = import_react13.useState(false);
+  const checkServiceWorker = import_react13.useCallback(async () => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
@@ -13254,7 +13256,7 @@ function ServiceWorkerPanel() {
       console.error("Error checking service worker:", error2);
     }
   }, []);
-  import_react12.useEffect(() => {
+  import_react13.useEffect(() => {
     checkServiceWorker();
   }, [checkServiceWorker]);
   const handleCheckUpdate = async () => {
@@ -13374,10 +13376,10 @@ function ServiceWorkerPanel() {
 function CacheManagementPanel({
   onClearCache
 }) {
-  const [caches, setCaches] = import_react12.useState([]);
-  const [isLoading, setIsLoading] = import_react12.useState(true);
-  const [isClearing, setIsClearing] = import_react12.useState(null);
-  const loadCaches = import_react12.useCallback(async () => {
+  const [caches, setCaches] = import_react13.useState([]);
+  const [isLoading, setIsLoading] = import_react13.useState(true);
+  const [isClearing, setIsClearing] = import_react13.useState(null);
+  const loadCaches = import_react13.useCallback(async () => {
     if (typeof window === "undefined" || !("caches" in window)) {
       setIsLoading(false);
       return;
@@ -13401,7 +13403,7 @@ function CacheManagementPanel({
       setIsLoading(false);
     }
   }, []);
-  import_react12.useEffect(() => {
+  import_react13.useEffect(() => {
     loadCaches();
   }, [loadCaches]);
   const handleClearCache = async (cacheName) => {

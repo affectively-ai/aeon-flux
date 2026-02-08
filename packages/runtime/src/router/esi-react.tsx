@@ -53,6 +53,41 @@ import type {
 } from './types';
 import { EdgeWorkersESIProcessor, esiInfer, esiEmbed, esiEmotion, esiVision, esiWithContext } from './esi';
 
+// Import control components for ESI namespace extension
+import {
+  ESIStructured,
+  ESIIf,
+  ESIShow,
+  ESIHide,
+  ESIWhen,
+  ESIUnless,
+  ESIMatch,
+  ESICase,
+  ESIDefault,
+  ESIFirst,
+  ESITierGate,
+  ESIEmotionGate,
+  ESITimeGate,
+  ESIForEach,
+  ESISelect,
+  ESIABTest,
+  ESIClamp,
+  ESIScore,
+  ESICollaborative,
+  ESIReflect,
+  ESIOptimize,
+  ESIAuto,
+} from './esi-control-react';
+
+// Import format components for ESI namespace extension
+import {
+  ESIMarkdown,
+  ESILatex,
+  ESIJson,
+  ESIPlaintext,
+  ESICode,
+} from './esi-format-react';
+
 // ============================================================================
 // ESI Context
 // ============================================================================
@@ -800,11 +835,45 @@ export function updateGlobalESIState(partial: Partial<GlobalESIState>): void {
 // ============================================================================
 
 export const ESI = {
+  // Basic components
   Provider: ESIProvider,
   Infer: ESIInfer,
   Embed: ESIEmbed,
   Emotion: ESIEmotion,
   Vision: ESIVision,
+  // Control flow components (from esi-control-react)
+  Structured: ESIStructured,
+  If: ESIIf,
+  Show: ESIShow,
+  Hide: ESIHide,
+  When: ESIWhen,
+  Unless: ESIUnless,
+  Match: ESIMatch,
+  Case: ESICase,
+  Default: ESIDefault,
+  First: ESIFirst,
+  // Gates
+  TierGate: ESITierGate,
+  EmotionGate: ESIEmotionGate,
+  TimeGate: ESITimeGate,
+  // Iteration & Selection
+  ForEach: ESIForEach,
+  Select: ESISelect,
+  ABTest: ESIABTest,
+  // Numeric
+  Clamp: ESIClamp,
+  Score: ESIScore,
+  // Advanced
+  Collaborative: ESICollaborative,
+  Reflect: ESIReflect,
+  Optimize: ESIOptimize,
+  Auto: ESIAuto,
+  // Format transformations (from esi-format-react)
+  Markdown: ESIMarkdown,
+  Latex: ESILatex,
+  Json: ESIJson,
+  Plaintext: ESIPlaintext,
+  Code: ESICode,
 };
 
 export default ESI;

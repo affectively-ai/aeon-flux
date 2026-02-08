@@ -34,6 +34,7 @@
  */
 import { type ReactNode, type FC } from 'react';
 import type { ESIConfig, ESIDirective, ESIModel, ESIProcessor, ESIResult, UserContext } from './types';
+import { ESIStructured, ESIIf, ESIShow, ESIHide, ESIWhen, ESIUnless, ESIMatch, ESICase, ESIDefault, ESIFirst, ESITierGate, ESIEmotionGate, ESITimeGate, ESIForEach, ESISelect, ESIABTest, ESIClamp, ESIScore, ESICollaborative, ESIReflect, ESIOptimize, ESIAuto } from './esi-control-react';
 interface ESIContextValue {
     processor: ESIProcessor;
     userContext: UserContext | null;
@@ -327,5 +328,32 @@ export declare const ESI: {
     Embed: FC<ESIEmbedProps>;
     Emotion: FC<ESIEmotionProps>;
     Vision: FC<ESIVisionProps>;
+    Structured: typeof ESIStructured;
+    If: typeof ESIIf;
+    Show: typeof ESIShow;
+    Hide: typeof ESIHide;
+    When: typeof ESIWhen;
+    Unless: typeof ESIUnless;
+    Match: typeof ESIMatch;
+    Case: typeof ESICase;
+    Default: typeof ESIDefault;
+    First: typeof ESIFirst;
+    TierGate: typeof ESITierGate;
+    EmotionGate: typeof ESIEmotionGate;
+    TimeGate: typeof ESITimeGate;
+    ForEach: typeof ESIForEach;
+    Select: typeof ESISelect;
+    ABTest: typeof ESIABTest;
+    Clamp: typeof ESIClamp;
+    Score: typeof ESIScore;
+    Collaborative: typeof ESICollaborative;
+    Reflect: typeof ESIReflect;
+    Optimize: typeof ESIOptimize;
+    Auto: typeof ESIAuto;
+    Markdown: FC<import("./esi-format-react").ESIMarkdownProps>;
+    Latex: FC<import("./esi-format-react").ESILatexProps>;
+    Json: FC<import("./esi-format-react").ESIJsonProps>;
+    Plaintext: FC<import("./esi-format-react").ESIPlaintextProps>;
+    Code: FC<import("./esi-format-react").ESICodeProps>;
 };
 export default ESI;
