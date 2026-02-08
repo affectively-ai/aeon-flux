@@ -276,3 +276,25 @@ export type {
   ChatExhaustEntry,
   ESIWhisperResult,
 } from './esi-cyrano';
+
+// Merkle-Based UCAN Capability Verification
+export {
+  // Resource parsing
+  parseResource,
+  formatResource,
+  // Capability matching
+  capabilityGrantsAccess,
+  // Verifier creation
+  createNodeCapabilityVerifier,
+  // Capability creation helpers
+  createNodeReadCapability,
+  createNodeWriteCapability,
+  createTreeCapability,
+  createPathCapability,
+  createWildcardNodeCapability,
+  // Access control helpers
+  checkNodeAccess,
+  filterAccessibleNodes,
+  getMostSpecificCapability,
+} from './merkle-capability';
+export type { NodeCapabilityVerifier, NodeVerifierOptions } from './merkle-capability';

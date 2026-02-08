@@ -330,6 +330,7 @@ export interface ESITierGateProps {
 }
 /**
  * Gate content by user tier
+ * Admins bypass ALL tier restrictions
  * @example
  * <ESI.TierGate minTier="pro" fallback={<UpgradePrompt />}>
  *   <AdvancedFeature />

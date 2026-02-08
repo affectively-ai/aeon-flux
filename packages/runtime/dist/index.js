@@ -2,26 +2,38 @@ import {
   AeonRouteRegistry,
   AeonRouter,
   createAeonServer
-} from "./chunk-gpw5swh8.js";
+} from "./chunk-439mqgjz.js";
 import {
   DEFAULT_ESI_CONFIG,
   DEFAULT_ROUTER_CONFIG,
   EdgeWorkersESIProcessor,
   HeuristicAdapter,
   addSpeculationHeaders,
+  capabilityGrantsAccess,
+  checkNodeAccess,
   createContextMiddleware,
+  createNodeCapabilityVerifier,
+  createNodeReadCapability,
+  createNodeWriteCapability,
+  createPathCapability,
+  createTreeCapability,
+  createWildcardNodeCapability,
   esiEmbed,
   esiEmotion,
   esiInfer,
   esiVision,
   esiWithContext,
   extractUserContext,
+  filterAccessibleNodes,
+  formatResource,
+  getMostSpecificCapability,
+  parseResource,
   setContextCookies
-} from "./chunk-6awcmjc3.js";
+} from "./chunk-7zbxm162.js";
 import"./chunk-e71hvfe9.js";
 import {
   __require
-} from "./chunk-m17t3vjq.js";
+} from "./chunk-tgx0r0vn.js";
 // src/cache.ts
 class NavigationCache {
   cache = new Map;
@@ -4296,6 +4308,7 @@ export {
   registerMessageHandlers,
   redirect,
   rateLimit,
+  parseResource,
   notFound,
   json,
   isSkeletonVisible,
@@ -4315,12 +4328,15 @@ export {
   getOfflineQueue,
   getNavigator,
   getNavigationCache,
+  getMostSpecificCapability,
   getConflictResolver,
   generateSkeletonPageStructure,
   generateSkeletonInitScript,
   generateOperationId,
   generateAsyncSwapScript,
+  formatResource,
   forbidden,
+  filterAccessibleNodes,
   extractUserContext,
   estimateEncryptedSize,
   esiWithContext,
@@ -4329,9 +4345,15 @@ export {
   esiEmotion,
   esiEmbed,
   error,
+  createWildcardNodeCapability,
+  createTreeCapability,
   createSyncCoordinator,
   createStorageAdapter,
+  createPathCapability,
   createOfflineQueue,
+  createNodeWriteCapability,
+  createNodeReadCapability,
+  createNodeCapabilityVerifier,
   createContextMiddleware,
   createConflictResolver,
   createApiRouter,
@@ -4339,6 +4361,8 @@ export {
   createAeonServer,
   cors,
   composeMiddleware,
+  checkNodeAccess,
+  capabilityGrantsAccess,
   badRequest,
   addSpeculationHeaders,
   adaptRouteModule,

@@ -24,10 +24,12 @@ export interface Viewport {
     devicePixelRatio?: number;
 }
 export type ConnectionType = 'slow-2g' | '2g' | '3g' | '4g' | 'fast';
-export type UserTier = 'free' | 'starter' | 'pro' | 'enterprise';
+export type UserTier = 'free' | 'starter' | 'pro' | 'enterprise' | 'admin';
 export interface UserContext {
     userId?: string;
     tier: UserTier;
+    /** Admin flag - bypasses ALL tier restrictions */
+    isAdmin?: boolean;
     recentPages: string[];
     dwellTimes: Map<string, number>;
     clickPatterns: string[];
@@ -155,7 +157,7 @@ export declare const DEFAULT_ROUTER_CONFIG: RouterConfig;
  * <ESI.Emotion>How is the user feeling?</ESI.Emotion>
  * ```
  */
-export type ESIModel = 'llm' | 'embed' | 'vision' | 'tts' | 'stt' | 'emotion' | 'classify' | 'custom';
+export type ESIModel = 'llm' | 'embed' | 'vision' | 'tts' | 'stt' | 'emotion' | 'classify' | 'translate' | 'custom';
 export type ESIContentType = 'text' | 'base64' | 'json' | 'template';
 export interface ESIParams {
     /** Model to use for inference */
@@ -303,3 +305,43 @@ export interface PresenceUser {
     /** User status (online, idle, etc.) */
     status?: 'online' | 'idle' | 'away' | 'busy' | 'offline';
 }
+/**
+ * Result of a translation operation
+ */
+export interface TranslationResult {
+    /** Original text that was translated */
+    original: string;
+    /** Translated text */
+    translated: string;
+    /** Source language (detected or specified) */
+    sourceLanguage: string;
+    /** Target language */
+    targetLanguage: string;
+    /** Translation confidence (0-1) */
+    confidence: number;
+    /** Was result from cache */
+    cached: boolean;
+    /** Latency in milliseconds */
+    latencyMs: number;
+}
+/**
+ * Configuration for the TranslationProvider
+ */
+export interface TranslationProviderConfig {
+    /** Default target language (ISO 639-1 code) */
+    defaultLanguage: string;
+    /** Fallback language if translation fails */
+    fallbackLanguage?: string;
+    /** Auto-detect source language */
+    autoDetectSource?: boolean;
+    /** AI Gateway endpoint for translation */
+    endpoint?: string;
+    /** Cache TTL in seconds (default: 86400 = 24 hours) */
+    cacheTtl?: number;
+    /** Maximum text length to translate (default: 5000 chars) */
+    maxTextLength?: number;
+}
+/**
+ * Supported language codes for translation
+ */
+export type SupportedLanguageCode = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'nl' | 'pl' | 'ru' | 'zh' | 'ja' | 'ko' | 'ar' | 'hi' | 'bn' | 'vi' | 'th' | 'tr' | 'id' | 'ms' | 'tl' | 'sv' | 'da' | 'no' | 'fi' | 'cs' | 'el' | 'he' | 'uk' | 'ro' | 'hu' | 'ca' | 'hy';

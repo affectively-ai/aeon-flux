@@ -149,12 +149,19 @@ function extractTimeContext(request: Request): { timezone: string; localHour: nu
 // ============================================================================
 
 /**
+ * Admin capability verifier function type
+ * This should be provided by the auth system (e.g., UCAN token verification)
+ */
+export type AdminVerifier = (token: string) => Promise<boolean>;
+
+/**
  * Extract user identity and tier from cookies/headers
+ * NOTE: isAdmin is NOT determined here - it must be verified via UCAN token
  */
 function extractIdentity(
   cookies: Record<string, string>,
   request: Request
-): { userId?: string; tier: UserTier } {
+): { userId?: string; tier: UserTier; authToken?: string } {
   // User ID from cookie or header
   const userId = cookies['user_id'] || request.headers.get('x-user-id') || undefined;
 
@@ -163,7 +170,12 @@ function extractIdentity(
   const tierHeader = request.headers.get('x-user-tier') as UserTier | null;
   const tier = tierCookie || tierHeader || 'free';
 
-  return { userId, tier };
+  // Auth token for admin verification (DO NOT trust cookies for admin status!)
+  const authToken = cookies['auth_token'] ||
+                    request.headers.get('authorization')?.replace('Bearer ', '') ||
+                    undefined;
+
+  return { userId, tier, authToken };
 }
 
 /**
@@ -243,6 +255,13 @@ export interface ContextExtractorOptions {
   /** Custom user tier resolver (e.g., from database) */
   resolveUserTier?: (userId: string) => Promise<UserTier>;
 
+  /**
+   * Verify admin capability from auth token (REQUIRED for admin access)
+   * This should verify the UCAN token has the 'admin' capability
+   * If not provided, isAdmin will always be false
+   */
+  verifyAdminCapability?: AdminVerifier;
+
   /** Additional context enrichment */
   enrich?: (context: UserContext, request: Request) => Promise<UserContext>;
 }
@@ -261,7 +280,7 @@ export async function extractUserContext(
   const connection = extractConnection(request);
   const reducedMotion = extractReducedMotion(request);
   const { timezone, localHour } = extractTimeContext(request);
-  const { userId, tier: initialTier } = extractIdentity(cookies, request);
+  const { userId, tier: initialTier, authToken } = extractIdentity(cookies, request);
   const { recentPages, dwellTimes, clickPatterns } = extractNavigationHistory(cookies);
   const preferences = extractPreferences(cookies);
   const { sessionId, isNewSession, sessionStartedAt } = extractSessionInfo(cookies);
@@ -273,6 +292,18 @@ export async function extractUserContext(
       tier = await options.resolveUserTier(userId);
     } catch {
       // Keep initial tier on error
+    }
+  }
+
+  // Verify admin capability via UCAN token (NOT from cookies!)
+  // Admin access MUST be cryptographically verified
+  let isAdmin = false;
+  if (authToken && options.verifyAdminCapability) {
+    try {
+      isAdmin = await options.verifyAdminCapability(authToken);
+    } catch {
+      // Not admin on verification failure
+      isAdmin = false;
     }
   }
 
@@ -290,6 +321,7 @@ export async function extractUserContext(
   let context: UserContext = {
     userId,
     tier,
+    isAdmin,
     recentPages,
     dwellTimes,
     clickPatterns,
@@ -404,6 +436,8 @@ export function addSpeculationHeaders(
 export interface ESIState {
   /** User subscription tier for feature gating */
   userTier: UserTier;
+  /** Admin flag - bypasses ALL tier restrictions */
+  isAdmin?: boolean;
   /** Current emotional state for personalization */
   emotionState?: {
     primary: string;
@@ -489,10 +523,25 @@ export function serializeToESIState(context: UserContext): ESIState {
       voiceSynthesis: true,
       imageAnalysis: true,
     },
+    admin: {
+      aiInference: true,
+      emotionTracking: true,
+      collaboration: true,
+      advancedInsights: true,
+      customThemes: true,
+      voiceSynthesis: true,
+      imageAnalysis: true,
+    },
   };
+
+  // Admins get ALL features regardless of tier
+  const features = context.isAdmin
+    ? tierFeatures.admin
+    : tierFeatures[context.tier] || tierFeatures.free;
 
   return {
     userTier: context.tier,
+    isAdmin: context.isAdmin,
     emotionState: context.emotionState ? {
       primary: context.emotionState.primary,
       valence: context.emotionState.valence,
@@ -507,7 +556,7 @@ export function serializeToESIState(context: UserContext): ESIState {
     sessionId: context.sessionId,
     localHour: context.localHour,
     timezone: context.timezone,
-    features: tierFeatures[context.tier],
+    features,
     userId: context.userId,
     isNewSession: context.isNewSession,
     recentPages: context.recentPages.slice(-10), // Last 10 pages
@@ -534,4 +583,47 @@ export function generateESIStateScript(esiState: ESIState): string {
 export function generateESIStateScriptFromContext(context: UserContext): string {
   const esiState = serializeToESIState(context);
   return generateESIStateScript(esiState);
+}
+
+// ============================================================================
+// Admin Verification Helpers
+// ============================================================================
+
+/**
+ * Create an admin verifier from a UCAN auth instance
+ *
+ * @example
+ * ```ts
+ * import { auth } from './auth';
+ * import { createAdminVerifier, extractUserContext } from '@affectively/aeon-pages-runtime';
+ *
+ * const verifyAdmin = createAdminVerifier(auth);
+ *
+ * const context = await extractUserContext(request, {
+ *   verifyAdminCapability: verifyAdmin,
+ * });
+ * ```
+ */
+export function createAdminVerifier<T>(
+  auth: {
+    verifyCapability: (opts: {
+      capability: T;
+      resource: string;
+      token: string;
+    }) => Promise<boolean>;
+  },
+  adminCapability: T = 'admin' as T,
+  adminResource: string = '*'
+): AdminVerifier {
+  return async (token: string): Promise<boolean> => {
+    try {
+      return await auth.verifyCapability({
+        capability: adminCapability,
+        resource: adminResource,
+        token,
+      });
+    } catch {
+      return false;
+    }
+  };
 }

@@ -391,10 +391,101 @@ export interface PresenceInfo {
   lastActivity: string;
 }
 
+// =============================================================================
+// UCAN CAPABILITIES - Authorization for Aeon pages and nodes
+// =============================================================================
+
+/**
+ * Base capability actions for Aeon pages
+ * - aeon:read - Read access to page/node
+ * - aeon:write - Write access to page/node
+ * - aeon:admin - Full admin access (bypasses all restrictions)
+ * - aeon:* - Wildcard (all permissions)
+ */
+export type AeonCapabilityAction = 'aeon:read' | 'aeon:write' | 'aeon:admin' | 'aeon:*';
+
+/**
+ * Node-level capability actions (Merkle hash-based)
+ * - aeon:node:read - Read access to specific node by Merkle hash
+ * - aeon:node:write - Write access to specific node by Merkle hash
+ * - aeon:node:* - All permissions on specific node
+ */
+export type AeonNodeCapabilityAction = 'aeon:node:read' | 'aeon:node:write' | 'aeon:node:*';
+
+/** All capability action types */
+export type AeonCapabilityActionType = AeonCapabilityAction | AeonNodeCapabilityAction;
+
 /** UCAN capability for Aeon pages */
 export interface AeonCapability {
-  can: 'aeon:read' | 'aeon:write' | 'aeon:admin' | 'aeon:*';
+  can: AeonCapabilityAction;
   with: string;
+}
+
+/**
+ * UCAN capability for node-level access (Merkle hash-based)
+ *
+ * @example
+ * ```ts
+ * // Grant read access to a specific node by Merkle hash
+ * const capability: AeonNodeCapability = {
+ *   can: 'aeon:node:read',
+ *   with: 'merkle:a1b2c3d4e5f6',
+ * };
+ *
+ * // Grant write access to all nodes under a path
+ * const pathCapability: AeonNodeCapability = {
+ *   can: 'aeon:node:write',
+ *   with: 'path:/dashboard/*',
+ * };
+ *
+ * // Grant access to node and all children (tree access)
+ * const treeCapability: AeonNodeCapability = {
+ *   can: 'aeon:node:*',
+ *   with: 'tree:a1b2c3d4e5f6',
+ * };
+ * ```
+ */
+export interface AeonNodeCapability {
+  can: AeonNodeCapabilityAction;
+  /**
+   * Resource identifier. Supports:
+   * - `merkle:<hash>` - Specific node by Merkle hash
+   * - `tree:<hash>` - Node and all descendants
+   * - `path:<route>` - All nodes on a route (supports wildcards)
+   * - `*` - All nodes (wildcard)
+   */
+  with: string;
+}
+
+/** Combined capability type (page or node level) */
+export type AeonAnyCapability = AeonCapability | AeonNodeCapability;
+
+/**
+ * Resource type for capability matching
+ */
+export type AeonResourceType = 'merkle' | 'tree' | 'path' | 'wildcard';
+
+/**
+ * Parsed resource identifier from capability
+ */
+export interface ParsedResource {
+  type: AeonResourceType;
+  value: string;
+}
+
+/**
+ * Merkle node access request
+ * Used when verifying access to a specific node
+ */
+export interface MerkleAccessRequest {
+  /** The Merkle hash of the node */
+  merkleHash: string;
+  /** Full tree path from root to node */
+  treePath?: string[];
+  /** Merkle hashes of ancestors (for tree-based checks) */
+  ancestorHashes?: string[];
+  /** The route/page path */
+  routePath?: string;
 }
 
 /** Alias for PresenceInfo - used by react package */

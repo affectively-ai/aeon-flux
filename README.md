@@ -128,6 +128,90 @@ import { ESI, ESIProvider } from '@affectively/aeon-pages-runtime/router';
 >
   {draftContent}
 </ESI.Optimize>
+
+// Format transformations - wrap any ESI output
+<ESI.Markdown gfm>
+  <ESI.Infer>Generate API documentation</ESI.Infer>
+</ESI.Markdown>
+
+<ESI.Latex displayMode>
+  <ESI.Infer>Write the quadratic formula</ESI.Infer>
+</ESI.Latex>
+
+<ESI.Json indent={4} copyable>
+  <ESI.Structured schema={dataSchema}>Analyze this</ESI.Structured>
+</ESI.Json>
+
+// Text-to-code with coding models
+<ESI.Code
+  generateFrom="A debounce utility function"
+  language="typescript"
+  model="codestral"
+  lineNumbers
+  copyable
+/>
+```
+
+### ESI Format Components
+
+Transform inference output before rendering:
+
+| Component | Purpose |
+|-----------|---------|
+| `ESI.Markdown` | Render markdown as HTML (GFM support) |
+| `ESI.Latex` | Render LaTeX math expressions |
+| `ESI.Json` | Pretty-print JSON with syntax highlighting |
+| `ESI.Plaintext` | Plain text with whitespace control |
+| `ESI.Code` | Code blocks with text-to-code generation |
+| `ESI.Semantic` | Extract topics/entities → structured HTML/microdata |
+
+### ESI.Code with Coding Models
+
+`ESI.Code` supports specialized coding models for text-to-code generation:
+
+```tsx
+// Text-to-code: generate from natural language
+<ESI.Code
+  generateFrom="A React hook that fetches user data with loading state"
+  language="typescript"
+  model="codestral"
+  lineNumbers
+  copyable
+/>
+
+// Available models
+type CodeModel =
+  | 'codestral'      // Mistral Codestral (default)
+  | 'deepseek'       // DeepSeek Coder
+  | 'starcoder'      // StarCoder
+  | 'codellama'      // Code Llama
+  | 'qwen-coder'     // Qwen Coder
+  | 'claude'         // Claude
+  | 'gpt-4';         // GPT-4
+
+// Auto-detect language
+<ESI.Code autoDetect model="deepseek">
+  {someCodeString}
+</ESI.Code>
+```
+
+### ESI.Semantic - Embeddings to Structured HTML
+
+Extract semantic topics, entities, and emotions → generate Schema.org microdata:
+
+```tsx
+// Extract topics as JSON-LD structured data
+<ESI.Semantic format="jsonld" schemaType="Article" extractEntities extractEmotion>
+  {articleText}
+</ESI.Semantic>
+
+// Display as interactive tags
+<ESI.Semantic format="tags" maxTopics={5} extractEmotion>
+  <ESI.Infer>Summarize this news article</ESI.Infer>
+</ESI.Semantic>
+
+// Output formats: microdata | jsonld | rdfa | tags
+// Uses: embed model (embeddings), classify model (entities), emotion model
 ```
 
 ## Zero-Dependency Rendering
@@ -317,6 +401,59 @@ const useSpeculation = createSpeculationHook(manager);
 
 Supports [Speculation Rules API](https://developer.chrome.com/docs/web-platform/prerender-pages) with link prefetch fallback.
 
+## Zero-Instrumentation Analytics
+
+Automatic click tracking with Merkle tree node identification. Every click tracked without writing a single line of instrumentation code.
+
+```typescript
+import {
+  initClickTracker,
+  initContextBridgeWithRetry,
+  pushPageView,
+} from '@affectively/aeon-pages-analytics';
+
+// Initialize on client
+initContextBridgeWithRetry({ maxRetries: 3, retryDelayMs: 500 });
+initClickTracker({
+  debounceMs: 100,
+  maxTextLength: 150,
+  excludeSelectors: ['.no-track'],
+});
+pushPageView();
+```
+
+### What Gets Tracked
+
+Every click automatically includes:
+
+| Data | Description |
+|------|-------------|
+| **Merkle Hash** | Content-addressable ID (stable across renders) |
+| **Tree Path** | `['root', 'layout', 'header', 'nav', 'button']` |
+| **ESI Context** | User tier, emotion state, features, session |
+| **Element Info** | Tag, text, aria-label, role, href |
+| **Position** | Viewport and document coordinates |
+
+### DataLayer Events
+
+```javascript
+// Click event pushed to dataLayer
+{
+  event: 'aeon.click',
+  click: {
+    merkleHash: 'a1b2c3d4e5f6',
+    treePath: ['root', 'layout', 'header', 'settings-btn'],
+    element: { tagName: 'BUTTON', text: 'Settings' }
+  },
+  context: {
+    userTier: 'pro',
+    emotionState: { primary: 'focused', valence: 0.3 }
+  }
+}
+```
+
+Works with GTM + GA4 out of the box. Set `GTM_CONTAINER_ID` in your environment.
+
 ## The `'use aeon'` Directive
 
 ```tsx
@@ -349,6 +486,8 @@ export default function Page() {
 | `useESITier()` | User tier for feature gating |
 | `useESIEmotionState()` | Current emotional context |
 | `useESIFeature(name)` | Check feature availability |
+| `useIsAdmin()` | Check if user is admin |
+| `useMeetsTierRequirement(tier)` | Check if user meets tier |
 | `useGlobalESIState()` | Full ESI state object |
 
 ## ESI Global State Injection
@@ -440,6 +579,7 @@ export default {
 | `@affectively/aeon-pages-runtime` | Runtime (npm) |
 | `@affectively/aeon-pages-runtime/router` | Personalized routing + ESI |
 | `@affectively/aeon-pages-runtime/server` | Server utilities |
+| `@affectively/aeon-pages-analytics` | Zero-instrumentation analytics with Merkle tree tracking |
 
 ## Deploy Your Own
 

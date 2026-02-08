@@ -5,11 +5,22 @@
  * Gathers signals from headers, cookies, and request properties.
  */
 import type { ConnectionType, EmotionState, UserContext, UserTier } from './types';
+/**
+ * Admin capability verifier function type
+ * This should be provided by the auth system (e.g., UCAN token verification)
+ */
+export type AdminVerifier = (token: string) => Promise<boolean>;
 export interface ContextExtractorOptions {
     /** Custom emotion detector (e.g., call edge-workers) */
     detectEmotion?: (request: Request) => Promise<EmotionState | undefined>;
     /** Custom user tier resolver (e.g., from database) */
     resolveUserTier?: (userId: string) => Promise<UserTier>;
+    /**
+     * Verify admin capability from auth token (REQUIRED for admin access)
+     * This should verify the UCAN token has the 'admin' capability
+     * If not provided, isAdmin will always be false
+     */
+    verifyAdminCapability?: AdminVerifier;
     /** Additional context enrichment */
     enrich?: (context: UserContext, request: Request) => Promise<UserContext>;
 }
@@ -36,6 +47,8 @@ export declare function addSpeculationHeaders(response: Response, prefetch: stri
 export interface ESIState {
     /** User subscription tier for feature gating */
     userTier: UserTier;
+    /** Admin flag - bypasses ALL tier restrictions */
+    isAdmin?: boolean;
     /** Current emotional state for personalization */
     emotionState?: {
         primary: string;
@@ -91,3 +104,25 @@ export declare function generateESIStateScript(esiState: ESIState): string;
  * Generate ESI state script from UserContext
  */
 export declare function generateESIStateScriptFromContext(context: UserContext): string;
+/**
+ * Create an admin verifier from a UCAN auth instance
+ *
+ * @example
+ * ```ts
+ * import { auth } from './auth';
+ * import { createAdminVerifier, extractUserContext } from '@affectively/aeon-pages-runtime';
+ *
+ * const verifyAdmin = createAdminVerifier(auth);
+ *
+ * const context = await extractUserContext(request, {
+ *   verifyAdminCapability: verifyAdmin,
+ * });
+ * ```
+ */
+export declare function createAdminVerifier<T>(auth: {
+    verifyCapability: (opts: {
+        capability: T;
+        resource: string;
+        token: string;
+    }) => Promise<boolean>;
+}, adminCapability?: T, adminResource?: string): AdminVerifier;

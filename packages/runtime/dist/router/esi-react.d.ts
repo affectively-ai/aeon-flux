@@ -193,7 +193,9 @@ export declare function useESIInfer(options?: UseESIInferOptions): {
  * Global ESI State type (matches ESIState from context-extractor)
  */
 export interface GlobalESIState {
-    userTier: 'free' | 'starter' | 'pro' | 'enterprise';
+    userTier: 'free' | 'starter' | 'pro' | 'enterprise' | 'admin';
+    /** Admin flag - bypasses ALL tier restrictions */
+    isAdmin?: boolean;
     emotionState?: {
         primary: string;
         valence: number;
@@ -268,6 +270,11 @@ export declare function useGlobalESIState(): GlobalESIState;
  */
 export declare function useESIFeature(feature: keyof GlobalESIState['features']): boolean;
 /**
+ * Hook to check if current user is an admin
+ * Admins bypass ALL tier restrictions
+ */
+export declare function useIsAdmin(): boolean;
+/**
  * Hook to get user tier
  *
  * @example
@@ -284,6 +291,24 @@ export declare function useESIFeature(feature: keyof GlobalESIState['features'])
  * ```
  */
 export declare function useESITier(): GlobalESIState['userTier'];
+/**
+ * Hook to check if user meets minimum tier requirement
+ * Admins bypass ALL tier restrictions
+ *
+ * @example
+ * ```tsx
+ * function ProFeature() {
+ *   const hasPro = useMeetsTierRequirement('pro');
+ *
+ *   if (!hasPro) {
+ *     return <UpgradePrompt tier="pro" />;
+ *   }
+ *
+ *   return <ProFeatureContent />;
+ * }
+ * ```
+ */
+export declare function useMeetsTierRequirement(requiredTier: GlobalESIState['userTier']): boolean;
 /**
  * Hook to get current emotion state
  *
@@ -328,6 +353,8 @@ export declare const ESI: {
     Embed: FC<ESIEmbedProps>;
     Emotion: FC<ESIEmotionProps>;
     Vision: FC<ESIVisionProps>;
+    Translate: FC<import("./esi-translate-react").ESITranslateProps>;
+    TranslationProvider: FC<import("./esi-translate-react").TranslationProviderProps>;
     Structured: typeof ESIStructured;
     If: typeof ESIIf;
     Show: typeof ESIShow;
@@ -355,5 +382,6 @@ export declare const ESI: {
     Json: FC<import("./esi-format-react").ESIJsonProps>;
     Plaintext: FC<import("./esi-format-react").ESIPlaintextProps>;
     Code: FC<import("./esi-format-react").ESICodeProps>;
+    Semantic: FC<import("./esi-format-react").ESISemanticProps>;
 };
 export default ESI;

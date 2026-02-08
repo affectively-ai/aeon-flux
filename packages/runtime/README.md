@@ -194,6 +194,117 @@ const insight = esiHalo({
 });
 ```
 
+### Merkle-Based UCAN Capabilities
+
+Fine-grained access control to component nodes using Merkle hashes. Integrates with UCAN tokens for cryptographic authorization.
+
+```tsx
+import {
+  createNodeCapabilityVerifier,
+  createNodeReadCapability,
+  createTreeCapability,
+  checkNodeAccess,
+} from '@affectively/aeon-pages-runtime';
+
+// Create capabilities for specific nodes by Merkle hash
+const readCapability = createNodeReadCapability('a1b2c3d4e5f6');
+// { can: 'aeon:node:read', with: 'merkle:a1b2c3d4e5f6' }
+
+// Create tree capability (grants access to node and all descendants)
+const treeCapability = createTreeCapability('a1b2c3d4e5f6');
+// { can: 'aeon:node:*', with: 'tree:a1b2c3d4e5f6' }
+
+// Create path-based capability (grants access to all nodes on a route)
+const pathCapability = createPathCapability('/dashboard/*');
+// { can: 'aeon:node:*', with: 'path:/dashboard/*' }
+
+// Verify access to a specific node
+const canAccess = checkNodeAccess(
+  userCapabilities,
+  { merkleHash: 'a1b2c3d4e5f6', routePath: '/dashboard' },
+  'read'
+);
+```
+
+#### Resource Formats
+
+| Format | Example | Description |
+|--------|---------|-------------|
+| `merkle:<hash>` | `merkle:a1b2c3d4e5f6` | Exact match on Merkle hash |
+| `tree:<hash>` | `tree:a1b2c3d4e5f6` | Match node or any ancestor |
+| `path:<route>` | `path:/dashboard/*` | All nodes on a route (wildcards) |
+| `*` | `*` | Match any node (wildcard) |
+
+#### Capability Actions
+
+| Action | Description |
+|--------|-------------|
+| `aeon:node:read` | Read access to node |
+| `aeon:node:write` | Write access to node |
+| `aeon:node:*` | Full access to node |
+
+#### Creating a Verifier from UCAN Token
+
+```tsx
+import { createNodeCapabilityVerifier } from '@affectively/aeon-pages-runtime';
+
+const verifier = createNodeCapabilityVerifier(token, {
+  extractCapabilities: async (t) => {
+    const decoded = await decodeUCAN(t);
+    return decoded.capabilities;
+  },
+  verifyToken: async (t) => {
+    return await verifyUCANSignature(t);
+  },
+});
+
+// Check if user can read a specific node
+const canRead = await verifier(
+  { merkleHash: 'a1b2c3d4e5f6' },
+  'read'
+);
+
+// Check with full tree path context
+const canWrite = await verifier(
+  {
+    merkleHash: 'a1b2c3d4e5f6',
+    treePath: ['root', 'layout', 'header', 'button'],
+    ancestorHashes: ['f1e2d3c4b5a6', 'b2c3d4e5f6a1'],
+    routePath: '/dashboard',
+  },
+  'write'
+);
+```
+
+#### Integration with Analytics
+
+Merkle capabilities integrate seamlessly with `@affectively/aeon-pages-analytics`:
+
+```tsx
+import { buildMerkleTreeSync } from '@affectively/aeon-pages-analytics';
+import { checkNodeAccess } from '@affectively/aeon-pages-runtime';
+
+// Build Merkle tree from component tree
+const merkleTree = buildMerkleTreeSync(componentTree);
+
+// Check access for each node
+for (const [nodeId, merkleNode] of merkleTree) {
+  const canEdit = checkNodeAccess(
+    userCapabilities,
+    {
+      merkleHash: merkleNode.hash,
+      treePath: merkleNode.path,
+      routePath: currentRoute,
+    },
+    'write'
+  );
+
+  if (canEdit) {
+    // Show edit controls for this node
+  }
+}
+```
+
 ## API Reference
 
 ### Components
@@ -234,6 +345,23 @@ const insight = esiHalo({
 | `normalizeLanguageCode()` | Normalize language code |
 | `getSupportedLanguages()` | Get list of supported languages |
 | `initTranslationObserver()` | Auto-init DOM translation observer |
+
+### Merkle Capability Functions
+
+| Function | Description |
+|----------|-------------|
+| `createNodeReadCapability(hash)` | Create read capability for a Merkle hash |
+| `createNodeWriteCapability(hash)` | Create write capability for a Merkle hash |
+| `createTreeCapability(hash, action)` | Create tree capability (node + descendants) |
+| `createPathCapability(path, action)` | Create path-based capability |
+| `createWildcardNodeCapability(action)` | Create wildcard capability (all nodes) |
+| `createNodeCapabilityVerifier(token, opts)` | Create verifier from UCAN token |
+| `checkNodeAccess(caps, request, action)` | Check if capabilities grant access |
+| `filterAccessibleNodes(nodes, caps, action)` | Filter nodes by access |
+| `getMostSpecificCapability(caps, request)` | Get most specific matching capability |
+| `parseResource(resource)` | Parse resource identifier |
+| `formatResource(type, value)` | Format resource identifier |
+| `capabilityGrantsAccess(cap, request, action)` | Check single capability |
 
 ## Configuration
 

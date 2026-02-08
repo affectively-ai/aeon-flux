@@ -82,6 +82,7 @@ const DEFAULT_CONFIG: Required<HeuristicAdapterConfig> = {
     starter: {},
     pro: {},
     enterprise: {},
+    admin: {}, // Admins get all features
   },
   defaultAccent: '#336699', // Steel blue - neutral default
   signals: {},

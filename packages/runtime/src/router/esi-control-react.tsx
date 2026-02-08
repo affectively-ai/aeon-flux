@@ -1349,10 +1349,11 @@ export interface ESITierGateProps {
   className?: string;
 }
 
-const TIER_LEVELS = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+const TIER_LEVELS = { free: 0, starter: 1, pro: 2, enterprise: 3, admin: 999 };
 
 /**
  * Gate content by user tier
+ * Admins bypass ALL tier restrictions
  * @example
  * <ESI.TierGate minTier="pro" fallback={<UpgradePrompt />}>
  *   <AdvancedFeature />
@@ -1363,7 +1364,14 @@ export function ESITierGate({ minTier, children, fallback = null, className }: E
 
   useEffect(() => {
     // Check global ESI state for tier
-    const state = (typeof window !== 'undefined' && (window as unknown as { __AEON_ESI_STATE__?: { userTier?: string } }).__AEON_ESI_STATE__) || {};
+    const state = (typeof window !== 'undefined' && (window as unknown as { __AEON_ESI_STATE__?: { userTier?: string; isAdmin?: boolean } }).__AEON_ESI_STATE__) || {};
+
+    // Admins bypass ALL tier restrictions
+    if (state.isAdmin === true || state.userTier === 'admin') {
+      setHasAccess(true);
+      return;
+    }
+
     const userTier = (state.userTier || 'free') as keyof typeof TIER_LEVELS;
     const userLevel = TIER_LEVELS[userTier] ?? 0;
     const requiredLevel = TIER_LEVELS[minTier] ?? 0;

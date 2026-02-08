@@ -253,7 +253,16 @@ export type {
   PageSession,
   PresenceInfo,
   PresenceUser,
+  // UCAN Capability types
   AeonCapability,
+  AeonCapabilityAction,
+  AeonNodeCapability,
+  AeonNodeCapabilityAction,
+  AeonCapabilityActionType,
+  AeonAnyCapability,
+  AeonResourceType,
+  ParsedResource,
+  MerkleAccessRequest,
   // Skeleton types
   SkeletonShape,
   SkeletonSource,
@@ -300,6 +309,19 @@ export {
   esiEmotion,
   esiVision,
   esiWithContext,
+  // Merkle-Based UCAN Capability Verification
+  parseResource,
+  formatResource,
+  capabilityGrantsAccess,
+  createNodeCapabilityVerifier,
+  createNodeReadCapability,
+  createNodeWriteCapability,
+  createTreeCapability,
+  createPathCapability,
+  createWildcardNodeCapability,
+  checkNodeAccess,
+  filterAccessibleNodes,
+  getMostSpecificCapability,
 } from './router/index';
 export type {
   // User context
@@ -340,6 +362,9 @@ export type {
   ESIResult,
   ESIProcessor,
   ESIConfig,
+  // Merkle Capability Verification
+  NodeCapabilityVerifier,
+  NodeVerifierOptions,
 } from './router/index';
 
 // Version
