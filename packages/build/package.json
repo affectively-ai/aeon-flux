@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-build",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Build-time optimizations for Aeon Pages - CSS tree-shaking, asset inlining, pre-rendering",
   "type": "module",
   "main": "./dist/index.js",
