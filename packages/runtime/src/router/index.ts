@@ -48,6 +48,11 @@ export type {
   ESIResult,
   ESIProcessor,
   ESIConfig,
+
+  // Translation Types
+  TranslationResult,
+  TranslationProviderConfig,
+  SupportedLanguageCode,
 } from './types';
 
 // Default configs
@@ -62,6 +67,21 @@ export {
   esiVision,
   esiWithContext,
 } from './esi';
+
+// ESI Translation
+export {
+  esiTranslate,
+  generateTranslationCacheKey,
+  getCachedTranslation,
+  setCachedTranslation,
+  clearTranslationCache,
+  readHeadTranslationConfig,
+  normalizeLanguageCode,
+  getLanguageName,
+  getSupportedLanguages,
+  detectTargetLanguage,
+  translateWithAIGateway,
+} from './esi-translate';
 
 // ESI React Components
 export {
@@ -90,6 +110,30 @@ export type {
   UseESIInferOptions,
   GlobalESIState,
 } from './esi-react';
+
+// ESI Translation React Components
+export {
+  ESITranslate,
+  TranslationProvider,
+  TranslationContext,
+  useTranslation,
+  useTranslationOptional,
+} from './esi-translate-react';
+export type {
+  ESITranslateProps,
+  TranslationProviderProps,
+  TranslationContextValue,
+} from './esi-translate-react';
+
+// ESI Translation Observer
+export {
+  TranslationObserver,
+  useTranslationObserver,
+  initTranslationObserver,
+} from './esi-translate-observer';
+export type {
+  TranslationObserverConfig,
+} from './esi-translate-observer';
 
 // Adapters
 export { HeuristicAdapter } from './heuristic-adapter';

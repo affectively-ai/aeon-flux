@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-pages-runtime",
-  "version": "0.3.2",
+  "version": "0.6.0",
   "description": "Bun/Cloudflare runtime for @affectively/aeon-pages",
   "type": "module",
   "main": "./dist/index.js",

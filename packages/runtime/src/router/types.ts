@@ -28,12 +28,14 @@ export interface Viewport {
 }
 
 export type ConnectionType = 'slow-2g' | '2g' | '3g' | '4g' | 'fast';
-export type UserTier = 'free' | 'starter' | 'pro' | 'enterprise';
+export type UserTier = 'free' | 'starter' | 'pro' | 'enterprise' | 'admin';
 
 export interface UserContext {
   // Identity
   userId?: string;
   tier: UserTier;
+  /** Admin flag - bypasses ALL tier restrictions */
+  isAdmin?: boolean;
 
   // Behavioral signals
   recentPages: string[];
@@ -257,6 +259,7 @@ export type ESIModel =
   | 'stt'           // Speech-to-text
   | 'emotion'       // Emotion detection
   | 'classify'      // Classification
+  | 'translate'     // Translation
   | 'custom';       // Custom model
 
 export type ESIContentType =
@@ -471,6 +474,11 @@ export const DEFAULT_ESI_CONFIG: ESIConfig = {
       allowedModels: ['llm', 'embed', 'classify', 'vision', 'tts', 'stt', 'custom'],
       maxTokens: 32000,
     },
+    admin: {
+      maxInferencesPerRequest: 999999,
+      allowedModels: ['llm', 'embed', 'classify', 'vision', 'tts', 'stt', 'emotion', 'custom'],
+      maxTokens: 999999,
+    },
   },
 };
 
@@ -512,3 +520,65 @@ export interface PresenceUser {
   /** User status (online, idle, etc.) */
   status?: 'online' | 'idle' | 'away' | 'busy' | 'offline';
 }
+
+// ============================================================================
+// Translation Types
+// ============================================================================
+
+/**
+ * Result of a translation operation
+ */
+export interface TranslationResult {
+  /** Original text that was translated */
+  original: string;
+
+  /** Translated text */
+  translated: string;
+
+  /** Source language (detected or specified) */
+  sourceLanguage: string;
+
+  /** Target language */
+  targetLanguage: string;
+
+  /** Translation confidence (0-1) */
+  confidence: number;
+
+  /** Was result from cache */
+  cached: boolean;
+
+  /** Latency in milliseconds */
+  latencyMs: number;
+}
+
+/**
+ * Configuration for the TranslationProvider
+ */
+export interface TranslationProviderConfig {
+  /** Default target language (ISO 639-1 code) */
+  defaultLanguage: string;
+
+  /** Fallback language if translation fails */
+  fallbackLanguage?: string;
+
+  /** Auto-detect source language */
+  autoDetectSource?: boolean;
+
+  /** AI Gateway endpoint for translation */
+  endpoint?: string;
+
+  /** Cache TTL in seconds (default: 86400 = 24 hours) */
+  cacheTtl?: number;
+
+  /** Maximum text length to translate (default: 5000 chars) */
+  maxTextLength?: number;
+}
+
+/**
+ * Supported language codes for translation
+ */
+export type SupportedLanguageCode =
+  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'nl' | 'pl' | 'ru'
+  | 'zh' | 'ja' | 'ko' | 'ar' | 'hi' | 'bn' | 'vi' | 'th' | 'tr'
+  | 'id' | 'ms' | 'tl' | 'sv' | 'da' | 'no' | 'fi' | 'cs' | 'el'
+  | 'he' | 'uk' | 'ro' | 'hu' | 'ca' | 'hy';

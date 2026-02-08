@@ -86,7 +86,14 @@ import {
   ESIJson,
   ESIPlaintext,
   ESICode,
+  ESISemantic,
 } from './esi-format-react';
+
+// Import translation components for ESI namespace extension
+import {
+  ESITranslate,
+  TranslationProvider,
+} from './esi-translate-react';
 
 // ============================================================================
 // ESI Context
@@ -628,7 +635,9 @@ export function useESIInfer(options: UseESIInferOptions = {}) {
  * Global ESI State type (matches ESIState from context-extractor)
  */
 export interface GlobalESIState {
-  userTier: 'free' | 'starter' | 'pro' | 'enterprise';
+  userTier: 'free' | 'starter' | 'pro' | 'enterprise' | 'admin';
+  /** Admin flag - bypasses ALL tier restrictions */
+  isAdmin?: boolean;
   emotionState?: {
     primary: string;
     valence: number;
@@ -752,8 +761,21 @@ export function useGlobalESIState(): GlobalESIState {
  * ```
  */
 export function useESIFeature(feature: keyof GlobalESIState['features']): boolean {
-  const { features } = useGlobalESIState();
+  const { features, isAdmin, userTier } = useGlobalESIState();
+  // Admins bypass ALL tier restrictions
+  if (isAdmin === true || userTier === 'admin') {
+    return true;
+  }
   return features[feature] ?? false;
+}
+
+/**
+ * Hook to check if current user is an admin
+ * Admins bypass ALL tier restrictions
+ */
+export function useIsAdmin(): boolean {
+  const { isAdmin, userTier } = useGlobalESIState();
+  return isAdmin === true || userTier === 'admin';
 }
 
 /**
@@ -775,6 +797,48 @@ export function useESIFeature(feature: keyof GlobalESIState['features']): boolea
 export function useESITier(): GlobalESIState['userTier'] {
   const { userTier } = useGlobalESIState();
   return userTier;
+}
+
+/**
+ * Tier level ordering for comparison
+ */
+const TIER_ORDER: Record<GlobalESIState['userTier'], number> = {
+  free: 0,
+  starter: 1,
+  pro: 2,
+  enterprise: 3,
+  admin: 999,
+};
+
+/**
+ * Hook to check if user meets minimum tier requirement
+ * Admins bypass ALL tier restrictions
+ *
+ * @example
+ * ```tsx
+ * function ProFeature() {
+ *   const hasPro = useMeetsTierRequirement('pro');
+ *
+ *   if (!hasPro) {
+ *     return <UpgradePrompt tier="pro" />;
+ *   }
+ *
+ *   return <ProFeatureContent />;
+ * }
+ * ```
+ */
+export function useMeetsTierRequirement(requiredTier: GlobalESIState['userTier']): boolean {
+  const { userTier, isAdmin } = useGlobalESIState();
+
+  // Admins bypass ALL tier restrictions
+  if (isAdmin === true || userTier === 'admin') {
+    return true;
+  }
+
+  const userLevel = TIER_ORDER[userTier] ?? 0;
+  const requiredLevel = TIER_ORDER[requiredTier] ?? 0;
+
+  return userLevel >= requiredLevel;
 }
 
 /**
@@ -841,6 +905,9 @@ export const ESI = {
   Embed: ESIEmbed,
   Emotion: ESIEmotion,
   Vision: ESIVision,
+  // Translation components (from esi-translate-react)
+  Translate: ESITranslate,
+  TranslationProvider: TranslationProvider,
   // Control flow components (from esi-control-react)
   Structured: ESIStructured,
   If: ESIIf,
@@ -874,6 +941,7 @@ export const ESI = {
   Json: ESIJson,
   Plaintext: ESIPlaintext,
   Code: ESICode,
+  Semantic: ESISemantic,
 };
 
 export default ESI;
