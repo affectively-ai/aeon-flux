@@ -28,11 +28,7 @@ export { AeonRouter } from './router.js';
 export { AeonRouteRegistry } from './registry';
 
 // Navigation engine (cutting-edge navigation)
-export {
-  AeonNavigationEngine,
-  getNavigator,
-  setNavigator,
-} from './navigation';
+export { AeonNavigationEngine, getNavigator, setNavigator } from './navigation';
 export type {
   NavigationOptions,
   PrefetchOptions,
@@ -73,11 +69,7 @@ export {
 export type { SkeletonSwapOptions } from './skeleton-hydrate';
 
 // Navigation predictor (ML-based)
-export {
-  NavigationPredictor,
-  getPredictor,
-  setPredictor,
-} from './predictor';
+export { NavigationPredictor, getPredictor, setPredictor } from './predictor';
 export type {
   PredictedRoute,
   NavigationRecord,
@@ -92,10 +84,7 @@ export {
   setSpeculativeRenderer,
   initSpeculativeRendering,
 } from './speculation';
-export type {
-  PreRenderedPage,
-  SpeculativeRendererConfig,
-} from './speculation';
+export type { PreRenderedPage, SpeculativeRendererConfig } from './speculation';
 
 // Storage adapters
 export {

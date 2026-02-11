@@ -125,7 +125,11 @@ export class SpeculativeRenderer {
   async prerender(route: string, confidence = 1): Promise<boolean> {
     // Skip if already cached and not stale
     const existing = this.cache.get(route);
-    if (existing && !existing.stale && Date.now() - existing.prefetchedAt < this.config.staleTTL) {
+    if (
+      existing &&
+      !existing.stale &&
+      Date.now() - existing.prefetchedAt < this.config.staleTTL
+    ) {
       return true;
     }
 
@@ -141,12 +145,15 @@ export class SpeculativeRenderer {
       const response = await fetch(`${route}?_aeon_prerender=1`, {
         headers: {
           'X-Aeon-Prerender': '1',
-          'Accept': 'text/html',
+          Accept: 'text/html',
         },
       });
 
       if (!response.ok) {
-        console.warn(`[aeon:speculation] Failed to fetch: ${route}`, response.status);
+        console.warn(
+          `[aeon:speculation] Failed to fetch: ${route}`,
+          response.status,
+        );
         return false;
       }
 
@@ -169,7 +176,9 @@ export class SpeculativeRenderer {
       this.cache.set(route, page);
       this.currentCacheSize += size;
 
-      console.log(`[aeon:speculation] Cached: ${route} (${(size / 1024).toFixed(1)}KB)`);
+      console.log(
+        `[aeon:speculation] Cached: ${route} (${(size / 1024).toFixed(1)}KB)`,
+      );
       return true;
     } catch (err) {
       console.warn(`[aeon:speculation] Error pre-rendering: ${route}`, err);
@@ -184,7 +193,11 @@ export class SpeculativeRenderer {
   async navigate(route: string): Promise<boolean> {
     const cached = this.cache.get(route);
 
-    if (cached && !cached.stale && Date.now() - cached.prefetchedAt < this.config.staleTTL) {
+    if (
+      cached &&
+      !cached.stale &&
+      Date.now() - cached.prefetchedAt < this.config.staleTTL
+    ) {
       console.log(`[aeon:speculation] Instant nav to: ${route}`);
 
       // Instant navigation - replace document content
@@ -243,7 +256,7 @@ export class SpeculativeRenderer {
   private setupIntersectionObserver(): void {
     this.observer = new IntersectionObserver(
       (entries) => this.onLinksVisible(entries),
-      { rootMargin: this.config.intersectionRootMargin }
+      { rootMargin: this.config.intersectionRootMargin },
     );
 
     // Observe all internal links
@@ -258,7 +271,9 @@ export class SpeculativeRenderer {
     });
   }
 
-  private async onLinksVisible(entries: IntersectionObserverEntry[]): Promise<void> {
+  private async onLinksVisible(
+    entries: IntersectionObserverEntry[],
+  ): Promise<void> {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
 
@@ -279,7 +294,9 @@ export class SpeculativeRenderer {
   }
 
   private onLinkHover(e: Event): void {
-    const link = (e.target as Element).closest('a[href^="/"]') as HTMLAnchorElement | null;
+    const link = (e.target as Element).closest(
+      'a[href^="/"]',
+    ) as HTMLAnchorElement | null;
     if (!link) return;
 
     const route = new URL(link.href, window.location.origin).pathname;
@@ -293,7 +310,9 @@ export class SpeculativeRenderer {
   }
 
   private onLinkLeave(e: Event): void {
-    const link = (e.target as Element).closest('a[href^="/"]') as HTMLAnchorElement | null;
+    const link = (e.target as Element).closest(
+      'a[href^="/"]',
+    ) as HTMLAnchorElement | null;
     if (!link) return;
 
     const route = new URL(link.href, window.location.origin).pathname;
@@ -308,8 +327,15 @@ export class SpeculativeRenderer {
 
   private injectSpeculationRules(): void {
     // Check if browser supports Speculation Rules
-    if (!('supports' in HTMLScriptElement && HTMLScriptElement.supports('speculationrules'))) {
-      console.log('[aeon:speculation] Browser does not support Speculation Rules API');
+    if (
+      !(
+        'supports' in HTMLScriptElement &&
+        HTMLScriptElement.supports('speculationrules')
+      )
+    ) {
+      console.log(
+        '[aeon:speculation] Browser does not support Speculation Rules API',
+      );
       return;
     }
 
@@ -343,7 +369,9 @@ export class SpeculativeRenderer {
   private setupNavigationInterception(): void {
     // Intercept link clicks
     document.addEventListener('click', async (e) => {
-      const link = (e.target as Element).closest('a[href^="/"]') as HTMLAnchorElement | null;
+      const link = (e.target as Element).closest(
+        'a[href^="/"]',
+      ) as HTMLAnchorElement | null;
       if (!link) return;
 
       // Skip if modifier keys pressed
@@ -448,7 +476,9 @@ export function setSpeculativeRenderer(renderer: SpeculativeRenderer): void {
 /**
  * Initialize speculative rendering (call on page load)
  */
-export function initSpeculativeRendering(config?: Partial<SpeculativeRendererConfig>): SpeculativeRenderer {
+export function initSpeculativeRendering(
+  config?: Partial<SpeculativeRendererConfig>,
+): SpeculativeRenderer {
   const renderer = new SpeculativeRenderer(config);
   setSpeculativeRenderer(renderer);
   renderer.init();

@@ -97,9 +97,7 @@ function serializeSubscription(sub: PushSubscription): PushSubscriptionData {
       p256dh: p256dh
         ? btoa(String.fromCharCode(...new Uint8Array(p256dh)))
         : '',
-      auth: auth
-        ? btoa(String.fromCharCode(...new Uint8Array(auth)))
-        : '',
+      auth: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : '',
     },
   };
 }
@@ -119,11 +117,15 @@ export interface UsePushNotificationsConfig {
  * Hook for managing push notifications
  */
 export function usePushNotifications(
-  config: UsePushNotificationsConfig = {}
+  config: UsePushNotificationsConfig = {},
 ): PushNotificationState {
   const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
-  const [subscription, setSubscription] = useState<PushSubscriptionData | null>(null);
+  const [permission, setPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >('unsupported');
+  const [subscription, setSubscription] = useState<PushSubscriptionData | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -157,73 +159,81 @@ export function usePushNotifications(
     });
   }, []);
 
-  const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
-    if (!isSupported) {
-      return 'denied';
-    }
+  const requestPermission =
+    useCallback(async (): Promise<NotificationPermission> => {
+      if (!isSupported) {
+        return 'denied';
+      }
 
-    const result = await Notification.requestPermission();
-    setPermission(result);
-    return result;
-  }, [isSupported]);
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      return result;
+    }, [isSupported]);
 
-  const subscribe = useCallback(async (): Promise<PushSubscriptionData | null> => {
-    if (!isSupported) {
-      setError('Push notifications are not supported');
-      return null;
-    }
+  const subscribe =
+    useCallback(async (): Promise<PushSubscriptionData | null> => {
+      if (!isSupported) {
+        setError('Push notifications are not supported');
+        return null;
+      }
 
-    if (!vapidPublicKey) {
-      setError('VAPID public key is required');
-      return null;
-    }
+      if (!vapidPublicKey) {
+        setError('VAPID public key is required');
+        return null;
+      }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Ensure service worker is registered
-      let registration: ServiceWorkerRegistration;
+      setIsLoading(true);
+      setError(null);
 
       try {
-        registration = await navigator.serviceWorker.ready;
-      } catch {
-        // Try to register if not ready
-        registration = await navigator.serviceWorker.register(serviceWorkerUrl, {
-          scope: '/',
-        });
-      }
+        // Ensure service worker is registered
+        let registration: ServiceWorkerRegistration;
 
-      // Request permission if needed
-      if (Notification.permission === 'default') {
-        const perm = await Notification.requestPermission();
-        setPermission(perm);
-
-        if (perm !== 'granted') {
-          throw new Error('Notification permission denied');
+        try {
+          registration = await navigator.serviceWorker.ready;
+        } catch {
+          // Try to register if not ready
+          registration = await navigator.serviceWorker.register(
+            serviceWorkerUrl,
+            {
+              scope: '/',
+            },
+          );
         }
-      } else if (Notification.permission !== 'granted') {
-        throw new Error('Notification permission not granted');
+
+        // Request permission if needed
+        if (Notification.permission === 'default') {
+          const perm = await Notification.requestPermission();
+          setPermission(perm);
+
+          if (perm !== 'granted') {
+            throw new Error('Notification permission denied');
+          }
+        } else if (Notification.permission !== 'granted') {
+          throw new Error('Notification permission not granted');
+        }
+
+        // Subscribe to push
+        const sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(
+            vapidPublicKey,
+          ) as BufferSource,
+        });
+
+        const serialized = serializeSubscription(sub);
+        setSubscription(serialized);
+
+        return serialized;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to subscribe';
+        setError(message);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      // Subscribe to push
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
-      });
-
-      const serialized = serializeSubscription(sub);
-      setSubscription(serialized);
-
-      return serialized;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to subscribe';
-      setError(message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isSupported, vapidPublicKey, serviceWorkerUrl]);
+    }, [isSupported, vapidPublicKey, serviceWorkerUrl]);
 
   const unsubscribe = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
@@ -244,7 +254,8 @@ export function usePushNotifications(
       setSubscription(null);
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unsubscribe';
+      const message =
+        err instanceof Error ? err.message : 'Failed to unsubscribe';
       setError(message);
       return false;
     } finally {
@@ -324,7 +335,13 @@ export function PushNotifications({
 
   return (
     <div className={className} role="region" aria-label="Push notifications">
-      <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+      <h3
+        style={{
+          fontSize: '1.125rem',
+          fontWeight: 600,
+          marginBottom: '0.5rem',
+        }}
+      >
         Push Notifications
       </h3>
 
@@ -360,7 +377,13 @@ export function PushNotifications({
 
       {state.subscription ? (
         <div>
-          <p style={{ color: '#10b981', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <p
+            style={{
+              color: '#10b981',
+              fontSize: '0.875rem',
+              marginBottom: '1rem',
+            }}
+          >
             ✓ You are subscribed to push notifications.
           </p>
           <button
@@ -383,7 +406,13 @@ export function PushNotifications({
         </div>
       ) : (
         <div>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <p
+            style={{
+              color: '#6b7280',
+              fontSize: '0.875rem',
+              marginBottom: '1rem',
+            }}
+          >
             You are not subscribed to push notifications.
           </p>
           <button
@@ -395,7 +424,8 @@ export function PushNotifications({
               color: 'white',
               border: 'none',
               borderRadius: '0.375rem',
-              cursor: state.isLoading || !vapidPublicKey ? 'not-allowed' : 'pointer',
+              cursor:
+                state.isLoading || !vapidPublicKey ? 'not-allowed' : 'pointer',
               opacity: state.isLoading || !vapidPublicKey ? 0.5 : 1,
               fontSize: '0.875rem',
             }}
@@ -404,7 +434,13 @@ export function PushNotifications({
             {state.isLoading ? 'Subscribing...' : 'Subscribe'}
           </button>
           {!vapidPublicKey && (
-            <p style={{ color: '#f59e0b', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+            <p
+              style={{
+                color: '#f59e0b',
+                fontSize: '0.75rem',
+                marginTop: '0.5rem',
+              }}
+            >
               VAPID public key is required for push notifications.
             </p>
           )}

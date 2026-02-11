@@ -42,7 +42,12 @@ interface RouteManifest {
 }
 
 interface CacheMessage {
-  type: 'CACHE_STATUS' | 'PRELOAD_PROGRESS' | 'PRELOAD_COMPLETE' | 'QUEUE_STATUS' | 'SYNC_OFFLINE_QUEUE';
+  type:
+    | 'CACHE_STATUS'
+    | 'PRELOAD_PROGRESS'
+    | 'PRELOAD_COMPLETE'
+    | 'QUEUE_STATUS'
+    | 'SYNC_OFFLINE_QUEUE';
   loaded?: number;
   total?: number;
   percentage?: number;
@@ -74,17 +79,13 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(CACHE_NAME);
 
       // Cache essential assets
-      const essentialAssets = [
-        '/',
-        MANIFEST_URL,
-        '/.aeon/runtime.js',
-      ];
+      const essentialAssets = ['/', MANIFEST_URL, '/.aeon/runtime.js'];
 
       await cache.addAll(essentialAssets.filter(Boolean));
 
       // Skip waiting to activate immediately
       await self.skipWaiting();
-    })()
+    })(),
   );
 });
 
@@ -99,7 +100,7 @@ self.addEventListener('activate', (event) => {
       await Promise.all(
         cacheNames
           .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .map((name) => caches.delete(name)),
       );
 
       // Claim all clients immediately
@@ -107,7 +108,7 @@ self.addEventListener('activate', (event) => {
 
       // Start total preload in background
       startTotalPreload();
-    })()
+    })(),
   );
 });
 
@@ -245,7 +246,10 @@ async function cacheFirst(request: Request): Promise<Response> {
 /**
  * Revalidate in background (stale-while-revalidate)
  */
-async function revalidateInBackground(request: Request, cache: Cache): Promise<void> {
+async function revalidateInBackground(
+  request: Request,
+  cache: Cache,
+): Promise<void> {
   try {
     const response = await fetch(request);
     if (response.ok) {
@@ -276,7 +280,7 @@ async function getManifest(cache: Cache): Promise<RouteManifest | null> {
  */
 function matchRoute(
   pathname: string,
-  routes: RouteManifest['routes']
+  routes: RouteManifest['routes'],
 ): RouteManifest['routes'][0] | null {
   for (const route of routes) {
     if (matchPattern(pathname, route.pattern)) {
@@ -353,7 +357,7 @@ async function startTotalPreload(): Promise<void> {
             total,
             percentage: Math.round((loaded / total) * 100),
           });
-        })
+        }),
       );
 
       // Small delay to keep main thread responsive
@@ -425,7 +429,9 @@ self.addEventListener('message', (event) => {
 /**
  * Handle cache status request
  */
-async function handleGetCacheStatus(event: ExtendableMessageEvent): Promise<void> {
+async function handleGetCacheStatus(
+  event: ExtendableMessageEvent,
+): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
   const manifest = await getManifest(cache);
 
@@ -489,7 +495,9 @@ async function handleClearCache(): Promise<void> {
  * Handle queue status request
  * Returns stats about the offline operation queue
  */
-async function handleGetQueueStatus(event: ExtendableMessageEvent): Promise<void> {
+async function handleGetQueueStatus(
+  event: ExtendableMessageEvent,
+): Promise<void> {
   // Queue stats would be stored in IndexedDB by the encrypted queue
   // For now, we broadcast a message to get stats from the main thread
   const clients = await self.clients.matchAll({ type: 'window' });
@@ -524,7 +532,9 @@ async function handleSyncNow(): Promise<void> {
 /**
  * Handle network state request
  */
-async function handleGetNetworkState(event: ExtendableMessageEvent): Promise<void> {
+async function handleGetNetworkState(
+  event: ExtendableMessageEvent,
+): Promise<void> {
   // Check if we can reach the origin
   let isOnline = true;
   try {

@@ -32,14 +32,17 @@ export interface PresenceRenderProps {
   users?: { userId: string; name?: string }[];
 }
 
-export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'children'> {
+export interface LinkProps
+  extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'children'> {
   href: string;
   prefetch?: PrefetchStrategy;
   transition?: TransitionType;
   showPresence?: boolean;
   preloadData?: boolean;
   replace?: boolean;
-  children?: ReactNode | ((props: { presence: PresenceRenderProps | null }) => ReactNode);
+  children?:
+    | ReactNode
+    | ((props: { presence: PresenceRenderProps | null }) => ReactNode);
   onNavigateStart?: () => void;
   onNavigateEnd?: () => void;
 }
@@ -62,7 +65,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
       className,
       ...props
     },
-    ref
+    ref,
   ) => {
     const internalRef = useRef<HTMLAnchorElement>(null);
     const linkRef = (ref as React.RefObject<HTMLAnchorElement>) ?? internalRef;
@@ -87,7 +90,10 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
 
     // Visibility-based prefetch
     useEffect(() => {
-      if (prefetch !== 'visible' || typeof IntersectionObserver === 'undefined') {
+      if (
+        prefetch !== 'visible' ||
+        typeof IntersectionObserver === 'undefined'
+      ) {
         return;
       }
 
@@ -98,7 +104,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
             setIsPrefetched(true);
           }
         },
-        { rootMargin: '100px' }
+        { rootMargin: '100px' },
       );
 
       const element = linkRef.current;
@@ -139,7 +145,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
           setIsPrefetched(true);
         }
       },
-      [href, prefetch, preloadData, showPresence, doPrefetch, onMouseEnter]
+      [href, prefetch, preloadData, showPresence, doPrefetch, onMouseEnter],
     );
 
     // Intent detection (cursor trajectory prediction)
@@ -187,8 +193,14 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
           const projectedY = lastPoint.y + velocityY * 10;
 
           // Check if projected position is closer to link
-          const currentDist = Math.hypot(lastPoint.x - centerX, lastPoint.y - centerY);
-          const projectedDist = Math.hypot(projectedX - centerX, projectedY - centerY);
+          const currentDist = Math.hypot(
+            lastPoint.x - centerX,
+            lastPoint.y - centerY,
+          );
+          const projectedDist = Math.hypot(
+            projectedX - centerX,
+            projectedY - centerY,
+          );
 
           if (projectedDist < currentDist) {
             // Cursor is approaching - prefetch with high priority
@@ -201,7 +213,15 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
           }
         }, 50);
       },
-      [href, prefetch, preloadData, showPresence, doPrefetch, onMouseMove, linkRef]
+      [
+        href,
+        prefetch,
+        preloadData,
+        showPresence,
+        doPrefetch,
+        onMouseMove,
+        linkRef,
+      ],
     );
 
     // Click navigation with view transition
@@ -232,7 +252,15 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
           onNavigateEnd?.();
         }
       },
-      [href, transition, replace, navigate, onClick, onNavigateStart, onNavigateEnd]
+      [
+        href,
+        transition,
+        replace,
+        navigate,
+        onClick,
+        onNavigateStart,
+        onNavigateEnd,
+      ],
     );
 
     // Cleanup
@@ -253,7 +281,10 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
         <>
           {children}
           {showPresence && presence && presence.count > 0 && (
-            <span className="aeon-presence-badge" aria-label={`${presence.count} active`}>
+            <span
+              className="aeon-presence-badge"
+              aria-label={`${presence.count} active`}
+            >
               {presence.hot ? '\uD83D\uDD25' : '\uD83D\uDC65'} {presence.count}
               {presence.editing > 0 && ` (${presence.editing} editing)`}
             </span>
@@ -279,7 +310,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(
         {renderChildren()}
       </a>
     );
-  }
+  },
 );
 
 Link.displayName = 'Link';

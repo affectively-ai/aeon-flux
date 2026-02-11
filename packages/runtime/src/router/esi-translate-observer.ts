@@ -94,7 +94,9 @@ interface TranslationQueueItem {
  */
 export class TranslationObserver {
   private observer: MutationObserver | null = null;
-  private config: Required<Omit<TranslationObserverConfig, 'root' | 'onTranslate' | 'onError'>> & {
+  private config: Required<
+    Omit<TranslationObserverConfig, 'root' | 'onTranslate' | 'onError'>
+  > & {
     root: Element | null;
     onTranslate?: TranslationObserverConfig['onTranslate'];
     onError?: TranslationObserverConfig['onError'];
@@ -122,7 +124,10 @@ export class TranslationObserver {
    * Start observing for translatable elements
    */
   observe(): void {
-    if (typeof window === 'undefined' || typeof MutationObserver === 'undefined') {
+    if (
+      typeof window === 'undefined' ||
+      typeof MutationObserver === 'undefined'
+    ) {
       console.warn('[TranslationObserver] MutationObserver not available');
       return;
     }
@@ -173,7 +178,9 @@ export class TranslationObserver {
     const root = this.config.root ?? document.body;
     if (!root) return;
 
-    const elements = root.querySelectorAll(`[${this.config.translateAttribute}]`);
+    const elements = root.querySelectorAll(
+      `[${this.config.translateAttribute}]`,
+    );
     Array.from(elements).forEach((element) => {
       if (!this.translatedElements.has(element)) {
         this.queueElement(element);
@@ -195,11 +202,15 @@ export class TranslationObserver {
     const context = element.getAttribute('data-translate-context') ?? undefined;
 
     try {
-      const result = await translateWithAIGateway(originalText, targetLanguage, {
-        sourceLanguage,
-        context,
-        endpoint: this.config.endpoint,
-      });
+      const result = await translateWithAIGateway(
+        originalText,
+        targetLanguage,
+        {
+          sourceLanguage,
+          context,
+          endpoint: this.config.endpoint,
+        },
+      );
 
       // Update element content
       if (result.translated !== originalText) {
@@ -213,7 +224,8 @@ export class TranslationObserver {
 
       return result;
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Translation failed';
+      const errorMsg =
+        error instanceof Error ? error.message : 'Translation failed';
       this.config.onError?.(element, errorMsg);
       return null;
     }
@@ -237,7 +249,9 @@ export class TranslationObserver {
               }
             }
             // Check descendants
-            const descendants = node.querySelectorAll(`[${this.config.translateAttribute}]`);
+            const descendants = node.querySelectorAll(
+              `[${this.config.translateAttribute}]`,
+            );
             Array.from(descendants).forEach((descendant) => {
               if (!this.translatedElements.has(descendant)) {
                 this.queueElement(descendant);
@@ -328,23 +342,27 @@ export class TranslationObserver {
                   sourceLanguage: item.sourceLanguage,
                   context: item.context,
                   endpoint: this.config.endpoint,
-                }
+                },
               );
 
               // Update element content
               if (result.translated !== item.originalText) {
                 item.element.textContent = result.translated;
                 item.element.setAttribute('data-translated', 'true');
-                item.element.setAttribute('data-original-text', item.originalText);
+                item.element.setAttribute(
+                  'data-original-text',
+                  item.originalText,
+                );
               }
 
               this.translatedElements.add(item.element);
               this.config.onTranslate?.(item.element, result);
             } catch (error) {
-              const errorMsg = error instanceof Error ? error.message : 'Translation failed';
+              const errorMsg =
+                error instanceof Error ? error.message : 'Translation failed';
               this.config.onError?.(item.element, errorMsg);
             }
-          })
+          }),
         );
       }
     } finally {
@@ -400,7 +418,7 @@ export class TranslationObserver {
  * ```
  */
 export function useTranslationObserver(
-  config?: TranslationObserverConfig
+  config?: TranslationObserverConfig,
 ): React.RefObject<TranslationObserver | null> {
   const observerRef = useRef<TranslationObserver | null>(null);
 
@@ -439,7 +457,9 @@ export function useTranslationObserver(
  * });
  * ```
  */
-export function initTranslationObserver(config?: TranslationObserverConfig): TranslationObserver {
+export function initTranslationObserver(
+  config?: TranslationObserverConfig,
+): TranslationObserver {
   const observer = new TranslationObserver(config);
 
   if (typeof document !== 'undefined') {

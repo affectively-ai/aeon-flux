@@ -37,7 +37,9 @@ export interface ServerOptions {
 /**
  * Create a minimal component tree for routing decisions
  */
-function createMinimalTree(match: ReturnType<AeonRouter['match']>): ComponentTree {
+function createMinimalTree(
+  match: ReturnType<AeonRouter['match']>,
+): ComponentTree {
   const nodes = new Map<string, ComponentNode>();
   const rootId = match?.componentId || 'root';
 
@@ -87,7 +89,12 @@ function createRouterAdapter(routerConfig?: RouterConfig): RouterAdapter {
  * Create an Aeon Pages server using Bun's native server
  */
 export async function createAeonServer(options: ServerOptions) {
-  const { config, router: routerConfig, onRouteChange, onRouteDecision } = options;
+  const {
+    config,
+    router: routerConfig,
+    onRouteChange,
+    onRouteDecision,
+  } = options;
 
   const router = new AeonRouter({
     routesDir: config.pagesDir,
@@ -107,7 +114,10 @@ export async function createAeonServer(options: ServerOptions) {
     await watchFiles(config.pagesDir, async (path, type) => {
       console.log(`[aeon] File ${type}: ${path}`);
       await router.reload();
-      onRouteChange?.(path, type === 'create' ? 'add' : type === 'delete' ? 'remove' : 'update');
+      onRouteChange?.(
+        path,
+        type === 'create' ? 'add' : type === 'delete' ? 'remove' : 'update',
+      );
     });
   }
 
@@ -115,7 +125,10 @@ export async function createAeonServer(options: ServerOptions) {
   registry.subscribeToMutations((operation) => {
     console.log(`[aeon] Collaborative route mutation:`, operation);
     router.reload();
-    onRouteChange?.(operation.path, operation.type as 'add' | 'update' | 'remove');
+    onRouteChange?.(
+      operation.path,
+      operation.type as 'add' | 'update' | 'remove',
+    );
   });
 
   // Initialize routes from file system
@@ -171,7 +184,7 @@ export async function createAeonServer(options: ServerOptions) {
       response = addSpeculationHeaders(
         response,
         decision.prefetch || [],
-        decision.prerender || []
+        decision.prerender || [],
       );
 
       return response;
@@ -197,7 +210,7 @@ export async function createAeonServer(options: ServerOptions) {
  */
 async function watchFiles(
   dir: string,
-  callback: (path: string, type: 'create' | 'update' | 'delete') => void
+  callback: (path: string, type: 'create' | 'update' | 'delete') => void,
 ) {
   const { watch } = await import('fs');
   const { join } = await import('path');
@@ -230,10 +243,15 @@ function handleStaticAsset(path: string, config: AeonConfig): Response {
 /**
  * Handle WebSocket upgrade for Aeon sync
  */
-function handleWebSocketUpgrade(req: Request, _registry: AeonRouteRegistry): Response {
+function handleWebSocketUpgrade(
+  req: Request,
+  _registry: AeonRouteRegistry,
+): Response {
   const server = Bun.serve.prototype; // This is a placeholder - actual upgrade happens in Bun
   if ('upgrade' in server) {
-    const success = (server as { upgrade: (req: Request) => boolean }).upgrade(req);
+    const success = (server as { upgrade: (req: Request) => boolean }).upgrade(
+      req,
+    );
     if (success) {
       return new Response(null, { status: 101 });
     }
@@ -247,7 +265,7 @@ function handleWebSocketUpgrade(req: Request, _registry: AeonRouteRegistry): Res
 async function handleDynamicCreation(
   path: string,
   req: Request,
-  registry: AeonRouteRegistry
+  registry: AeonRouteRegistry,
 ): Promise<Response> {
   // Check if user has permission to create routes
   const authHeader = req.headers.get('Authorization');
@@ -271,7 +289,7 @@ async function handleDynamicCreation(
     {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
-    }
+    },
   );
 }
 
@@ -282,7 +300,7 @@ async function renderRoute(
   match: ReturnType<AeonRouter['match']>,
   _req: Request,
   config: AeonConfig,
-  decision?: RouteDecision
+  decision?: RouteDecision,
 ): Promise<Response> {
   if (!match) {
     return new Response('Not Found', { status: 404 });
@@ -311,7 +329,10 @@ function generateSpeculationScript(decision?: RouteDecision): string {
     return '';
   }
 
-  const rules: { prerender?: Array<{ urls: string[] }>; prefetch?: Array<{ urls: string[] }> } = {};
+  const rules: {
+    prerender?: Array<{ urls: string[] }>;
+    prefetch?: Array<{ urls: string[] }>;
+  } = {};
 
   if (decision.prerender?.length) {
     rules.prerender = [{ urls: decision.prerender }];
@@ -341,7 +362,11 @@ function generatePersonalizationStyles(decision?: RouteDecision): string {
   }
 
   if (decision.density) {
-    const spacingMap = { compact: '0.5rem', normal: '1rem', comfortable: '1.5rem' };
+    const spacingMap = {
+      compact: '0.5rem',
+      normal: '1rem',
+      comfortable: '1.5rem',
+    };
     vars.push(`--aeon-spacing: ${spacingMap[decision.density]}`);
   }
 
@@ -356,12 +381,17 @@ function generatePersonalizationStyles(decision?: RouteDecision): string {
 function generateAeonPageHtml(
   match: NonNullable<ReturnType<AeonRouter['match']>>,
   config: AeonConfig,
-  decision?: RouteDecision
+  decision?: RouteDecision,
 ): string {
   const { sessionId, params, componentId } = match;
 
   // Determine color scheme from decision
-  const colorScheme = decision?.theme === 'dark' ? 'dark' : decision?.theme === 'light' ? 'light' : '';
+  const colorScheme =
+    decision?.theme === 'dark'
+      ? 'dark'
+      : decision?.theme === 'light'
+        ? 'light'
+        : '';
   const colorSchemeAttr = colorScheme ? ` data-theme="${colorScheme}"` : '';
 
   return `<!DOCTYPE html>
@@ -421,9 +451,14 @@ function generateAeonPageHtml(
 function generateStaticPageHtml(
   match: NonNullable<ReturnType<AeonRouter['match']>>,
   _config: AeonConfig,
-  decision?: RouteDecision
+  decision?: RouteDecision,
 ): string {
-  const colorScheme = decision?.theme === 'dark' ? 'dark' : decision?.theme === 'light' ? 'light' : '';
+  const colorScheme =
+    decision?.theme === 'dark'
+      ? 'dark'
+      : decision?.theme === 'light'
+        ? 'light'
+        : '';
   const colorSchemeAttr = colorScheme ? ` data-theme="${colorScheme}"` : '';
 
   return `<!DOCTYPE html>

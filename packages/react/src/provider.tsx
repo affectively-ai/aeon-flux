@@ -8,7 +8,17 @@
  * - Schema versioning via SchemaVersionManager
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react';
+import { getSyncCoordinator } from '@affectively/aeon-pages-runtime/sync/coordinator';
+import { getOfflineQueue } from '@affectively/aeon-pages-runtime/offline/encrypted-queue';
 
 // Types
 export interface PresenceUser {
@@ -72,9 +82,14 @@ export interface AeonPageProviderProps {
 /**
  * AeonPageProvider - Wraps a page with Aeon collaborative features
  */
-export function AeonPageProvider({ route, children, initialData = {} }: AeonPageProviderProps) {
+export function AeonPageProvider({
+  route,
+  children,
+  initialData = {},
+}: AeonPageProviderProps) {
   // Generate session ID from route
-  const sessionId = route.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'index';
+  const sessionId =
+    route.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'index';
 
   // State
   const [presence, setPresence] = useState<PresenceUser[]>([]);
@@ -103,14 +118,14 @@ export function AeonPageProvider({ route, children, initialData = {} }: AeonPage
   useEffect(() => {
     const initAeon = async () => {
       try {
-        // Dynamic import to avoid SSR issues
-        const aeon = await import('@affectively/aeon-pages-runtime');
+
+
 
         // Initialize sync coordinator
-        syncCoordinatorRef.current = aeon.getSyncCoordinator();
+        syncCoordinatorRef.current = getSyncCoordinator();
 
         // Initialize offline queue
-        offlineQueueRef.current = aeon.getOfflineQueue();
+        offlineQueueRef.current = getOfflineQueue();
 
         // Presence manager and version manager are handled via WebSocket
         presenceManagerRef.current = null;
@@ -247,38 +262,56 @@ export function AeonPageProvider({ route, children, initialData = {} }: AeonPage
   }, []);
 
   // Update cursor position
-  const updateCursor = useCallback((position: { x: number; y: number }) => {
-    if (!localUser) return;
+  const updateCursor = useCallback(
+    (position: { x: number; y: number }) => {
+      if (!localUser) return;
 
-    setLocalUser((prev) =>
-      prev ? { ...prev, cursor: position, lastActivity: new Date().toISOString() } : null
-    );
+      setLocalUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              cursor: position,
+              lastActivity: new Date().toISOString(),
+            }
+          : null,
+      );
 
-    // Send to WebSocket
-    wsRef.current?.send(
-      JSON.stringify({
-        type: 'cursor-update',
-        position,
-      })
-    );
-  }, [localUser]);
+      // Send to WebSocket
+      wsRef.current?.send(
+        JSON.stringify({
+          type: 'cursor-update',
+          position,
+        }),
+      );
+    },
+    [localUser],
+  );
 
   // Update editing element
-  const updateEditing = useCallback((elementPath: string | null) => {
-    if (!localUser) return;
+  const updateEditing = useCallback(
+    (elementPath: string | null) => {
+      if (!localUser) return;
 
-    setLocalUser((prev) =>
-      prev ? { ...prev, editing: elementPath ?? undefined, lastActivity: new Date().toISOString() } : null
-    );
+      setLocalUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              editing: elementPath ?? undefined,
+              lastActivity: new Date().toISOString(),
+            }
+          : null,
+      );
 
-    // Send to WebSocket
-    wsRef.current?.send(
-      JSON.stringify({
-        type: 'editing-update',
-        elementPath,
-      })
-    );
-  }, [localUser]);
+      // Send to WebSocket
+      wsRef.current?.send(
+        JSON.stringify({
+          type: 'editing-update',
+          elementPath,
+        }),
+      );
+    },
+    [localUser],
+  );
 
   // Force sync
   const forceSync = useCallback(async () => {
@@ -314,32 +347,35 @@ export function AeonPageProvider({ route, children, initialData = {} }: AeonPage
   }, []);
 
   // Set data
-  const setData = useCallback((key: string, value: unknown) => {
-    setDataState((prev) => ({ ...prev, [key]: value }));
+  const setData = useCallback(
+    (key: string, value: unknown) => {
+      setDataState((prev) => ({ ...prev, [key]: value }));
 
-    // Queue for sync
-    if (sync.isOnline && wsRef.current) {
-      wsRef.current.send(
-        JSON.stringify({
+      // Queue for sync
+      if (sync.isOnline && wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'data-set',
+            key,
+            value,
+          }),
+        );
+      } else {
+        // Queue offline
+        // @ts-expect-error - Aeon module method
+        offlineQueueRef.current?.enqueue({
           type: 'data-set',
           key,
           value,
-        })
-      );
-    } else {
-      // Queue offline
-      // @ts-expect-error - Aeon module method
-      offlineQueueRef.current?.enqueue({
-        type: 'data-set',
-        key,
-        value,
-      });
-      setSync((prev) => ({
-        ...prev,
-        pendingOperations: prev.pendingOperations + 1,
-      }));
-    }
-  }, [sync.isOnline]);
+        });
+        setSync((prev) => ({
+          ...prev,
+          pendingOperations: prev.pendingOperations + 1,
+        }));
+      }
+    },
+    [sync.isOnline],
+  );
 
   // Update tree
   const updateTree = useCallback((path: string, value: unknown) => {
@@ -349,7 +385,7 @@ export function AeonPageProvider({ route, children, initialData = {} }: AeonPage
         type: 'tree-patch',
         path,
         value,
-      })
+      }),
     );
   }, []);
 
@@ -408,10 +444,15 @@ export function useAeonSync() {
 /**
  * useAeonData - Just the data store
  */
-export function useAeonData<T = unknown>(key: string): [T | undefined, (value: T) => void] {
+export function useAeonData<T = unknown>(
+  key: string,
+): [T | undefined, (value: T) => void] {
   const { data, setData } = useAeonPage();
   const value = data[key] as T | undefined;
-  const setValue = useCallback((newValue: T) => setData(key, newValue), [key, setData]);
+  const setValue = useCallback(
+    (newValue: T) => setData(key, newValue),
+    [key, setData],
+  );
   return [value, setValue];
 }
 

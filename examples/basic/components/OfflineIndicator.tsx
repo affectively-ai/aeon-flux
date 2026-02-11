@@ -1,7 +1,8 @@
 import { useOfflineStatus } from '@affectively/aeon-pages/react';
 
 export function OfflineIndicator() {
-  const { isOffline, isSyncing, pendingOperations, lastSyncAt } = useOfflineStatus();
+  const { isOffline, isSyncing, pendingOperations, lastSyncAt } =
+    useOfflineStatus();
 
   if (!isOffline && !isSyncing && pendingOperations === 0) {
     return null;
@@ -26,8 +27,12 @@ export function OfflineIndicator() {
             />
           </svg>
           <div>
-            <p className="text-sm font-medium text-yellow-800">You're offline</p>
-            <p className="text-xs text-yellow-600">Changes will sync when back online</p>
+            <p className="text-sm font-medium text-yellow-800">
+              You're offline
+            </p>
+            <p className="text-xs text-yellow-600">
+              Changes will sync when back online
+            </p>
           </div>
         </div>
       )}
@@ -36,7 +41,11 @@ export function OfflineIndicator() {
       {pendingOperations > 0 && (
         <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-lg">
           <div className="w-5 h-5">
-            <svg className="animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+            <svg
+              className="animate-spin text-blue-500"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
               <circle
                 className="opacity-25"
                 cx="12"
@@ -57,7 +66,8 @@ export function OfflineIndicator() {
               {isSyncing ? 'Syncing...' : `${pendingOperations} pending`}
             </p>
             <p className="text-xs text-blue-600">
-              {pendingOperations} {pendingOperations === 1 ? 'change' : 'changes'} to sync
+              {pendingOperations}{' '}
+              {pendingOperations === 1 ? 'change' : 'changes'} to sync
             </p>
           </div>
         </div>

@@ -87,7 +87,7 @@ export function formatResource(type: AeonResourceType, value: string): string {
  */
 function actionPermits(
   capabilityAction: AeonCapabilityActionType,
-  requestedAction: 'read' | 'write'
+  requestedAction: 'read' | 'write',
 ): boolean {
   // Wildcard permits everything
   if (capabilityAction === 'aeon:*' || capabilityAction === 'aeon:node:*') {
@@ -148,7 +148,7 @@ function pathMatches(pattern: string, path: string): boolean {
 export function capabilityGrantsAccess(
   capability: AeonAnyCapability,
   request: MerkleAccessRequest,
-  action: 'read' | 'write'
+  action: 'read' | 'write',
 ): boolean {
   // Check action first
   if (!actionPermits(capability.can, action)) {
@@ -199,7 +199,7 @@ export function capabilityGrantsAccess(
  */
 export type NodeCapabilityVerifier = (
   request: MerkleAccessRequest,
-  action: 'read' | 'write'
+  action: 'read' | 'write',
 ) => Promise<boolean>;
 
 /**
@@ -254,7 +254,7 @@ export interface NodeVerifierOptions {
  */
 export function createNodeCapabilityVerifier(
   token: string,
-  options: NodeVerifierOptions
+  options: NodeVerifierOptions,
 ): NodeCapabilityVerifier {
   let cachedCapabilities: AeonAnyCapability[] | null = null;
   let cacheTime = 0;
@@ -262,7 +262,7 @@ export function createNodeCapabilityVerifier(
 
   return async (
     request: MerkleAccessRequest,
-    action: 'read' | 'write'
+    action: 'read' | 'write',
   ): Promise<boolean> => {
     // Verify token if verifier provided
     if (options.verifyToken) {
@@ -303,7 +303,9 @@ export function createNodeCapabilityVerifier(
 /**
  * Create a node read capability for a specific Merkle hash
  */
-export function createNodeReadCapability(merkleHash: string): AeonNodeCapability {
+export function createNodeReadCapability(
+  merkleHash: string,
+): AeonNodeCapability {
   return {
     can: 'aeon:node:read',
     with: formatResource('merkle', merkleHash),
@@ -313,7 +315,9 @@ export function createNodeReadCapability(merkleHash: string): AeonNodeCapability
 /**
  * Create a node write capability for a specific Merkle hash
  */
-export function createNodeWriteCapability(merkleHash: string): AeonNodeCapability {
+export function createNodeWriteCapability(
+  merkleHash: string,
+): AeonNodeCapability {
   return {
     can: 'aeon:node:write',
     with: formatResource('merkle', merkleHash),
@@ -325,7 +329,7 @@ export function createNodeWriteCapability(merkleHash: string): AeonNodeCapabilit
  */
 export function createTreeCapability(
   merkleHash: string,
-  action: AeonNodeCapabilityAction = 'aeon:node:*'
+  action: AeonNodeCapabilityAction = 'aeon:node:*',
 ): AeonNodeCapability {
   return {
     can: action,
@@ -338,7 +342,7 @@ export function createTreeCapability(
  */
 export function createPathCapability(
   routePath: string,
-  action: AeonNodeCapabilityAction = 'aeon:node:*'
+  action: AeonNodeCapabilityAction = 'aeon:node:*',
 ): AeonNodeCapability {
   return {
     can: action,
@@ -350,7 +354,7 @@ export function createPathCapability(
  * Create a wildcard capability (grants access to all nodes)
  */
 export function createWildcardNodeCapability(
-  action: AeonNodeCapabilityAction = 'aeon:node:*'
+  action: AeonNodeCapabilityAction = 'aeon:node:*',
 ): AeonNodeCapability {
   return {
     can: action,
@@ -377,7 +381,7 @@ export function createWildcardNodeCapability(
 export function checkNodeAccess(
   capabilities: AeonAnyCapability[],
   request: MerkleAccessRequest,
-  action: 'read' | 'write'
+  action: 'read' | 'write',
 ): boolean {
   for (const capability of capabilities) {
     if (capabilityGrantsAccess(capability, request, action)) {
@@ -399,11 +403,13 @@ export function checkNodeAccess(
  * );
  * ```
  */
-export function filterAccessibleNodes<T extends { merkleHash: string; treePath?: string[] }>(
+export function filterAccessibleNodes<
+  T extends { merkleHash: string; treePath?: string[] },
+>(
   nodes: T[],
   capabilities: AeonAnyCapability[],
   action: 'read' | 'write',
-  routePath?: string
+  routePath?: string,
 ): T[] {
   return nodes.filter((node) => {
     const request: MerkleAccessRequest = {
@@ -421,7 +427,7 @@ export function filterAccessibleNodes<T extends { merkleHash: string; treePath?:
  */
 export function getMostSpecificCapability(
   capabilities: AeonAnyCapability[],
-  request: MerkleAccessRequest
+  request: MerkleAccessRequest,
 ): AeonAnyCapability | null {
   let mostSpecific: AeonAnyCapability | null = null;
   let specificity = -1;
@@ -445,7 +451,10 @@ export function getMostSpecificCapability(
         }
         break;
       case 'path':
-        if (request.routePath && pathMatches(resource.value, request.routePath)) {
+        if (
+          request.routePath &&
+          pathMatches(resource.value, request.routePath)
+        ) {
           capSpecificity = 1;
         }
         break;

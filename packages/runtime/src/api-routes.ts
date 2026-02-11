@@ -67,7 +67,7 @@ export class ApiRouter<E extends AeonEnv = AeonEnv> {
   async handle(
     request: Request,
     env: E,
-    ctx: ExecutionContext
+    ctx: ExecutionContext,
   ): Promise<Response | null> {
     const match = this.match(request);
     if (!match) {
@@ -95,7 +95,7 @@ export class ApiRouter<E extends AeonEnv = AeonEnv> {
         {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
-        }
+        },
       );
     }
   }
@@ -138,7 +138,7 @@ export class ApiRouter<E extends AeonEnv = AeonEnv> {
    */
   private matchSegments(
     routeSegments: ApiRouteSegment[],
-    pathSegments: string[]
+    pathSegments: string[],
   ): Record<string, string> | null {
     const params: Record<string, string> = {};
     let pathIndex = 0;
@@ -183,7 +183,7 @@ export class ApiRouter<E extends AeonEnv = AeonEnv> {
    */
   private getHandler(
     module: ApiRouteModule,
-    method: HttpMethod
+    method: HttpMethod,
   ): ApiRouteHandler | null {
     const handler = module[method];
     if (handler) {
@@ -227,7 +227,10 @@ export function json<T>(data: T, init?: ResponseInit): Response {
 /**
  * Helper to create a redirect response
  */
-export function redirect(url: string, status: 301 | 302 | 303 | 307 | 308 = 302): Response {
+export function redirect(
+  url: string,
+  status: 301 | 302 | 303 | 307 | 308 = 302,
+): Response {
   return new Response(null, {
     status,
     headers: { Location: url },
@@ -279,7 +282,7 @@ export function forbidden(message = 'Forbidden'): Response {
 /** Middleware function type */
 export type Middleware<E extends AeonEnv = AeonEnv> = (
   context: AeonContext<E>,
-  next: () => Promise<Response>
+  next: () => Promise<Response>,
 ) => Response | Promise<Response>;
 
 /**
@@ -382,7 +385,10 @@ export function cors(options?: {
  * Auth middleware factory - validates Authorization header
  */
 export function requireAuth<E extends AeonEnv = AeonEnv>(
-  validate: (token: string, context: AeonContext<E>) => boolean | Promise<boolean>
+  validate: (
+    token: string,
+    context: AeonContext<E>,
+  ) => boolean | Promise<boolean>,
 ): Middleware<E> {
   return async (context, next) => {
     const authHeader = context.request.headers.get('Authorization');
@@ -415,13 +421,22 @@ export function rateLimit<E extends AeonEnv = AeonEnv>(options: {
   keyGenerator?: (context: AeonContext<E>) => string;
 }): Middleware<E> {
   return async (context, next) => {
-    const kv = options.kvKey ? (context.env[options.kvKey] as unknown) : context.env.CACHE;
+    const kv = options.kvKey
+      ? (context.env[options.kvKey] as unknown)
+      : context.env.CACHE;
     if (!kv || typeof (kv as Record<string, unknown>).get !== 'function') {
       // No KV available, skip rate limiting
       return next();
     }
 
-    const kvNamespace = kv as { get: (key: string) => Promise<string | null>; put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void> };
+    const kvNamespace = kv as {
+      get: (key: string) => Promise<string | null>;
+      put: (
+        key: string,
+        value: string,
+        options?: { expirationTtl?: number },
+      ) => Promise<void>;
+    };
     const clientKey = options.keyGenerator
       ? options.keyGenerator(context)
       : context.request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -431,16 +446,13 @@ export function rateLimit<E extends AeonEnv = AeonEnv>(options: {
     const count = current ? parseInt(current, 10) : 0;
 
     if (count >= options.limit) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests' }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': String(options.window),
-          },
-        }
-      );
+      return new Response(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(options.window),
+        },
+      });
     }
 
     // Increment counter

@@ -11,8 +11,8 @@ export type { EmotionState, Viewport, ConnectionType, UserTier, UserContext, The
 export { DEFAULT_ROUTER_CONFIG, DEFAULT_ESI_CONFIG } from './types';
 export { EdgeWorkersESIProcessor, esiInfer, esiEmbed, esiEmotion, esiVision, esiWithContext, } from './esi';
 export { esiTranslate, generateTranslationCacheKey, getCachedTranslation, setCachedTranslation, clearTranslationCache, readHeadTranslationConfig, normalizeLanguageCode, getLanguageName, getSupportedLanguages, detectTargetLanguage, translateWithAIGateway, } from './esi-translate';
-export { ESI, ESIProvider, ESIInfer, ESIEmbed, ESIEmotion, ESIVision, useESI, useESIInfer, useGlobalESIState, useESIFeature, useESITier, useESIEmotionState, useESIPreferences, updateGlobalESIState, } from './esi-react';
-export type { ESIProviderProps, ESIInferProps, ESIEmbedProps, ESIEmotionProps, ESIVisionProps, UseESIInferOptions, GlobalESIState, } from './esi-react';
+export { ESI, ESIProvider, ESIInfer, ESIEmbed, ESIEmotion, ESIVision, useESI, useESIInfer, useGlobalESIState, useESIFeature, useESITier, useESIEmotionState, useESIPreferences, updateGlobalESIState, useNavigation, } from './esi-react';
+export type { ESIProviderProps, ESIInferProps, ESIEmbedProps, ESIEmotionProps, ESIVisionProps, UseESIInferOptions, GlobalESIState, NavigationRouter, } from './esi-react';
 export { ESITranslate, TranslationProvider, TranslationContext, useTranslation, useTranslationOptional, } from './esi-translate-react';
 export type { ESITranslateProps, TranslationProviderProps, TranslationContextValue, } from './esi-translate-react';
 export { TranslationObserver, useTranslationObserver, initTranslationObserver, } from './esi-translate-observer';

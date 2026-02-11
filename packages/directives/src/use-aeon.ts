@@ -63,7 +63,10 @@ export function hasAeonDirective(code: string): boolean {
 /**
  * Process the 'use aeon' directive and transform the code
  */
-export function processAeonDirective(code: string, options: TransformOptions): TransformResult {
+export function processAeonDirective(
+  code: string,
+  options: TransformOptions,
+): TransformResult {
   const { filePath, pagesDir = './pages' } = options;
 
   // Check for directive
@@ -82,7 +85,7 @@ export function processAeonDirective(code: string, options: TransformOptions): T
 
   // Find the default export
   const defaultExportMatch = codeWithoutDirective.match(
-    /export\s+default\s+function\s+(\w+)/
+    /export\s+default\s+function\s+(\w+)/,
   );
 
   if (!defaultExportMatch) {
@@ -99,7 +102,7 @@ import { AeonPageProvider, useAeonPage } from '@affectively/aeon-pages/react';
 
 ${codeWithoutDirective.replace(
   /export\s+default\s+function\s+(\w+)/,
-  'function $1'
+  'function $1',
 )}
 
 // Re-export useAeonPage for convenience
@@ -128,7 +131,7 @@ export default function AeonWrappedPage(props: any) {
 function transformArrowExport(code: string, route: string): TransformResult {
   // Match: export default () => ... or export default function() ...
   const arrowExportMatch = code.match(
-    /export\s+default\s+((?:\([^)]*\)|[^=])\s*=>|function\s*\()/
+    /export\s+default\s+((?:\([^)]*\)|[^=])\s*=>|function\s*\()/,
   );
 
   if (!arrowExportMatch) {
@@ -235,24 +238,27 @@ export function aeonBunPlugin(options: { pagesDir?: string } = {}) {
   return {
     name: 'aeon-directive',
     setup(build: { onLoad: (opts: unknown, callback: unknown) => void }) {
-      build.onLoad({ filter: /\.(tsx?|jsx?)$/ }, async (args: { path: string }) => {
-        const file = Bun.file(args.path);
-        const code = await file.text();
+      build.onLoad(
+        { filter: /\.(tsx?|jsx?)$/ },
+        async (args: { path: string }) => {
+          const file = Bun.file(args.path);
+          const code = await file.text();
 
-        if (!hasAeonDirective(code)) {
-          return undefined; // Let Bun handle it normally
-        }
+          if (!hasAeonDirective(code)) {
+            return undefined; // Let Bun handle it normally
+          }
 
-        const result = processAeonDirective(code, {
-          filePath: args.path,
-          pagesDir: options.pagesDir,
-        });
+          const result = processAeonDirective(code, {
+            filePath: args.path,
+            pagesDir: options.pagesDir,
+          });
 
-        return {
-          contents: result.code,
-          loader: args.path.endsWith('.tsx') ? 'tsx' : 'ts',
-        };
-      });
+          return {
+            contents: result.code,
+            loader: args.path.endsWith('.tsx') ? 'tsx' : 'ts',
+          };
+        },
+      );
     },
   };
 }

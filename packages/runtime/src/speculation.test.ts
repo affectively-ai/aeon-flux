@@ -1,4 +1,12 @@
-import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from 'bun:test';
 import {
   SpeculativeRenderer,
   getSpeculativeRenderer,
@@ -101,10 +109,13 @@ describe('SpeculativeRenderer', () => {
   test('prerender caches page HTML', async () => {
     const mockHtml = '<html><body>Test Page</body></html>';
 
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => mockHtml,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => mockHtml,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -131,10 +142,13 @@ describe('SpeculativeRenderer', () => {
   });
 
   test('prerender handles fetch failures', async () => {
-    globalThis.fetch = mock(async () => ({
-      ok: false,
-      status: 404,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: false,
+          status: 404,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -166,10 +180,13 @@ describe('SpeculativeRenderer', () => {
   test('invalidate marks pages as stale', async () => {
     const mockHtml = '<html><body>Test</body></html>';
 
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => mockHtml,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => mockHtml,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -190,10 +207,13 @@ describe('SpeculativeRenderer', () => {
   test('invalidate without routes marks all as stale', async () => {
     const mockHtml = '<html><body>Test</body></html>';
 
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => mockHtml,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => mockHtml,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -217,10 +237,13 @@ describe('SpeculativeRenderer', () => {
   test('evicts old pages when cache is full', async () => {
     const mockHtml = 'x'.repeat(1000); // 1KB per page
 
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => mockHtml,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => mockHtml,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -243,10 +266,13 @@ describe('SpeculativeRenderer', () => {
   });
 
   test('evicts based on cache size limit', async () => {
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => 'x'.repeat(1000), // 1KB
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => 'x'.repeat(1000), // 1KB
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },
@@ -295,10 +321,13 @@ describe('SpeculativeRenderer', () => {
   test('destroy cleans up resources', async () => {
     const mockHtml = '<html><body>Test</body></html>';
 
-    globalThis.fetch = mock(async () => ({
-      ok: true,
-      text: async () => mockHtml,
-    } as Response));
+    globalThis.fetch = mock(
+      async () =>
+        ({
+          ok: true,
+          text: async () => mockHtml,
+        }) as Response,
+    );
 
     globalThis.window = {
       location: { pathname: '/' },

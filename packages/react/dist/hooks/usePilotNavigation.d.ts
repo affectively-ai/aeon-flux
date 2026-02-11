@@ -16,7 +16,7 @@
  * - History API integration (smooth client-side navigation)
  * - Navigation analytics/tracking
  */
-import { type NavigationOptions } from './useAeonNavigation';
+import type { NavigationOptions } from '@affectively/aeon-pages-runtime/navigation';
 export interface PilotNavigationIntent {
     id: string;
     destination: string;
@@ -60,14 +60,14 @@ export declare function usePilotNavigation(options?: {
 }): {
     pendingIntent: PilotNavigationIntent | null;
     intentHistory: PilotNavigationIntent[];
-    isNavigating: boolean;
-    current: string;
+    isNavigating: any;
+    current: any;
     pilot: (destination: string, pilotOptions?: PilotNavigationOptions) => Promise<boolean>;
     approve: () => Promise<boolean>;
     reject: () => void;
     clearPending: () => void;
     navigateDirect: (destination: string, navOptions?: NavigationOptions) => Promise<void>;
-    prefetch: (href: string, options?: import("@affectively/aeon-pages-runtime").PrefetchOptions) => Promise<void>;
+    prefetch: (href: string, options?: NavigationOptions) => Promise<void>;
     back: () => Promise<void>;
     isPreloaded: (href: string) => boolean;
 };

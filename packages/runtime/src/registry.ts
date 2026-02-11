@@ -67,8 +67,10 @@ export class AeonRouteRegistry {
       const aeon = await import('@affectively/aeon');
 
       if (this.syncMode === 'distributed') {
-        this.coordinator = new aeon.SyncCoordinator() as unknown as SyncCoordinatorLike;
-        this.reconciler = new aeon.StateReconciler() as unknown as StateReconcilerLike;
+        this.coordinator =
+          new aeon.SyncCoordinator() as unknown as SyncCoordinatorLike;
+        this.reconciler =
+          new aeon.StateReconciler() as unknown as StateReconcilerLike;
 
         // Subscribe to sync events
         this.coordinator.on('sync-completed', (session: unknown) => {
@@ -77,20 +79,27 @@ export class AeonRouteRegistry {
       }
 
       if (this.versioningEnabled) {
-        this.versions = new aeon.SchemaVersionManager() as unknown as SchemaVersionManagerLike;
+        this.versions =
+          new aeon.SchemaVersionManager() as unknown as SchemaVersionManagerLike;
         this.versions.registerVersion('1.0.0', {
           description: 'Initial route schema',
         });
       }
     } catch (error) {
-      console.warn('[aeon-registry] Aeon modules not available, running in standalone mode');
+      console.warn(
+        '[aeon-registry] Aeon modules not available, running in standalone mode',
+      );
     }
   }
 
   /**
    * Add a new route collaboratively
    */
-  async addRoute(path: string, component: string, metadata: RouteMetadata): Promise<void> {
+  async addRoute(
+    path: string,
+    component: string,
+    metadata: RouteMetadata,
+  ): Promise<void> {
     const operation: RouteOperation = {
       type: 'route-add',
       path,
@@ -106,15 +115,16 @@ export class AeonRouteRegistry {
       if (participants.length > 0) {
         await this.coordinator.createSyncSession(
           this.coordinator.getLocalNodeId(),
-          participants
+          participants,
         );
       }
     }
 
     // Apply locally
-    const version = this.versioningEnabled && this.versions
-      ? await this.versions.getCurrentVersion()
-      : '1.0.0';
+    const version =
+      this.versioningEnabled && this.versions
+        ? await this.versions.getCurrentVersion()
+        : '1.0.0';
 
     this.routes.set(path, {
       path,
@@ -200,7 +210,9 @@ export class AeonRouteRegistry {
   /**
    * Subscribe to route mutations
    */
-  subscribeToMutations(callback: (operation: RouteOperation) => void): () => void {
+  subscribeToMutations(
+    callback: (operation: RouteOperation) => void,
+  ): () => void {
     this.mutationCallbacks.push(callback);
     return () => {
       const idx = this.mutationCallbacks.indexOf(callback);

@@ -13,7 +13,10 @@ function createMockContext(): UserContext {
   return {
     tier: 'pro',
     recentPages: ['/', '/chat', '/settings', '/chat', '/', '/tools'],
-    dwellTimes: new Map([['/', 5000], ['/chat', 12000]]),
+    dwellTimes: new Map([
+      ['/', 5000],
+      ['/chat', 12000],
+    ]),
     clickPatterns: ['nav-chat', 'btn-send', 'nav-home'],
     preferences: { theme: 'dark' },
     viewport: { width: 1920, height: 1080 },
@@ -47,9 +50,14 @@ function createMockTree(nodeCount: number): ComponentTree {
     getChildren: (id) => {
       const node = nodes.get(id);
       if (!node?.children) return [];
-      return (node.children as string[]).map(cid => nodes.get(cid)!);
+      return (node.children as string[]).map((cid) => nodes.get(cid)!);
     },
-    getSchema: () => ({ rootId: 'root', nodeCount: nodes.size, nodeTypes: ['Page', 'Section', 'Text', 'Button'], depth: 2 }),
+    getSchema: () => ({
+      rootId: 'root',
+      nodeCount: nodes.size,
+      nodeTypes: ['Page', 'Section', 'Text', 'Button'],
+      depth: 2,
+    }),
     clone: () => createMockTree(nodeCount),
   };
 }
@@ -61,13 +69,20 @@ function createMockTreeForCompiler(nodeCount: number) {
       id: `node-${i}`,
       type: i % 3 === 0 ? 'Section' : i % 3 === 1 ? 'Text' : 'Button',
       props: { title: `Node ${i}`, className: 'test-class' },
-      children: i % 5 === 0 ? [{ id: `nested-${i}`, type: 'Span', text: 'Nested content' }] : [],
+      children:
+        i % 5 === 0
+          ? [{ id: `nested-${i}`, type: 'Span', text: 'Nested content' }]
+          : [],
     });
   }
   return { id: 'root', type: 'Page', children };
 }
 
-async function benchmark(name: string, fn: () => unknown | Promise<unknown>, iterations: number = 1000) {
+async function benchmark(
+  name: string,
+  fn: () => unknown | Promise<unknown>,
+  iterations: number = 1000,
+) {
   // Warmup
   for (let i = 0; i < 10; i++) await fn();
 
@@ -80,7 +95,9 @@ async function benchmark(name: string, fn: () => unknown | Promise<unknown>, ite
   const avgMs = elapsed / iterations;
   const opsPerSec = Math.round(1000 / avgMs);
 
-  console.log(`${name.padEnd(40)} ${avgMs.toFixed(3).padStart(8)}ms  ${opsPerSec.toLocaleString().padStart(8)} ops/sec`);
+  console.log(
+    `${name.padEnd(40)} ${avgMs.toFixed(3).padStart(8)}ms  ${opsPerSec.toLocaleString().padStart(8)} ops/sec`,
+  );
 
   return { name, avgMs, opsPerSec };
 }
@@ -99,22 +116,29 @@ async function main() {
 
   for (const nodeCount of [10, 50, 100, 500]) {
     const tree = createMockTree(nodeCount);
-    await benchmark(`  route() with ${nodeCount} nodes`, () => adapter.route('/', context, tree));
+    await benchmark(`  route() with ${nodeCount} nodes`, () =>
+      adapter.route('/', context, tree),
+    );
   }
 
   // Speculation benchmarks
   console.log('\n🔮 HeuristicAdapter.speculate()\n');
 
   await benchmark('  speculate() - empty history', () =>
-    adapter.speculate('/', { ...context, recentPages: [] })
+    adapter.speculate('/', { ...context, recentPages: [] }),
   );
 
   await benchmark('  speculate() - 6 page history', () =>
-    adapter.speculate('/', context)
+    adapter.speculate('/', context),
   );
 
   await benchmark('  speculate() - 50 page history', () =>
-    adapter.speculate('/', { ...context, recentPages: Array(50).fill('/').map((_, i) => `/${i % 5}`) })
+    adapter.speculate('/', {
+      ...context,
+      recentPages: Array(50)
+        .fill('/')
+        .map((_, i) => `/${i % 5}`),
+    }),
   );
 
   // Tree compiler benchmarks
@@ -122,9 +146,11 @@ async function main() {
 
   for (const nodeCount of [10, 50, 100, 500]) {
     const tree = createMockTreeForCompiler(nodeCount);
-    await benchmark(`  compile ${nodeCount} nodes → TSX`, () =>
-      compileTreeToTSX(tree, { route: '/test' })
-    , 100);
+    await benchmark(
+      `  compile ${nodeCount} nodes → TSX`,
+      () => compileTreeToTSX(tree, { route: '/test' }),
+      100,
+    );
   }
 
   // Personalization benchmarks
@@ -134,7 +160,7 @@ async function main() {
     const tree = createMockTree(nodeCount);
     const decision = await adapter.route('/', context, tree);
     await benchmark(`  personalize ${nodeCount} nodes`, () =>
-      adapter.personalizeTree(tree, decision)
+      adapter.personalizeTree(tree, decision),
     );
   }
 

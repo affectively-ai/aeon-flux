@@ -45,7 +45,10 @@ export function onNavigationEvent(handler: NavigationEventHandler): () => void {
   return () => eventHandlers.delete(handler);
 }
 
-function emit(type: NavigationEventHandler extends (e: infer E) => void ? E['type'] : never, data: unknown): void {
+function emit(
+  type: NavigationEventHandler extends (e: infer E) => void ? E['type'] : never,
+  data: unknown,
+): void {
   for (const handler of eventHandlers) {
     handler({ type, data });
   }
@@ -68,11 +71,13 @@ Examples:
     properties: {
       route: {
         type: 'string',
-        description: 'The route to navigate to (e.g., "/breathing/4-7-8", "/insights")',
+        description:
+          'The route to navigate to (e.g., "/breathing/4-7-8", "/insights")',
       },
       autoAccept: {
         type: 'boolean',
-        description: 'Whether to navigate immediately without user confirmation (default: false)',
+        description:
+          'Whether to navigate immediately without user confirmation (default: false)',
         default: false,
       },
     },
@@ -103,7 +108,8 @@ Examples:
       },
       autoAccept: {
         type: 'boolean',
-        description: 'If true and user has auto-accept enabled, navigate immediately',
+        description:
+          'If true and user has auto-accept enabled, navigate immediately',
         default: false,
       },
     },
@@ -286,16 +292,22 @@ export async function handleSuggestRoute(args: {
   };
 }
 
-export async function handleGetCurrentRoute(): Promise<{ content: TextContent[] }> {
+export async function handleGetCurrentRoute(): Promise<{
+  content: TextContent[];
+}> {
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify({
-          currentRoute: state.currentRoute,
-          previousRoutes: state.previousRoutes.slice(-5),
-          pendingSuggestions: state.pendingSuggestions,
-        }, null, 2),
+        text: JSON.stringify(
+          {
+            currentRoute: state.currentRoute,
+            previousRoutes: state.previousRoutes.slice(-5),
+            pendingSuggestions: state.pendingSuggestions,
+          },
+          null,
+          2,
+        ),
       },
     ],
   };
@@ -318,30 +330,58 @@ export async function handleGetSitemap(args: {
     { route: '/breathing', title: 'Breathing Exercises', category: 'tools' },
     { route: '/breathing/4-7-8', title: '4-7-8 Breathing', category: 'tools' },
     { route: '/breathing/box', title: 'Box Breathing', category: 'tools' },
-    { route: '/breathing/coherent', title: 'Coherent Breathing', category: 'tools' },
+    {
+      route: '/breathing/coherent',
+      title: 'Coherent Breathing',
+      category: 'tools',
+    },
 
     // Tools - Grounding
     { route: '/grounding', title: 'Grounding Exercises', category: 'tools' },
-    { route: '/grounding/5-4-3-2-1', title: '5-4-3-2-1 Grounding', category: 'tools' },
+    {
+      route: '/grounding/5-4-3-2-1',
+      title: '5-4-3-2-1 Grounding',
+      category: 'tools',
+    },
     { route: '/grounding/body-scan', title: 'Body Scan', category: 'tools' },
 
     // Tools - Journaling
     { route: '/journaling', title: 'Journaling', category: 'tools' },
-    { route: '/journaling/freeform', title: 'Freeform Journaling', category: 'tools' },
-    { route: '/journaling/gratitude', title: 'Gratitude Journal', category: 'tools' },
+    {
+      route: '/journaling/freeform',
+      title: 'Freeform Journaling',
+      category: 'tools',
+    },
+    {
+      route: '/journaling/gratitude',
+      title: 'Gratitude Journal',
+      category: 'tools',
+    },
 
     // Learning
     { route: '/learning', title: 'Learning', category: 'learning' },
     { route: '/learning/emotions', title: 'Emotions', category: 'learning' },
     { route: '/learning/emotions/joy', title: 'Joy', category: 'learning' },
-    { route: '/learning/emotions/sadness', title: 'Sadness', category: 'learning' },
+    {
+      route: '/learning/emotions/sadness',
+      title: 'Sadness',
+      category: 'learning',
+    },
     { route: '/learning/emotions/anger', title: 'Anger', category: 'learning' },
     { route: '/learning/emotions/fear', title: 'Fear', category: 'learning' },
 
     // Settings
     { route: '/settings', title: 'Settings', category: 'settings' },
-    { route: '/settings/privacy', title: 'Privacy Settings', category: 'settings' },
-    { route: '/settings/notifications', title: 'Notification Settings', category: 'settings' },
+    {
+      route: '/settings/privacy',
+      title: 'Privacy Settings',
+      category: 'settings',
+    },
+    {
+      route: '/settings/notifications',
+      title: 'Notification Settings',
+      category: 'settings',
+    },
 
     // Account
     { route: '/account', title: 'Account', category: 'account' },
@@ -354,7 +394,7 @@ export async function handleGetSitemap(args: {
         (page) =>
           page.route.includes(filter) ||
           page.title.toLowerCase().includes(filter.toLowerCase()) ||
-          page.category.includes(filter)
+          page.category.includes(filter),
       )
     : sitemap;
 
@@ -384,18 +424,25 @@ export async function handleSpeculate(args: {
     '/settings': ['/settings/privacy', '/account', '/dashboard'],
   };
 
-  const likelyRoutes = speculations[state.currentRoute] ||
-    ['/dashboard', '/insights', '/breathing'];
+  const likelyRoutes = speculations[state.currentRoute] || [
+    '/dashboard',
+    '/insights',
+    '/breathing',
+  ];
 
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify({
-          currentRoute: state.currentRoute,
-          likelyNextRoutes: likelyRoutes.slice(0, depth),
-          confidence: 0.7,
-        }, null, 2),
+        text: JSON.stringify(
+          {
+            currentRoute: state.currentRoute,
+            likelyNextRoutes: likelyRoutes.slice(0, depth),
+            confidence: 0.7,
+          },
+          null,
+          2,
+        ),
       },
     ],
   };
@@ -440,14 +487,18 @@ export async function handleInvokeTool(args: {
     content: [
       {
         type: 'text',
-        text: JSON.stringify({
-          status: 'invoked',
-          toolId,
-          category,
-          name,
-          params: params || {},
-          timestamp: Date.now(),
-        }, null, 2),
+        text: JSON.stringify(
+          {
+            status: 'invoked',
+            toolId,
+            category,
+            name,
+            params: params || {},
+            timestamp: Date.now(),
+          },
+          null,
+          2,
+        ),
       },
     ],
   };

@@ -41,7 +41,13 @@ import {
 } from 'react';
 
 // Try to import useESI, but provide fallback if not in ESI context
-let useESIContext: (() => { process: (directive: unknown) => Promise<{ success: boolean; output?: string }> }) | null = null;
+let useESIContext:
+  | (() => {
+      process: (
+        directive: unknown,
+      ) => Promise<{ success: boolean; output?: string }>;
+    })
+  | null = null;
 try {
   // Dynamic import to avoid circular dependency
   const esiReact = require('./esi-react');
@@ -55,7 +61,14 @@ try {
 // ============================================================================
 
 /** Supported wrapper element types */
-type WrapperElement = 'div' | 'span' | 'pre' | 'code' | 'section' | 'article' | 'aside';
+type WrapperElement =
+  | 'div'
+  | 'span'
+  | 'pre'
+  | 'code'
+  | 'section'
+  | 'article'
+  | 'aside';
 
 export interface ESIFormatProps {
   /** ESI component(s) to wrap */
@@ -124,14 +137,14 @@ export interface ESIPlaintextProps extends Omit<ESIFormatProps, 'as'> {
 
 /** Supported code-specialized models */
 export type CodeModel =
-  | 'codestral'      // Mistral Codestral
-  | 'deepseek'       // DeepSeek Coder
-  | 'starcoder'      // StarCoder
-  | 'codellama'      // Code Llama
-  | 'qwen-coder'     // Qwen Coder
-  | 'claude'         // Claude (general but excellent at code)
-  | 'gpt-4'          // GPT-4 (general but excellent at code)
-  | 'llm';           // Default LLM
+  | 'codestral' // Mistral Codestral
+  | 'deepseek' // DeepSeek Coder
+  | 'starcoder' // StarCoder
+  | 'codellama' // Code Llama
+  | 'qwen-coder' // Qwen Coder
+  | 'claude' // Claude (general but excellent at code)
+  | 'gpt-4' // GPT-4 (general but excellent at code)
+  | 'llm'; // Default LLM
 
 export interface ESICodeProps extends Omit<ESIFormatProps, 'as'> {
   /** Custom wrapper element */
@@ -207,7 +220,7 @@ interface ESIComponentProps {
  */
 function wrapChildren(
   children: ReactNode,
-  onOutput: (text: string) => void
+  onOutput: (text: string) => void,
 ): ReactNode {
   return Children.map(children, (child) => {
     if (!isValidElement(child)) {
@@ -228,11 +241,14 @@ function wrapChildren(
       ...childProps,
       render: (result: unknown) => {
         // Extract text from result
-        const text = typeof result === 'string'
-          ? result
-          : typeof result === 'object' && result !== null && 'output' in result
-            ? String((result as { output: unknown }).output)
-            : JSON.stringify(result);
+        const text =
+          typeof result === 'string'
+            ? result
+            : typeof result === 'object' &&
+                result !== null &&
+                'output' in result
+              ? String((result as { output: unknown }).output)
+              : JSON.stringify(result);
 
         onOutput(text);
 
@@ -260,11 +276,14 @@ function wrapChildren(
  * Simple markdown to HTML converter
  * For production, consider using a library like marked or remark
  */
-function parseMarkdown(text: string, options: {
-  gfm?: boolean;
-  allowHtml?: boolean;
-  linkTarget?: string;
-} = {}): string {
+function parseMarkdown(
+  text: string,
+  options: {
+    gfm?: boolean;
+    allowHtml?: boolean;
+    linkTarget?: string;
+  } = {},
+): string {
   const { gfm = true, allowHtml = false, linkTarget = '_blank' } = options;
 
   let html = text;
@@ -310,14 +329,11 @@ function parseMarkdown(text: string, options: {
   // Links
   html = html.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    `<a href="$2" target="${linkTarget}" rel="noopener noreferrer">$1</a>`
+    `<a href="$2" target="${linkTarget}" rel="noopener noreferrer">$1</a>`,
   );
 
   // Images
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" />'
-  );
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
 
   // Blockquotes
   html = html.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>');
@@ -336,11 +352,11 @@ function parseMarkdown(text: string, options: {
   if (gfm) {
     html = html.replace(
       /<li>\[ \]\s*(.+)<\/li>/g,
-      '<li><input type="checkbox" disabled /> $1</li>'
+      '<li><input type="checkbox" disabled /> $1</li>',
     );
     html = html.replace(
       /<li>\[x\]\s*(.+)<\/li>/gi,
-      '<li><input type="checkbox" disabled checked /> $1</li>'
+      '<li><input type="checkbox" disabled checked /> $1</li>',
     );
   }
 
@@ -350,23 +366,27 @@ function parseMarkdown(text: string, options: {
     const rows = html.match(tableRegex);
     if (rows && rows.length >= 2) {
       // Check for separator row
-      const separatorIdx = rows.findIndex(row => /^\|[\s\-:|]+\|$/.test(row));
+      const separatorIdx = rows.findIndex((row) => /^\|[\s\-:|]+\|$/.test(row));
       if (separatorIdx === 1) {
         const headerRow = rows[0];
         const dataRows = rows.slice(2);
 
-        const headerCells = headerRow.split('|').filter(c => c.trim());
-        const headerHtml = `<thead><tr>${headerCells.map(c => `<th>${c.trim()}</th>`).join('')}</tr></thead>`;
+        const headerCells = headerRow.split('|').filter((c) => c.trim());
+        const headerHtml = `<thead><tr>${headerCells.map((c) => `<th>${c.trim()}</th>`).join('')}</tr></thead>`;
 
-        const bodyHtml = dataRows.map(row => {
-          const cells = row.split('|').filter(c => c.trim());
-          return `<tr>${cells.map(c => `<td>${c.trim()}</td>`).join('')}</tr>`;
-        }).join('');
+        const bodyHtml = dataRows
+          .map((row) => {
+            const cells = row.split('|').filter((c) => c.trim());
+            return `<tr>${cells.map((c) => `<td>${c.trim()}</td>`).join('')}</tr>`;
+          })
+          .join('');
 
         const tableHtml = `<table>${headerHtml}<tbody>${bodyHtml}</tbody></table>`;
 
         // Replace the original table markdown
-        const tableMarkdown = rows.slice(0, separatorIdx + 1 + dataRows.length).join('\n');
+        const tableMarkdown = rows
+          .slice(0, separatorIdx + 1 + dataRows.length)
+          .join('\n');
         html = html.replace(tableMarkdown, tableHtml);
       }
     }
@@ -376,8 +396,14 @@ function parseMarkdown(text: string, options: {
   html = html.replace(/^(?!<[a-z]|$)(.+)$/gm, '<p>$1</p>');
 
   // Clean up extra paragraph tags around block elements
-  html = html.replace(/<p>(<(?:h[1-6]|ul|ol|li|blockquote|pre|table|hr)[^>]*>)/g, '$1');
-  html = html.replace(/(<\/(?:h[1-6]|ul|ol|li|blockquote|pre|table|hr)>)<\/p>/g, '$1');
+  html = html.replace(
+    /<p>(<(?:h[1-6]|ul|ol|li|blockquote|pre|table|hr)[^>]*>)/g,
+    '$1',
+  );
+  html = html.replace(
+    /(<\/(?:h[1-6]|ul|ol|li|blockquote|pre|table|hr)>)<\/p>/g,
+    '$1',
+  );
 
   // Line breaks
   html = html.replace(/\n\n/g, '</p><p>');
@@ -394,22 +420,32 @@ function parseMarkdown(text: string, options: {
  * Simple LaTeX to HTML converter
  * For production, use KaTeX or MathJax
  */
-function parseLatex(text: string, options: {
-  mode?: 'inline' | 'block' | 'auto';
-  displayMode?: boolean;
-} = {}): string {
+function parseLatex(
+  text: string,
+  options: {
+    mode?: 'inline' | 'block' | 'auto';
+    displayMode?: boolean;
+  } = {},
+): string {
   const { mode = 'auto', displayMode = false } = options;
 
   // Check if we should use display mode
-  const isBlock = mode === 'block' ||
+  const isBlock =
+    mode === 'block' ||
     (mode === 'auto' && (text.includes('\\[') || text.includes('$$')));
 
   // Convert common LaTeX to HTML entities/CSS
   let html = text;
 
   // Display math delimiters
-  html = html.replace(/\$\$([\s\S]+?)\$\$/g, '<div class="math-block">$1</div>');
-  html = html.replace(/\\\[([\s\S]+?)\\\]/g, '<div class="math-block">$1</div>');
+  html = html.replace(
+    /\$\$([\s\S]+?)\$\$/g,
+    '<div class="math-block">$1</div>',
+  );
+  html = html.replace(
+    /\\\[([\s\S]+?)\\\]/g,
+    '<div class="math-block">$1</div>',
+  );
 
   // Inline math delimiters
   html = html.replace(/\$([^$]+)\$/g, '<span class="math-inline">$1</span>');
@@ -417,25 +453,77 @@ function parseLatex(text: string, options: {
 
   // Common symbols
   const symbols: Record<string, string> = {
-    '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ',
-    '\\epsilon': 'ε', '\\zeta': 'ζ', '\\eta': 'η', '\\theta': 'θ',
-    '\\iota': 'ι', '\\kappa': 'κ', '\\lambda': 'λ', '\\mu': 'μ',
-    '\\nu': 'ν', '\\xi': 'ξ', '\\pi': 'π', '\\rho': 'ρ',
-    '\\sigma': 'σ', '\\tau': 'τ', '\\upsilon': 'υ', '\\phi': 'φ',
-    '\\chi': 'χ', '\\psi': 'ψ', '\\omega': 'ω',
-    '\\Gamma': 'Γ', '\\Delta': 'Δ', '\\Theta': 'Θ', '\\Lambda': 'Λ',
-    '\\Xi': 'Ξ', '\\Pi': 'Π', '\\Sigma': 'Σ', '\\Phi': 'Φ',
-    '\\Psi': 'Ψ', '\\Omega': 'Ω',
-    '\\infty': '∞', '\\pm': '±', '\\mp': '∓', '\\times': '×',
-    '\\div': '÷', '\\cdot': '·', '\\leq': '≤', '\\geq': '≥',
-    '\\neq': '≠', '\\approx': '≈', '\\equiv': '≡', '\\subset': '⊂',
-    '\\supset': '⊃', '\\in': '∈', '\\notin': '∉', '\\cup': '∪',
-    '\\cap': '∩', '\\emptyset': '∅', '\\forall': '∀', '\\exists': '∃',
-    '\\nabla': '∇', '\\partial': '∂', '\\sum': '∑', '\\prod': '∏',
-    '\\int': '∫', '\\oint': '∮', '\\sqrt': '√', '\\therefore': '∴',
-    '\\because': '∵', '\\angle': '∠', '\\perp': '⊥', '\\parallel': '∥',
-    '\\rightarrow': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒',
-    '\\Leftarrow': '⇐', '\\leftrightarrow': '↔', '\\Leftrightarrow': '⇔',
+    '\\alpha': 'α',
+    '\\beta': 'β',
+    '\\gamma': 'γ',
+    '\\delta': 'δ',
+    '\\epsilon': 'ε',
+    '\\zeta': 'ζ',
+    '\\eta': 'η',
+    '\\theta': 'θ',
+    '\\iota': 'ι',
+    '\\kappa': 'κ',
+    '\\lambda': 'λ',
+    '\\mu': 'μ',
+    '\\nu': 'ν',
+    '\\xi': 'ξ',
+    '\\pi': 'π',
+    '\\rho': 'ρ',
+    '\\sigma': 'σ',
+    '\\tau': 'τ',
+    '\\upsilon': 'υ',
+    '\\phi': 'φ',
+    '\\chi': 'χ',
+    '\\psi': 'ψ',
+    '\\omega': 'ω',
+    '\\Gamma': 'Γ',
+    '\\Delta': 'Δ',
+    '\\Theta': 'Θ',
+    '\\Lambda': 'Λ',
+    '\\Xi': 'Ξ',
+    '\\Pi': 'Π',
+    '\\Sigma': 'Σ',
+    '\\Phi': 'Φ',
+    '\\Psi': 'Ψ',
+    '\\Omega': 'Ω',
+    '\\infty': '∞',
+    '\\pm': '±',
+    '\\mp': '∓',
+    '\\times': '×',
+    '\\div': '÷',
+    '\\cdot': '·',
+    '\\leq': '≤',
+    '\\geq': '≥',
+    '\\neq': '≠',
+    '\\approx': '≈',
+    '\\equiv': '≡',
+    '\\subset': '⊂',
+    '\\supset': '⊃',
+    '\\in': '∈',
+    '\\notin': '∉',
+    '\\cup': '∪',
+    '\\cap': '∩',
+    '\\emptyset': '∅',
+    '\\forall': '∀',
+    '\\exists': '∃',
+    '\\nabla': '∇',
+    '\\partial': '∂',
+    '\\sum': '∑',
+    '\\prod': '∏',
+    '\\int': '∫',
+    '\\oint': '∮',
+    '\\sqrt': '√',
+    '\\therefore': '∴',
+    '\\because': '∵',
+    '\\angle': '∠',
+    '\\perp': '⊥',
+    '\\parallel': '∥',
+    '\\rightarrow': '→',
+    '\\leftarrow': '←',
+    '\\Rightarrow': '⇒',
+    '\\Leftarrow': '⇐',
+    '\\leftrightarrow': '↔',
+    '\\Leftrightarrow': '⇔',
   };
 
   for (const [latex, symbol] of Object.entries(symbols)) {
@@ -445,7 +533,7 @@ function parseLatex(text: string, options: {
   // Fractions: \frac{a}{b}
   html = html.replace(
     /\\frac\{([^}]+)\}\{([^}]+)\}/g,
-    '<span class="frac"><span class="num">$1</span><span class="den">$2</span></span>'
+    '<span class="frac"><span class="num">$1</span><span class="den">$2</span></span>',
   );
 
   // Superscript: ^{x} or ^x
@@ -482,11 +570,14 @@ function parseLatex(text: string, options: {
 /**
  * Format and optionally highlight JSON
  */
-function formatJson(text: string, options: {
-  indent?: number;
-  syntaxHighlight?: boolean;
-  theme?: 'light' | 'dark' | 'auto';
-} = {}): string {
+function formatJson(
+  text: string,
+  options: {
+    indent?: number;
+    syntaxHighlight?: boolean;
+    theme?: 'light' | 'dark' | 'auto';
+  } = {},
+): string {
   const { indent = 2, syntaxHighlight = true } = options;
 
   try {
@@ -504,23 +595,23 @@ function formatJson(text: string, options: {
     // Strings (but not inside already highlighted)
     highlighted = highlighted.replace(
       /("(?:[^"\\]|\\.)*")\s*:/g,
-      '<span class="json-key">$1</span>:'
+      '<span class="json-key">$1</span>:',
     );
     highlighted = highlighted.replace(
       /:\s*("(?:[^"\\]|\\.)*")/g,
-      ': <span class="json-string">$1</span>'
+      ': <span class="json-string">$1</span>',
     );
 
     // Numbers
     highlighted = highlighted.replace(
       /:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g,
-      ': <span class="json-number">$1</span>'
+      ': <span class="json-number">$1</span>',
     );
 
     // Booleans and null
     highlighted = highlighted.replace(
       /:\s*(true|false|null)/g,
-      ': <span class="json-$1">$1</span>'
+      ': <span class="json-$1">$1</span>',
     );
 
     return `<pre class="json-highlight"><code>${highlighted}</code></pre>`;
@@ -546,13 +637,21 @@ function escapeHtml(text: string): string {
 /**
  * Format code with optional syntax highlighting
  */
-function formatCode(text: string, options: {
-  language?: string;
-  lineNumbers?: boolean;
-  startLine?: number;
-  highlightLines?: number[];
-} = {}): string {
-  const { language, lineNumbers = false, startLine = 1, highlightLines = [] } = options;
+function formatCode(
+  text: string,
+  options: {
+    language?: string;
+    lineNumbers?: boolean;
+    startLine?: number;
+    highlightLines?: number[];
+  } = {},
+): string {
+  const {
+    language,
+    lineNumbers = false,
+    startLine = 1,
+    highlightLines = [],
+  } = options;
 
   const lines = text.split('\n');
   const langClass = language ? ` language-${language}` : '';
@@ -561,12 +660,14 @@ function formatCode(text: string, options: {
     return `<pre><code class="code-block${langClass}">${escapeHtml(text)}</code></pre>`;
   }
 
-  const lineHtml = lines.map((line, i) => {
-    const lineNum = startLine + i;
-    const isHighlighted = highlightLines.includes(lineNum);
-    const highlightClass = isHighlighted ? ' highlighted' : '';
-    return `<span class="line${highlightClass}"><span class="line-number">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></span>`;
-  }).join('\n');
+  const lineHtml = lines
+    .map((line, i) => {
+      const lineNum = startLine + i;
+      const isHighlighted = highlightLines.includes(lineNum);
+      const highlightClass = isHighlighted ? ' highlighted' : '';
+      return `<span class="line${highlightClass}"><span class="line-number">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></span>`;
+    })
+    .join('\n');
 
   return `<pre class="code-with-lines${langClass}"><code>${lineHtml}</code></pre>`;
 }
@@ -684,11 +785,7 @@ export const ESILatex: FC<ESILatexProps> = ({
   }, [children]);
 
   if (isLoading) {
-    return (
-      <Wrapper className={className}>
-        {wrappedChildren}
-      </Wrapper>
-    );
+    return <Wrapper className={className}>{wrappedChildren}</Wrapper>;
   }
 
   if (!output) {
@@ -768,11 +865,7 @@ export const ESIJson: FC<ESIJsonProps> = ({
   }, [children]);
 
   if (isLoading) {
-    return (
-      <Wrapper className={className}>
-        {wrappedChildren}
-      </Wrapper>
-    );
+    return <Wrapper className={className}>{wrappedChildren}</Wrapper>;
   }
 
   if (!output) {
@@ -823,12 +916,17 @@ export const ESIPlaintext: FC<ESIPlaintextProps> = ({
   const [output, setOutput] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const style = useMemo(() => ({
-    whiteSpace: preserveWhitespace ? 'pre-wrap' as const : 'normal' as const,
-    wordWrap: wordWrap ? 'break-word' as const : 'normal' as const,
-    maxWidth: maxWidth ? `${maxWidth}ch` : undefined,
-    fontFamily: 'monospace',
-  }), [preserveWhitespace, wordWrap, maxWidth]);
+  const style = useMemo(
+    () => ({
+      whiteSpace: preserveWhitespace
+        ? ('pre-wrap' as const)
+        : ('normal' as const),
+      wordWrap: wordWrap ? ('break-word' as const) : ('normal' as const),
+      maxWidth: maxWidth ? `${maxWidth}ch` : undefined,
+      fontFamily: 'monospace',
+    }),
+    [preserveWhitespace, wordWrap, maxWidth],
+  );
 
   // Handle string children directly
   if (typeof children === 'string') {
@@ -847,11 +945,7 @@ export const ESIPlaintext: FC<ESIPlaintextProps> = ({
   }, [children]);
 
   if (isLoading) {
-    return (
-      <Wrapper className={className}>
-        {wrappedChildren}
-      </Wrapper>
-    );
+    return <Wrapper className={className}>{wrappedChildren}</Wrapper>;
   }
 
   if (!output) {
@@ -910,7 +1004,9 @@ export const ESICode: FC<ESICodeProps> = ({
   onGenerate,
 }) => {
   const [output, setOutput] = useState<string | null>(null);
-  const [detectedLang, setDetectedLang] = useState<string | undefined>(language);
+  const [detectedLang, setDetectedLang] = useState<string | undefined>(
+    language,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -924,13 +1020,16 @@ export const ESICode: FC<ESICodeProps> = ({
   }, [output]);
 
   // Extract code from markdown code blocks if present
-  const extractCode = useCallback((text: string): { code: string; lang?: string } => {
-    const match = text.match(/```(\w*)\n?([\s\S]*?)```/);
-    if (match) {
-      return { code: match[2].trim(), lang: match[1] || undefined };
-    }
-    return { code: text };
-  }, []);
+  const extractCode = useCallback(
+    (text: string): { code: string; lang?: string } => {
+      const match = text.match(/```(\w*)\n?([\s\S]*?)```/);
+      if (match) {
+        return { code: match[2].trim(), lang: match[1] || undefined };
+      }
+      return { code: text };
+    },
+    [],
+  );
 
   // Generate code from natural language using coding model
   useEffect(() => {
@@ -991,7 +1090,8 @@ export const ESICode: FC<ESICodeProps> = ({
             variant: model,
             temperature: 0,
             maxTokens: 20,
-            system: 'You are a code language detector. Respond with ONLY the programming language name, nothing else.',
+            system:
+              'You are a code language detector. Respond with ONLY the programming language name, nothing else.',
           },
           content: {
             type: 'text',
@@ -1056,11 +1156,7 @@ export const ESICode: FC<ESICodeProps> = ({
   }, [children, generateFrom]);
 
   if (isLoading && !generateFrom) {
-    return (
-      <Wrapper className={className}>
-        {wrappedChildren}
-      </Wrapper>
-    );
+    return <Wrapper className={className}>{wrappedChildren}</Wrapper>;
   }
 
   if (!output) {
@@ -1132,7 +1228,15 @@ export interface SemanticEntity {
   /** Entity text */
   text: string;
   /** Entity type (person, place, org, etc.) */
-  type: 'person' | 'place' | 'organization' | 'date' | 'money' | 'product' | 'event' | 'other';
+  type:
+    | 'person'
+    | 'place'
+    | 'organization'
+    | 'date'
+    | 'money'
+    | 'product'
+    | 'event'
+    | 'other';
   /** Schema.org type */
   schemaType?: SchemaOrgType;
   /** Start position in text */
@@ -1274,7 +1378,8 @@ ${textToAnalyze.slice(0, 2000)}`;
             model: 'llm',
             temperature: 0.1,
             maxTokens: 1000,
-            system: 'You are a semantic analysis expert. Extract topics, entities, and suggest Schema.org types. Always respond with valid JSON.',
+            system:
+              'You are a semantic analysis expert. Extract topics, entities, and suggest Schema.org types. Always respond with valid JSON.',
           },
           content: {
             type: 'text',
@@ -1301,7 +1406,10 @@ ${textToAnalyze.slice(0, 2000)}`;
                   const entityResult = await esi.process({
                     id: `esi-semantic-entities-${Date.now()}`,
                     params: { model: 'classify' }, // Entity extraction model
-                    content: { type: 'text', value: textToAnalyze.slice(0, 2000) },
+                    content: {
+                      type: 'text',
+                      value: textToAnalyze.slice(0, 2000),
+                    },
                   });
                   if (entityResult.success && entityResult.output) {
                     try {
@@ -1326,7 +1434,10 @@ ${textToAnalyze.slice(0, 2000)}`;
                   const emotionResult = await esi.process({
                     id: `esi-semantic-emotion-${Date.now()}`,
                     params: { model: 'emotion' }, // Emotion detection model
-                    content: { type: 'text', value: textToAnalyze.slice(0, 1000) },
+                    content: {
+                      type: 'text',
+                      value: textToAnalyze.slice(0, 1000),
+                    },
                   });
                   if (emotionResult.success && emotionResult.output) {
                     try {
@@ -1351,7 +1462,11 @@ ${textToAnalyze.slice(0, 2000)}`;
                 }
               }
 
-              onExtract?.({ topics: extractedTopics, entities: extractedEntities, emotion: extractedEmotion });
+              onExtract?.({
+                topics: extractedTopics,
+                entities: extractedEntities,
+                emotion: extractedEmotion,
+              });
 
               // Generate structured HTML
               const html = generateStructuredHtml(
@@ -1360,7 +1475,7 @@ ${textToAnalyze.slice(0, 2000)}`;
                 extractedEntities,
                 format,
                 parsed.suggestedSchema || schemaType,
-                extractedEmotion
+                extractedEmotion,
               );
               setStructuredHtml(html);
             }
@@ -1377,12 +1492,15 @@ ${textToAnalyze.slice(0, 2000)}`;
             content: { type: 'text', value: textToAnalyze.slice(0, 1000) },
           });
 
-          const embeddingResult = embedResult as { success: boolean; embedding?: number[] };
+          const embeddingResult = embedResult as {
+            success: boolean;
+            embedding?: number[];
+          };
           if (embeddingResult.success && embeddingResult.embedding) {
             const embedding = embeddingResult.embedding;
-            setTopics(prev => prev.map((t, i) =>
-              i === 0 ? { ...t, embedding } : t
-            ));
+            setTopics((prev) =>
+              prev.map((t, i) => (i === 0 ? { ...t, embedding } : t)),
+            );
           }
         }
       } catch (err) {
@@ -1393,7 +1511,18 @@ ${textToAnalyze.slice(0, 2000)}`;
     };
 
     extractSemantics();
-  }, [inputText, output, maxTopics, minConfidence, schemaType, extractEntities, vocabulary, format, includeEmbeddings, onExtract]);
+  }, [
+    inputText,
+    output,
+    maxTopics,
+    minConfidence,
+    schemaType,
+    extractEntities,
+    vocabulary,
+    format,
+    includeEmbeddings,
+    onExtract,
+  ]);
 
   // Handle ESI children
   const wrappedChildren = useMemo(() => {
@@ -1405,7 +1534,9 @@ ${textToAnalyze.slice(0, 2000)}`;
 
   if (isLoading) {
     return (
-      <Wrapper className={`esi-semantic esi-semantic-loading ${className || ''}`}>
+      <Wrapper
+        className={`esi-semantic esi-semantic-loading ${className || ''}`}
+      >
         {wrappedChildren}
         {!wrappedChildren && <span>Analyzing...</span>}
       </Wrapper>
@@ -1426,7 +1557,9 @@ ${textToAnalyze.slice(0, 2000)}`;
             data-valence={emotion.valence}
             data-arousal={emotion.arousal}
           >
-            <span className="esi-semantic-emotion-label">{emotion.primary}</span>
+            <span className="esi-semantic-emotion-label">
+              {emotion.primary}
+            </span>
             <span className="esi-semantic-emotion-confidence">
               {(emotion.confidence * 100).toFixed(0)}%
             </span>
@@ -1479,9 +1612,9 @@ function generateStructuredHtml(
   entities: SemanticEntity[],
   format: 'microdata' | 'jsonld' | 'rdfa' | 'tags',
   schemaType: SchemaOrgType,
-  emotion?: SemanticEmotion
+  emotion?: SemanticEmotion,
 ): string {
-  const keywords = topics.flatMap(t => t.keywords || [t.label]).join(', ');
+  const keywords = topics.flatMap((t) => t.keywords || [t.label]).join(', ');
 
   switch (format) {
     case 'jsonld': {
@@ -1490,11 +1623,11 @@ function generateStructuredHtml(
         '@type': schemaType,
         name: topics[0]?.label || 'Content',
         keywords,
-        about: topics.map(t => ({
+        about: topics.map((t) => ({
           '@type': t.schemaType || 'Thing',
           name: t.label,
         })),
-        mentions: entities.map(e => ({
+        mentions: entities.map((e) => ({
           '@type': e.schemaType || entityTypeToSchema(e.type),
           name: e.text,
         })),
@@ -1506,9 +1639,21 @@ function generateStructuredHtml(
           name: 'emotionalTone',
           value: emotion.primary,
           additionalProperty: [
-            { '@type': 'PropertyValue', name: 'valence', value: emotion.valence },
-            { '@type': 'PropertyValue', name: 'arousal', value: emotion.arousal },
-            { '@type': 'PropertyValue', name: 'confidence', value: emotion.confidence },
+            {
+              '@type': 'PropertyValue',
+              name: 'valence',
+              value: emotion.valence,
+            },
+            {
+              '@type': 'PropertyValue',
+              name: 'arousal',
+              value: emotion.arousal,
+            },
+            {
+              '@type': 'PropertyValue',
+              name: 'confidence',
+              value: emotion.confidence,
+            },
           ],
         };
       }
@@ -1517,9 +1662,12 @@ function generateStructuredHtml(
     }
 
     case 'rdfa': {
-      const topicSpans = topics.map(t =>
-        `<span property="about" typeof="${t.schemaType || 'Thing'}"><span property="name">${escapeHtml(t.label)}</span></span>`
-      ).join(' ');
+      const topicSpans = topics
+        .map(
+          (t) =>
+            `<span property="about" typeof="${t.schemaType || 'Thing'}"><span property="name">${escapeHtml(t.label)}</span></span>`,
+        )
+        .join(' ');
       const emotionSpan = emotion
         ? `<span property="emotionalTone" content="${escapeHtml(emotion.primary)}" data-valence="${emotion.valence}" data-arousal="${emotion.arousal}"></span>`
         : '';
@@ -1533,16 +1681,22 @@ function generateStructuredHtml(
 
     case 'microdata':
     default: {
-      const topicSpans = topics.map(t =>
-        `<span itemprop="about" itemscope itemtype="https://schema.org/${t.schemaType || 'Thing'}">
+      const topicSpans = topics
+        .map(
+          (t) =>
+            `<span itemprop="about" itemscope itemtype="https://schema.org/${t.schemaType || 'Thing'}">
           <span itemprop="name">${escapeHtml(t.label)}</span>
-        </span>`
-      ).join('\n');
-      const entitySpans = entities.map(e =>
-        `<span itemprop="mentions" itemscope itemtype="https://schema.org/${entityTypeToSchema(e.type)}">
+        </span>`,
+        )
+        .join('\n');
+      const entitySpans = entities
+        .map(
+          (e) =>
+            `<span itemprop="mentions" itemscope itemtype="https://schema.org/${entityTypeToSchema(e.type)}">
           <span itemprop="name">${escapeHtml(e.text)}</span>
-        </span>`
-      ).join('\n');
+        </span>`,
+        )
+        .join('\n');
       const emotionMeta = emotion
         ? `<meta itemprop="emotionalTone" content="${escapeHtml(emotion.primary)}" data-valence="${emotion.valence}" data-arousal="${emotion.arousal}" data-confidence="${emotion.confidence}" />`
         : '';

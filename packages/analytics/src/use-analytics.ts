@@ -9,7 +9,11 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { AnalyticsConfig, MerkleTree } from './types';
 import { initializeGTM, waitForGTM } from './gtm-loader';
 import { initContextBridge, pushPageView, getESIState } from './context-bridge';
-import { initClickTracker, trackClick, trackInteraction } from './click-tracker';
+import {
+  initClickTracker,
+  trackClick,
+  trackInteraction,
+} from './click-tracker';
 import { setDebugMode } from './data-layer';
 
 // ============================================================================
@@ -27,7 +31,11 @@ export interface UseAnalyticsReturn {
   trackClick: (element: HTMLElement, event?: MouseEvent) => void;
 
   /** Track a custom interaction */
-  trackInteraction: (name: string, data: Record<string, unknown>, element?: HTMLElement) => void;
+  trackInteraction: (
+    name: string,
+    data: Record<string, unknown>,
+    element?: HTMLElement,
+  ) => void;
 
   /** Manually push a page view */
   pushPageView: (merkleRoot?: string) => void;
@@ -120,7 +128,7 @@ export function useAeonAnalytics(config: AnalyticsConfig): UseAnalyticsReturn {
           dataLayerName: config.dataLayerName,
           eventPrefix: config.eventPrefix,
         },
-        merkleRoot
+        merkleRoot,
       );
     }
 
@@ -155,18 +163,21 @@ export function useAeonAnalytics(config: AnalyticsConfig): UseAnalyticsReturn {
         dataLayerName: config.dataLayerName,
         eventPrefix: config.eventPrefix,
       },
-      merkleRoot
+      merkleRoot,
     );
   }, [typeof window !== 'undefined' ? window.location.pathname : '']);
 
   // Manual track click
-  const handleTrackClick = useCallback((element: HTMLElement, event?: MouseEvent) => {
-    trackClick(element, event, {
-      dataLayerName: configRef.current.dataLayerName,
-      eventPrefix: configRef.current.eventPrefix,
-      clickOptions: configRef.current.clickOptions,
-    });
-  }, []);
+  const handleTrackClick = useCallback(
+    (element: HTMLElement, event?: MouseEvent) => {
+      trackClick(element, event, {
+        dataLayerName: configRef.current.dataLayerName,
+        eventPrefix: configRef.current.eventPrefix,
+        clickOptions: configRef.current.clickOptions,
+      });
+    },
+    [],
+  );
 
   // Manual track interaction
   const handleTrackInteraction = useCallback(
@@ -176,7 +187,7 @@ export function useAeonAnalytics(config: AnalyticsConfig): UseAnalyticsReturn {
         eventPrefix: configRef.current.eventPrefix,
       });
     },
-    []
+    [],
   );
 
   // Manual push page view
@@ -186,7 +197,7 @@ export function useAeonAnalytics(config: AnalyticsConfig): UseAnalyticsReturn {
         dataLayerName: configRef.current.dataLayerName,
         eventPrefix: configRef.current.eventPrefix,
       },
-      merkleRoot || merkleTreeRef.current?.rootHash || ''
+      merkleRoot || merkleTreeRef.current?.rootHash || '',
     );
   }, []);
 
@@ -222,14 +233,14 @@ export function useESIState() {
  */
 export function useTrackMount(
   componentName: string,
-  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ) {
   useEffect(() => {
     trackInteraction(
       'component.mount',
       { component: componentName },
       undefined,
-      config
+      config,
     );
 
     return () => {
@@ -237,7 +248,7 @@ export function useTrackMount(
         'component.unmount',
         { component: componentName },
         undefined,
-        config
+        config,
       );
     };
   }, [componentName]);
@@ -249,7 +260,7 @@ export function useTrackMount(
 export function useTrackVisibility(
   ref: React.RefObject<HTMLElement>,
   componentName: string,
-  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ) {
   const hasTracked = useRef(false);
 
@@ -267,13 +278,13 @@ export function useTrackVisibility(
               'component.visible',
               { component: componentName },
               ref.current || undefined,
-              config
+              config,
             );
             observer.disconnect();
           }
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     observer.observe(ref.current);

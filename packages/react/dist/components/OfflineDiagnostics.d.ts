@@ -64,7 +64,7 @@ export declare function CacheManagementPanel({ onClearCache, }: {
 /**
  * Queue Stats Panel
  */
-export declare function QueueStatsPanel({ stats, }: {
+export declare function QueueStatsPanel({ stats }: {
     stats?: QueueStats;
 }): ReactNode;
 /**

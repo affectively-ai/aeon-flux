@@ -35,7 +35,11 @@ export interface AeonWorkerOptions<E extends AeonEnv = AeonEnv> {
   };
 
   /** Custom fetch handler to run before Aeon routing */
-  onRequest?: (request: Request, env: E, ctx: ExecutionContext) => Promise<Response | null>;
+  onRequest?: (
+    request: Request,
+    env: E,
+    ctx: ExecutionContext,
+  ) => Promise<Response | null>;
 
   /** Custom 404 handler */
   notFound?: (request: Request, env: E) => Response | Promise<Response>;
@@ -70,7 +74,7 @@ export interface AeonWorkerOptions<E extends AeonEnv = AeonEnv> {
  * ```
  */
 export function createAeonWorker<E extends AeonEnv = AeonEnv>(
-  options: AeonWorkerOptions<E> = {}
+  options: AeonWorkerOptions<E> = {},
 ): ExportedHandler<E> {
   // Create API router and register routes
   const apiRouter = createApiRouter<E>();
@@ -87,7 +91,9 @@ export function createAeonWorker<E extends AeonEnv = AeonEnv>(
     ...options.cors,
   };
 
-  const getCorsHeaders = (requestOrigin?: string | null): Record<string, string> => {
+  const getCorsHeaders = (
+    requestOrigin?: string | null,
+  ): Record<string, string> => {
     let allowedOrigin = '*';
     if (typeof corsConfig.origin === 'string') {
       allowedOrigin = corsConfig.origin;
@@ -111,7 +117,11 @@ export function createAeonWorker<E extends AeonEnv = AeonEnv>(
   };
 
   return {
-    async fetch(request: Request, env: E, ctx: ExecutionContext): Promise<Response> {
+    async fetch(
+      request: Request,
+      env: E,
+      ctx: ExecutionContext,
+    ): Promise<Response> {
       const url = new URL(request.url);
       const corsHeaders = getCorsHeaders(request.headers.get('Origin'));
 
@@ -146,19 +156,27 @@ export function createAeonWorker<E extends AeonEnv = AeonEnv>(
 
         // Session routes - /session/*
         if (url.pathname.startsWith('/session/')) {
-          return handleSessionRequest(request, env as unknown as BaseEnv, corsHeaders);
+          return handleSessionRequest(
+            request,
+            env as unknown as BaseEnv,
+            corsHeaders,
+          );
         }
 
         // Routes registry - /routes
         if (url.pathname.startsWith('/routes')) {
-          return handleRoutesRequest(request, env as unknown as BaseEnv, corsHeaders);
+          return handleRoutesRequest(
+            request,
+            env as unknown as BaseEnv,
+            corsHeaders,
+          );
         }
 
         // Health check
         if (url.pathname === '/health') {
           return new Response(
             JSON.stringify({ status: 'ok', env: env.ENVIRONMENT }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           );
         }
 
@@ -176,7 +194,10 @@ export function createAeonWorker<E extends AeonEnv = AeonEnv>(
             error: 'Internal server error',
             message: error instanceof Error ? error.message : 'Unknown error',
           }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
         );
       }
     },
@@ -184,7 +205,10 @@ export function createAeonWorker<E extends AeonEnv = AeonEnv>(
 }
 
 /** Add CORS headers to a response */
-function addCorsHeaders(response: Response, corsHeaders: Record<string, string>): Response {
+function addCorsHeaders(
+  response: Response,
+  corsHeaders: Record<string, string>,
+): Response {
   const newHeaders = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders)) {
     if (!newHeaders.has(key)) {
@@ -221,7 +245,7 @@ export default createAeonWorker();
 async function handleSessionRequest(
   request: Request,
   env: BaseEnv,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
 ): Promise<Response> {
   const url = new URL(request.url);
 
@@ -230,7 +254,10 @@ async function handleSessionRequest(
   const sessionId = pathParts[1];
 
   if (!sessionId) {
-    return new Response('Session ID required', { status: 400, headers: corsHeaders });
+    return new Response('Session ID required', {
+      status: 400,
+      headers: corsHeaders,
+    });
   }
 
   // Get or create the Durable Object instance
@@ -268,7 +295,7 @@ async function handleSessionRequest(
 async function handleRoutesRequest(
   request: Request,
   env: BaseEnv,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
 ): Promise<Response> {
   // Use a singleton DO for routes registry
   const id = env.ROUTES_REGISTRY.idFromName('__routes__');

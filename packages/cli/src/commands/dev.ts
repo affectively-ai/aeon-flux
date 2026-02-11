@@ -60,11 +60,15 @@ export async function dev(options: DevOptions): Promise<void> {
   console.log('');
 
   // Start file watcher
-  const watcher = startWatcher(pagesDir, componentsDir, async (event, filename) => {
-    console.log(`\n♻️  ${event}: ${filename}`);
-    // Trigger HMR
-    broadcastHMR(filename);
-  });
+  const watcher = startWatcher(
+    pagesDir,
+    componentsDir,
+    async (event, filename) => {
+      console.log(`\n♻️  ${event}: ${filename}`);
+      // Trigger HMR
+      broadcastHMR(filename);
+    },
+  );
 
   // Start server
   const server = Bun.serve({
@@ -209,7 +213,8 @@ async function scanRoutes(pagesDir: string): Promise<RouteInfo[]> {
 
         if (isPage) {
           const content = await readFile(fullPath, 'utf-8');
-          const isAeon = content.includes("'use aeon'") || content.includes('"use aeon"');
+          const isAeon =
+            content.includes("'use aeon'") || content.includes('"use aeon"');
 
           // Check for layout
           const layoutPath = join(dir, 'layout.tsx');
@@ -245,7 +250,7 @@ async function scanRoutes(pagesDir: string): Promise<RouteInfo[]> {
 
 function matchRoute(
   path: string,
-  routes: RouteInfo[]
+  routes: RouteInfo[],
 ): (RouteInfo & { params: Record<string, string> }) | null {
   for (const route of routes) {
     const params = matchPattern(path, route.pattern);
@@ -256,7 +261,10 @@ function matchRoute(
   return null;
 }
 
-function matchPattern(path: string, pattern: string): Record<string, string> | null {
+function matchPattern(
+  path: string,
+  pattern: string,
+): Record<string, string> | null {
   const pathParts = path.split('/').filter(Boolean);
   const patternParts = pattern.split('/').filter(Boolean);
   const params: Record<string, string> = {};
@@ -309,7 +317,7 @@ function matchPattern(path: string, pattern: string): Record<string, string> | n
 async function renderPage(
   content: string,
   match: RouteInfo & { params: Record<string, string> },
-  _config: AeonConfig
+  _config: AeonConfig,
 ): Promise<string> {
   // For dev mode, we do a simple transform
   // In production, this would use the WASM runtime
@@ -318,9 +326,7 @@ async function renderPage(
   const isAeon = match.isAeon;
 
   // Extract the default export component
-  const componentMatch = content.match(
-    /export\s+default\s+function\s+(\w+)/
-  );
+  const componentMatch = content.match(/export\s+default\s+function\s+(\w+)/);
   const componentName = componentMatch?.[1] || 'Page';
 
   // Simple dev rendering - in production this uses React SSR
@@ -344,7 +350,9 @@ async function renderPage(
 </head>
 <body>
   <div id="root"></div>
-  ${isAeon ? `
+  ${
+    isAeon
+      ? `
   <script type="module">
     // Aeon Flux runtime
     window.__AEON_PAGE__ = {
@@ -353,7 +361,9 @@ async function renderPage(
       isAeon: true,
     };
   </script>
-  ` : ''}
+  `
+      : ''
+  }
   <script type="module">
     // Dev mode hydration
     import React from 'react';
@@ -428,7 +438,7 @@ function escapeHtml(str: string): string {
 function startWatcher(
   pagesDir: string,
   componentsDir: string,
-  callback: (event: string, filename: string) => void
+  callback: (event: string, filename: string) => void,
 ): { close: () => void } {
   const watchers: ReturnType<typeof watch>[] = [];
 
@@ -436,7 +446,7 @@ function startWatcher(
     watchers.push(
       watch(pagesDir, { recursive: true }, (event, filename) => {
         if (filename) callback(event, `pages/${filename}`);
-      })
+      }),
     );
   } catch {
     console.log('⚠️  Could not watch pages directory');
@@ -446,7 +456,7 @@ function startWatcher(
     watchers.push(
       watch(componentsDir, { recursive: true }, (event, filename) => {
         if (filename) callback(event, `components/${filename}`);
-      })
+      }),
     );
   } catch {
     // Components dir may not exist

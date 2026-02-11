@@ -45,7 +45,9 @@ export interface SyncStats {
 
 type EventHandler<T> = (data: T) => void;
 
-class EventEmitter<Events extends Record<string, unknown> = Record<string, unknown>> {
+class EventEmitter<
+  Events extends Record<string, unknown> = Record<string, unknown>,
+> {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
 
   on<K extends keyof Events>(event: K, handler: EventHandler<Events[K]>): void {
@@ -56,8 +58,13 @@ class EventEmitter<Events extends Record<string, unknown> = Record<string, unkno
     this.handlers.get(key)!.add(handler as EventHandler<unknown>);
   }
 
-  off<K extends keyof Events>(event: K, handler: EventHandler<Events[K]>): void {
-    this.handlers.get(event as string)?.delete(handler as EventHandler<unknown>);
+  off<K extends keyof Events>(
+    event: K,
+    handler: EventHandler<Events[K]>,
+  ): void {
+    this.handlers
+      .get(event as string)
+      ?.delete(handler as EventHandler<unknown>);
   }
 
   emit<K extends keyof Events>(event: K, data?: Events[K]): void {
@@ -149,10 +156,14 @@ export class SyncCoordinator extends EventEmitter<{
 
     // Check connection quality if available
     if (typeof navigator !== 'undefined' && 'connection' in navigator) {
-      const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+      const conn = (
+        navigator as Navigator & { connection?: NetworkInformation }
+      ).connection;
       if (conn) {
         this.updateBandwidthFromConnection(conn);
-        conn.addEventListener?.('change', () => this.updateBandwidthFromConnection(conn));
+        conn.addEventListener?.('change', () =>
+          this.updateBandwidthFromConnection(conn),
+        );
       }
     }
   }
@@ -161,7 +172,8 @@ export class SyncCoordinator extends EventEmitter<{
    * Update bandwidth profile from Network Information API
    */
   private updateBandwidthFromConnection(conn: NetworkInformation): void {
-    const effectiveType = conn.effectiveType as BandwidthProfile['effectiveType'];
+    const effectiveType =
+      conn.effectiveType as BandwidthProfile['effectiveType'];
 
     let speedKbps = 1024; // Default 1 Mbps
     let latencyMs = 50;
@@ -199,7 +211,8 @@ export class SyncCoordinator extends EventEmitter<{
       speedKbps,
       latencyMs,
       effectiveType,
-      reliability: effectiveType === '4g' ? 0.95 : effectiveType === '3g' ? 0.85 : 0.7,
+      reliability:
+        effectiveType === '4g' ? 0.95 : effectiveType === '3g' ? 0.85 : 0.7,
     });
 
     // Update network state based on connection quality
@@ -296,11 +309,17 @@ export class SyncCoordinator extends EventEmitter<{
     }
 
     // Determine highest priority in batch
-    const priorityOrder: Record<OperationPriority, number> = { high: 0, normal: 1, low: 2 };
+    const priorityOrder: Record<OperationPriority, number> = {
+      high: 0,
+      normal: 1,
+      low: 2,
+    };
     const highestPriority = sizedOps.reduce<OperationPriority>(
       (highest, op) =>
-        priorityOrder[op.priority] < priorityOrder[highest] ? op.priority : highest,
-      'low'
+        priorityOrder[op.priority] < priorityOrder[highest]
+          ? op.priority
+          : highest,
+      'low',
     );
 
     const batch: SyncBatch = {
@@ -345,7 +364,7 @@ export class SyncCoordinator extends EventEmitter<{
   updateProgress(
     batchId: string,
     syncedOperations: number,
-    bytesSynced: number
+    bytesSynced: number,
   ): void {
     const batch = this.batches.get(batchId);
     if (!batch) return;
@@ -356,7 +375,9 @@ export class SyncCoordinator extends EventEmitter<{
       syncedOperations,
       bytesSynced,
       totalBytes: batch.totalSize,
-      estimatedTimeRemaining: this.estimateSyncTime(batch.totalSize - bytesSynced),
+      estimatedTimeRemaining: this.estimateSyncTime(
+        batch.totalSize - bytesSynced,
+      ),
     };
 
     this.progress.set(batchId, progress);
@@ -389,10 +410,12 @@ export class SyncCoordinator extends EventEmitter<{
     const batch = this.batches.get(batchId);
     if (!batch) return;
 
-    const attemptCount = (batch as SyncBatch & { attemptCount?: number }).attemptCount || 0;
+    const attemptCount =
+      (batch as SyncBatch & { attemptCount?: number }).attemptCount || 0;
 
     if (retryable && attemptCount < this.config.maxRetries) {
-      (batch as SyncBatch & { attemptCount: number }).attemptCount = attemptCount + 1;
+      (batch as SyncBatch & { attemptCount: number }).attemptCount =
+        attemptCount + 1;
       this.emit('batch:retry', { batch, attempt: attemptCount + 1 });
     } else {
       this.stats.failedSyncs++;
@@ -430,8 +453,11 @@ export class SyncCoordinator extends EventEmitter<{
    * Estimate sync time for given bytes
    */
   estimateSyncTime(bytes: number): number {
-    const secondsNeeded = (bytes * 8) / (this.bandwidthProfile.speedKbps * 1024);
-    return Math.round((secondsNeeded + this.bandwidthProfile.latencyMs / 1000) * 1000);
+    const secondsNeeded =
+      (bytes * 8) / (this.bandwidthProfile.speedKbps * 1024);
+    return Math.round(
+      (secondsNeeded + this.bandwidthProfile.latencyMs / 1000) * 1000,
+    );
   }
 
   /**
@@ -442,15 +468,30 @@ export class SyncCoordinator extends EventEmitter<{
 
     // Poor connection - reduce batch size
     if (speed < 512) {
-      this.config.maxBatchSize = Math.max(10, Math.floor(DEFAULT_CONFIG.maxBatchSize / 4));
-      this.config.maxBatchBytes = Math.max(512 * 1024, Math.floor(DEFAULT_CONFIG.maxBatchBytes / 4));
+      this.config.maxBatchSize = Math.max(
+        10,
+        Math.floor(DEFAULT_CONFIG.maxBatchSize / 4),
+      );
+      this.config.maxBatchBytes = Math.max(
+        512 * 1024,
+        Math.floor(DEFAULT_CONFIG.maxBatchBytes / 4),
+      );
     } else if (speed < 1024) {
-      this.config.maxBatchSize = Math.max(25, Math.floor(DEFAULT_CONFIG.maxBatchSize / 2));
-      this.config.maxBatchBytes = Math.max(1024 * 1024, Math.floor(DEFAULT_CONFIG.maxBatchBytes / 2));
+      this.config.maxBatchSize = Math.max(
+        25,
+        Math.floor(DEFAULT_CONFIG.maxBatchSize / 2),
+      );
+      this.config.maxBatchBytes = Math.max(
+        1024 * 1024,
+        Math.floor(DEFAULT_CONFIG.maxBatchBytes / 2),
+      );
     } else if (speed > 5000) {
       // Good connection - increase batch size
       this.config.maxBatchSize = Math.min(500, DEFAULT_CONFIG.maxBatchSize * 2);
-      this.config.maxBatchBytes = Math.min(50 * 1024 * 1024, DEFAULT_CONFIG.maxBatchBytes * 2);
+      this.config.maxBatchBytes = Math.min(
+        50 * 1024 * 1024,
+        DEFAULT_CONFIG.maxBatchBytes * 2,
+      );
     } else {
       // Normal connection - use defaults
       this.config.maxBatchSize = DEFAULT_CONFIG.maxBatchSize;
@@ -539,7 +580,7 @@ export function getSyncCoordinator(): SyncCoordinator {
  * Create a new sync coordinator with custom configuration
  */
 export function createSyncCoordinator(
-  config?: Partial<SyncCoordinatorConfig>
+  config?: Partial<SyncCoordinatorConfig>,
 ): SyncCoordinator {
   return new SyncCoordinator(config);
 }

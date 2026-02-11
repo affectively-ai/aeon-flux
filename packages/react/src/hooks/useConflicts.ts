@@ -11,7 +11,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 // Types
 // ============================================================================
 
-export type ResolutionStrategy = 'local-wins' | 'remote-wins' | 'merge' | 'last-modified' | 'manual';
+export type ResolutionStrategy =
+  | 'local-wins'
+  | 'remote-wins'
+  | 'merge'
+  | 'last-modified'
+  | 'manual';
 
 export interface Conflict {
   id: string;
@@ -48,7 +53,11 @@ export interface UseConflictsResult {
   /** Conflict statistics */
   stats: ConflictStats;
   /** Resolve a conflict */
-  resolveConflict: (conflictId: string, strategy: ResolutionStrategy, customData?: Record<string, unknown>) => Promise<void>;
+  resolveConflict: (
+    conflictId: string,
+    strategy: ResolutionStrategy,
+    customData?: Record<string, unknown>,
+  ) => Promise<void>;
   /** Dismiss a conflict (remove without resolution) */
   dismissConflict: (conflictId: string) => void;
   /** Clear all resolved conflicts */
@@ -102,12 +111,12 @@ export function useConflicts(sessionId?: string): UseConflictsResult {
 
   const unresolvedConflicts = useMemo(
     () => conflicts.filter((c) => !c.resolution),
-    [conflicts]
+    [conflicts],
   );
 
   const highSeverityConflicts = useMemo(
     () => conflicts.filter((c) => !c.resolution && c.severity === 'high'),
-    [conflicts]
+    [conflicts],
   );
 
   const stats = useMemo<ConflictStats>(() => {
@@ -121,9 +130,9 @@ export function useConflicts(sessionId?: string): UseConflictsResult {
     const byStrategy: Record<ResolutionStrategy, number> = {
       'local-wins': 0,
       'remote-wins': 0,
-      'merge': 0,
+      merge: 0,
       'last-modified': 0,
-      'manual': 0,
+      manual: 0,
     };
 
     let unresolved = 0;
@@ -155,7 +164,7 @@ export function useConflicts(sessionId?: string): UseConflictsResult {
     async (
       conflictId: string,
       strategy: ResolutionStrategy,
-      customData?: Record<string, unknown>
+      customData?: Record<string, unknown>,
     ) => {
       setIsLoading(true);
 
@@ -204,7 +213,7 @@ export function useConflicts(sessionId?: string): UseConflictsResult {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   const dismissConflict = useCallback((conflictId: string) => {

@@ -51,7 +51,14 @@ import type {
   ESIResult,
   UserContext,
 } from './types';
-import { EdgeWorkersESIProcessor, esiInfer, esiEmbed, esiEmotion, esiVision, esiWithContext } from './esi';
+import {
+  EdgeWorkersESIProcessor,
+  esiInfer,
+  esiEmbed,
+  esiEmotion,
+  esiVision,
+  esiWithContext,
+} from './esi';
 
 // Import control components for ESI namespace extension
 import {
@@ -90,10 +97,7 @@ import {
 } from './esi-format-react';
 
 // Import translation components for ESI namespace extension
-import {
-  ESITranslate,
-  TranslationProvider,
-} from './esi-translate-react';
+import { ESITranslate, TranslationProvider } from './esi-translate-react';
 
 // ============================================================================
 // ESI Context
@@ -106,7 +110,7 @@ interface ESIContextValue {
   process: (directive: ESIDirective) => Promise<ESIResult>;
   processWithStream: (
     directive: ESIDirective,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ) => Promise<ESIResult>;
 }
 
@@ -129,7 +133,7 @@ export const ESIProvider: FC<ESIProviderProps> = ({
   processor: customProcessor,
 }) => {
   const [processor] = useState(
-    () => customProcessor || new EdgeWorkersESIProcessor(config)
+    () => customProcessor || new EdgeWorkersESIProcessor(config),
   );
 
   useEffect(() => {
@@ -150,7 +154,7 @@ export const ESIProvider: FC<ESIProviderProps> = ({
       }
       return processor.process(directive, userContext);
     },
-    [processor, userContext]
+    [processor, userContext],
   );
 
   const processWithStream = useCallback(
@@ -170,7 +174,7 @@ export const ESIProvider: FC<ESIProviderProps> = ({
       }
       return processor.stream(directive, userContext, onChunk);
     },
-    [processor, userContext]
+    [processor, userContext],
   );
 
   return (
@@ -288,60 +292,83 @@ export const ESIInfer: FC<ESIInferProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const promptText = prompt || (typeof children === 'string' ? children : String(children || ''));
+  const promptText =
+    prompt ||
+    (typeof children === 'string' ? children : String(children || ''));
 
   useEffect(() => {
-    if (!enabled) {
-      setOutput(typeof fallback === 'string' ? fallback : '');
-      setIsLoading(false);
-      return;
-    }
+    const fetchData = async () => {
+      if (!enabled) {
+        setOutput(typeof fallback === 'string' ? fallback : '');
+        setIsLoading(false);
+        return;
+      }
 
-    const directive: ESIDirective = contextAware
-      ? esiWithContext(promptText, signals, {
-          model,
-          variant,
-          temperature,
-          maxTokens,
-          system,
-          cacheTtl,
-          fallback: typeof fallback === 'string' ? fallback : undefined,
-        })
-      : esiInfer(promptText, {
-          model,
-          variant,
-          temperature,
-          maxTokens,
-          system,
-          cacheTtl,
-          fallback: typeof fallback === 'string' ? fallback : undefined,
+      const directive: ESIDirective = contextAware
+        ? esiWithContext(promptText, signals, {
+            model,
+            variant,
+            temperature,
+            maxTokens,
+            system,
+            cacheTtl,
+            fallback: typeof fallback === 'string' ? fallback : undefined,
+          })
+        : esiInfer(promptText, {
+            model,
+            variant,
+            temperature,
+            maxTokens,
+            system,
+            cacheTtl,
+            fallback: typeof fallback === 'string' ? fallback : undefined,
+          });
+
+      if (stream) {
+        setOutput('');
+        await processWithStream(directive, (chunk) => {
+          setOutput((prev) => prev + chunk);
+        }).then((result) => {
+          setIsLoading(false);
+          if (!result.success) {
+            setError(result.error || 'Inference failed');
+            onError?.(result.error || 'Inference failed');
+          }
+          onComplete?.(result);
         });
+      } else {
+        await process(directive).then((result) => {
+          setIsLoading(false);
+          if (result.success && result.output) {
+            setOutput(result.output);
+          } else {
+            setError(result.error || 'Inference failed');
+            onError?.(result.error || 'Inference failed');
+          }
+          onComplete?.(result);
+        });
+      }
+    };
 
-    if (stream) {
-      setOutput('');
-      processWithStream(directive, (chunk) => {
-        setOutput((prev) => prev + chunk);
-      }).then((result) => {
-        setIsLoading(false);
-        if (!result.success) {
-          setError(result.error || 'Inference failed');
-          onError?.(result.error || 'Inference failed');
-        }
-        onComplete?.(result);
-      });
-    } else {
-      process(directive).then((result) => {
-        setIsLoading(false);
-        if (result.success && result.output) {
-          setOutput(result.output);
-        } else {
-          setError(result.error || 'Inference failed');
-          onError?.(result.error || 'Inference failed');
-        }
-        onComplete?.(result);
-      });
-    }
-  }, [promptText, model, variant, temperature, maxTokens, system, contextAware, stream, enabled]);
+    fetchData();
+
+    return () => {};
+  }, [
+    promptText,
+    model,
+    variant,
+    temperature,
+    maxTokens,
+    system,
+    contextAware,
+    stream,
+    enabled,
+    fallback,
+    processWithStream,
+    process,
+    onComplete,
+    onError,
+  ]);
 
   if (isLoading && !stream) {
     return <span className={className}>{loading}</span>;
@@ -367,7 +394,9 @@ export const ESIInfer: FC<ESIInferProps> = ({
     );
   }
 
-  return <span className={className}>{output || (isLoading ? loading : '')}</span>;
+  return (
+    <span className={className}>{output || (isLoading ? loading : '')}</span>
+  );
 };
 
 export interface ESIEmbedProps {
@@ -386,7 +415,11 @@ export interface ESIEmbedProps {
  * </ESI.Embed>
  * ```
  */
-export const ESIEmbed: FC<ESIEmbedProps> = ({ children, onComplete, onError }) => {
+export const ESIEmbed: FC<ESIEmbedProps> = ({
+  children,
+  onComplete,
+  onError,
+}) => {
   const { process, enabled } = useESI();
   const text = typeof children === 'string' ? children : String(children || '');
 
@@ -525,7 +558,11 @@ export const ESIVision: FC<ESIVisionProps> = ({
 // Hook for programmatic ESI
 // ============================================================================
 
-export interface UseESIInferOptions extends Omit<ESIInferProps, 'children' | 'loading' | 'fallback' | 'render' | 'className'> {
+export interface UseESIInferOptions
+  extends Omit<
+    ESIInferProps,
+    'children' | 'loading' | 'fallback' | 'render' | 'className'
+  > {
   autoRun?: boolean;
 }
 
@@ -615,7 +652,7 @@ export function useESIInfer(options: UseESIInferOptions = {}) {
         return null;
       }
     },
-    [process, processWithStream, enabled, options]
+    [process, processWithStream, enabled, options],
   );
 
   const reset = useCallback(() => {
@@ -743,6 +780,7 @@ export function useGlobalESIState(): GlobalESIState {
       });
       return unsubscribe;
     }
+    return () => {}; // Return a no-op cleanup function if subscribe is not available
   }, []);
 
   return state;
@@ -760,7 +798,9 @@ export function useGlobalESIState(): GlobalESIState {
  * }
  * ```
  */
-export function useESIFeature(feature: keyof GlobalESIState['features']): boolean {
+export function useESIFeature(
+  feature: keyof GlobalESIState['features'],
+): boolean {
   const { features, isAdmin, userTier } = useGlobalESIState();
   // Admins bypass ALL tier restrictions
   if (isAdmin === true || userTier === 'admin') {
@@ -827,7 +867,9 @@ const TIER_ORDER: Record<GlobalESIState['userTier'], number> = {
  * }
  * ```
  */
-export function useMeetsTierRequirement(requiredTier: GlobalESIState['userTier']): boolean {
+export function useMeetsTierRequirement(
+  requiredTier: GlobalESIState['userTier'],
+): boolean {
   const { userTier, isAdmin } = useGlobalESIState();
 
   // Admins bypass ALL tier restrictions
@@ -892,6 +934,82 @@ export function updateGlobalESIState(partial: Partial<GlobalESIState>): void {
   } else if (typeof window !== 'undefined' && window.__AEON_ESI_STATE__) {
     Object.assign(window.__AEON_ESI_STATE__, partial);
   }
+}
+
+// ============================================================================
+// Navigation Hook (edge-ready, no Next.js dependency)
+// ============================================================================
+
+import { getNavigator } from '../navigation.js';
+
+export interface NavigationRouter {
+  push: (url: string) => void;
+  replace: (url: string) => void;
+  back: () => void;
+  prefetch: (url: string) => void;
+}
+
+/**
+ * Edge-ready navigation hook - works in both Next.js and edge environments
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const router = useNavigation();
+ *
+ *   return (
+ *     <button onClick={() => router.push('/dashboard')}>
+ *       Go to Dashboard
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useNavigation(): NavigationRouter {
+  // Try to get the Aeon navigation engine
+  const aeonNavigator = typeof window !== 'undefined' ? getNavigator() : null;
+
+  const push = useCallback(
+    (url: string) => {
+      if (aeonNavigator) {
+        aeonNavigator.navigate(url);
+      } else if (typeof window !== 'undefined') {
+        window.location.href = url;
+      }
+    },
+    [aeonNavigator],
+  );
+
+  const replace = useCallback(
+    (url: string) => {
+      if (aeonNavigator) {
+        aeonNavigator.navigate(url, { replace: true });
+      } else if (typeof window !== 'undefined') {
+        window.location.replace(url);
+      }
+    },
+    [aeonNavigator],
+  );
+
+  const back = useCallback(() => {
+    if (aeonNavigator) {
+      aeonNavigator.back();
+    } else if (typeof window !== 'undefined') {
+      window.history.back();
+    }
+  }, [aeonNavigator]);
+
+  const prefetch = useCallback(
+    (url: string) => {
+      if (aeonNavigator) {
+        aeonNavigator.prefetch(url);
+      }
+      // No-op in fallback mode
+    },
+    [aeonNavigator],
+  );
+
+  return { push, replace, back, prefetch };
 }
 
 // ============================================================================

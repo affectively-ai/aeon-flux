@@ -110,7 +110,7 @@ export class NavigationCache {
    */
   async prefetch(
     sessionId: string,
-    fetcher: () => Promise<CachedSession>
+    fetcher: () => Promise<CachedSession>,
   ): Promise<CachedSession> {
     // Return cached if available
     const cached = this.get(sessionId);
@@ -127,7 +127,7 @@ export class NavigationCache {
    */
   async prefetchMany(
     sessionIds: string[],
-    fetcher: (sessionId: string) => Promise<CachedSession>
+    fetcher: (sessionId: string) => Promise<CachedSession>,
   ): Promise<CachedSession[]> {
     const promises = sessionIds.map(async (sessionId) => {
       const cached = this.get(sessionId);
@@ -147,7 +147,7 @@ export class NavigationCache {
   async preloadAll(
     manifest: { sessionId: string; route: string }[],
     fetcher: (sessionId: string) => Promise<CachedSession>,
-    options: { onProgress?: (loaded: number, total: number) => void } = {}
+    options: { onProgress?: (loaded: number, total: number) => void } = {},
   ): Promise<void> {
     const total = manifest.length;
     let loaded = 0;
@@ -169,7 +169,7 @@ export class NavigationCache {
           }
           loaded++;
           options.onProgress?.(loaded, total);
-        })
+        }),
       );
 
       // Small delay between batches to keep main thread responsive
@@ -430,7 +430,7 @@ export function getWithSkeleton(
   route: string,
   skeletonCache: SkeletonCache,
   sessionCache: NavigationCache,
-  contentFetcher: (route: string) => Promise<CachedSession>
+  contentFetcher: (route: string) => Promise<CachedSession>,
 ): SkeletonWithContent {
   // Get skeleton immediately (sync)
   const skeleton = skeletonCache.get(route);

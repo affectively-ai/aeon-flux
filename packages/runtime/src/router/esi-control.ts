@@ -39,12 +39,7 @@
  */
 
 import type { ZodType, ZodTypeDef, z } from 'zod';
-import type {
-  ESIDirective,
-  ESIParams,
-  ESIResult,
-  UserContext,
-} from './types';
+import type { ESIDirective, ESIParams, ESIResult, UserContext } from './types';
 
 // ============================================================================
 // Schema Types
@@ -163,7 +158,9 @@ export interface ESIControlResult<T> {
 /**
  * Generate a JSON schema prompt suffix for structured output
  */
-export function generateSchemaPrompt<T>(schema: ZodType<T, ZodTypeDef, unknown>): string {
+export function generateSchemaPrompt<T>(
+  schema: ZodType<T, ZodTypeDef, unknown>,
+): string {
   // Extract schema description for the prompt
   // This helps the LLM understand the expected output format
   const schemaDescription = describeZodSchema(schema);
@@ -176,18 +173,40 @@ ${schemaDescription}
 Output ONLY the JSON, no markdown, no explanation.`;
 }
 
+function getSchemaDef(schema: unknown): Record<string, unknown> | null {
+  if (!schema || typeof schema !== 'object' || !('_def' in schema)) {
+    return null;
+  }
+
+  const def = (schema as { _def?: unknown })._def;
+  if (!def || typeof def !== 'object') {
+    return null;
+  }
+
+  return def as Record<string, unknown>;
+}
+
 /**
  * Describe a Zod schema in a way the LLM can understand
  */
 function describeZodSchema<T>(schema: ZodType<T, ZodTypeDef, unknown>): string {
-  // Get the schema's shape if it's an object
-  const def = schema._def as Record<string, unknown>;
+  const def = getSchemaDef(schema);
+  if (!def) {
+    return 'JSON value';
+  }
 
   if (def.typeName === 'ZodObject') {
-    const shape = def.shape as Record<string, ZodType<unknown, ZodTypeDef, unknown>>;
+    const rawShape = def.shape as
+      | Record<string, ZodType<unknown, ZodTypeDef, unknown>>
+      | (() => Record<string, ZodType<unknown, ZodTypeDef, unknown>>);
+    const shape = typeof rawShape === 'function' ? rawShape() : rawShape;
+    if (!shape || typeof shape !== 'object') {
+      return 'object';
+    }
+
     const fields = Object.entries(shape).map(([key, fieldSchema]) => {
-      const fieldDef = fieldSchema._def as Record<string, unknown>;
-      return `  "${key}": ${describeZodType(fieldDef)}`;
+      const fieldDef = getSchemaDef(fieldSchema);
+      return `  "${key}": ${fieldDef ? describeZodType(fieldDef) : 'any'}`;
     });
     return `{\n${fields.join(',\n')}\n}`;
   }
@@ -199,7 +218,11 @@ function describeZodSchema<T>(schema: ZodType<T, ZodTypeDef, unknown>): string {
  * Describe a Zod type
  */
 function describeZodType(def: Record<string, unknown>): string {
-  const typeName = def.typeName as string;
+  const typeName =
+    typeof def.typeName === 'string' ? (def.typeName as string) : null;
+  if (!typeName) {
+    return 'any';
+  }
 
   switch (typeName) {
     case 'ZodString':
@@ -208,20 +231,48 @@ function describeZodType(def: Record<string, unknown>): string {
       return 'number';
     case 'ZodBoolean':
       return 'boolean';
-    case 'ZodArray':
+    case 'ZodArray': {
       const innerType = def.type as ZodType<unknown, ZodTypeDef, unknown>;
-      return `array of ${describeZodType(innerType._def as Record<string, unknown>)}`;
-    case 'ZodEnum':
+      if (!innerType || typeof innerType !== 'object') {
+        return 'array';
+      }
+      const innerDef = getSchemaDef(innerType);
+      return innerDef ? `array of ${describeZodType(innerDef)}` : 'array';
+    }
+    case 'ZodEnum': {
       const values = def.values as string[];
       return `one of: ${values.map((v) => `"${v}"`).join(' | ')}`;
+    }
     case 'ZodLiteral':
       return JSON.stringify(def.value);
-    case 'ZodOptional':
-      const optionalType = def.innerType as ZodType<unknown, ZodTypeDef, unknown>;
-      return `${describeZodType(optionalType._def as Record<string, unknown>)} (optional)`;
-    case 'ZodNullable':
-      const nullableType = def.innerType as ZodType<unknown, ZodTypeDef, unknown>;
-      return `${describeZodType(nullableType._def as Record<string, unknown>)} or null`;
+    case 'ZodOptional': {
+      const optionalType = def.innerType as ZodType<
+        unknown,
+        ZodTypeDef,
+        unknown
+      >;
+      if (!optionalType || typeof optionalType !== 'object') {
+        return 'any (optional)';
+      }
+      const optionalDef = getSchemaDef(optionalType);
+      return optionalDef
+        ? `${describeZodType(optionalDef)} (optional)`
+        : 'any (optional)';
+    }
+    case 'ZodNullable': {
+      const nullableType = def.innerType as ZodType<
+        unknown,
+        ZodTypeDef,
+        unknown
+      >;
+      if (!nullableType || typeof nullableType !== 'object') {
+        return 'any or null';
+      }
+      const nullableDef = getSchemaDef(nullableType);
+      return nullableDef
+        ? `${describeZodType(nullableDef)} or null`
+        : 'any or null';
+    }
     case 'ZodObject':
       return 'object';
     default:
@@ -234,7 +285,7 @@ function describeZodType(def: Record<string, unknown>): string {
  */
 export function parseWithSchema<T>(
   output: string,
-  schema: ZodType<T, ZodTypeDef, unknown>
+  schema: ZodType<T, ZodTypeDef, unknown>,
 ): { success: true; data: T } | { success: false; errors: string[] } {
   // Try to extract JSON from the output
   let jsonStr = output.trim();
@@ -260,7 +311,9 @@ export function parseWithSchema<T>(
       } catch {
         return {
           success: false,
-          errors: [`Failed to parse JSON: ${e instanceof Error ? e.message : 'Unknown error'}`],
+          errors: [
+            `Failed to parse JSON: ${e instanceof Error ? e.message : 'Unknown error'}`,
+          ],
         };
       }
     } else {
@@ -280,9 +333,7 @@ export function parseWithSchema<T>(
 
   return {
     success: false,
-    errors: result.error.errors.map(
-      (e) => `${e.path.join('.')}: ${e.message}`
-    ),
+    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
   };
 }
 
@@ -296,7 +347,7 @@ export interface ESIControlProcessor {
    */
   processIf<T>(
     directive: ESIIfDirective<T>,
-    context: UserContext
+    context: UserContext,
   ): Promise<ESIControlResult<T>>;
 
   /**
@@ -304,7 +355,7 @@ export interface ESIControlProcessor {
    */
   processMatch<T>(
     directive: ESIMatchDirective<T>,
-    context: UserContext
+    context: UserContext,
   ): Promise<ESIControlResult<T>>;
 
   /**
@@ -314,7 +365,7 @@ export interface ESIControlProcessor {
     prompt: string,
     schema: ZodType<T, ZodTypeDef, unknown>,
     params: Partial<ESIParams>,
-    context: UserContext
+    context: UserContext,
   ): Promise<ESISchemaResult<T>>;
 }
 
@@ -322,14 +373,17 @@ export interface ESIControlProcessor {
  * Create a control processor that wraps an ESI processor
  */
 export function createControlProcessor(
-  processESI: (directive: ESIDirective, context: UserContext) => Promise<ESIResult>
+  processESI: (
+    directive: ESIDirective,
+    context: UserContext,
+  ) => Promise<ESIResult>,
 ): ESIControlProcessor {
   return {
     async processWithSchema<T>(
       prompt: string,
       schema: ZodType<T, ZodTypeDef, unknown>,
       params: Partial<ESIParams>,
-      context: UserContext
+      context: UserContext,
     ): Promise<ESISchemaResult<T>> {
       // Add schema prompt
       const fullPrompt = prompt + generateSchemaPrompt(schema);
@@ -375,13 +429,13 @@ export function createControlProcessor(
 
     async processIf<T>(
       directive: ESIIfDirective<T>,
-      context: UserContext
+      context: UserContext,
     ): Promise<ESIControlResult<T>> {
       const schemaResult = await this.processWithSchema(
         directive.prompt,
         directive.schema,
         directive.params || {},
-        context
+        context,
       );
 
       let conditionMet = false;
@@ -405,13 +459,13 @@ export function createControlProcessor(
 
     async processMatch<T>(
       directive: ESIMatchDirective<T>,
-      context: UserContext
+      context: UserContext,
     ): Promise<ESIControlResult<T>> {
       const schemaResult = await this.processWithSchema(
         directive.prompt,
         directive.schema,
         directive.params || {},
-        context
+        context,
       );
 
       let matchedCase: string | undefined;
@@ -455,7 +509,7 @@ export function esiIf<T>(
   prompt: string,
   schema: ZodType<T, ZodTypeDef, unknown>,
   when: ESICondition<T>,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIIfDirective<T> {
   return {
     id: `esi-if-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -474,7 +528,7 @@ export function esiMatch<T>(
   schema: ZodType<T, ZodTypeDef, unknown>,
   cases: Array<{ match: ESICondition<T>; id: string }>,
   defaultCase?: string,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIMatchDirective<T> {
   return {
     id: `esi-match-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -485,4 +539,3 @@ export function esiMatch<T>(
     params: options,
   };
 }
-

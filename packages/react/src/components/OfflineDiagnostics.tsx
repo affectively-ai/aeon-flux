@@ -16,8 +16,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { useNetworkState, type NetworkState, type BandwidthProfile } from '../hooks/useNetworkState';
-import { useConflicts, type Conflict, type ConflictStats } from '../hooks/useConflicts';
+import {
+  useNetworkState,
+  type NetworkState,
+  type BandwidthProfile,
+} from '../hooks/useNetworkState';
+import {
+  useConflicts,
+  type Conflict,
+  type ConflictStats,
+} from '../hooks/useConflicts';
 
 // ============================================================================
 // Types
@@ -69,7 +77,8 @@ export interface OfflineDiagnosticsProps {
  * Network Status Panel
  */
 export function NetworkStatusPanel(): ReactNode {
-  const { state, isOnline, isPoor, bandwidth, timeSinceChange, refresh } = useNetworkState();
+  const { state, isOnline, isPoor, bandwidth, timeSinceChange, refresh } =
+    useNetworkState();
 
   const stateColor = {
     online: '#10b981',
@@ -86,14 +95,33 @@ export function NetworkStatusPanel(): ReactNode {
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '50%', backgroundColor: stateColor, display: 'inline-block' }} />
+      <h4
+        style={{
+          fontSize: '1rem',
+          fontWeight: 600,
+          marginBottom: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+        }}
+      >
+        <span
+          style={{
+            width: '0.75rem',
+            height: '0.75rem',
+            borderRadius: '50%',
+            backgroundColor: stateColor,
+            display: 'inline-block',
+          }}
+        />
         Network Status
       </h4>
       <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.875rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Status:</span>
-          <span style={{ color: stateColor, fontWeight: 500 }}>{state.charAt(0).toUpperCase() + state.slice(1)}</span>
+          <span style={{ color: stateColor, fontWeight: 500 }}>
+            {state.charAt(0).toUpperCase() + state.slice(1)}
+          </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Connection Type:</span>
@@ -101,7 +129,11 @@ export function NetworkStatusPanel(): ReactNode {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Speed:</span>
-          <span>{bandwidth.speedKbps >= 1024 ? `${(bandwidth.speedKbps / 1024).toFixed(1)} Mbps` : `${bandwidth.speedKbps} Kbps`}</span>
+          <span>
+            {bandwidth.speedKbps >= 1024
+              ? `${(bandwidth.speedKbps / 1024).toFixed(1)} Mbps`
+              : `${bandwidth.speedKbps} Kbps`}
+          </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Latency:</span>
@@ -213,7 +245,9 @@ export function ServiceWorkerPanel(): ReactNode {
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+      <h4
+        style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+      >
         Service Worker
       </h4>
       {!swState.isSupported ? (
@@ -226,7 +260,8 @@ export function ServiceWorkerPanel(): ReactNode {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#6b7280' }}>Status:</span>
               <span style={{ color: regColor, fontWeight: 500 }}>
-                {swState.registration.charAt(0).toUpperCase() + swState.registration.slice(1)}
+                {swState.registration.charAt(0).toUpperCase() +
+                  swState.registration.slice(1)}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -342,7 +377,9 @@ export function CacheManagementPanel({
   if (!('caches' in window)) {
     return (
       <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+        <h4
+          style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+        >
           Cache Storage
         </h4>
         <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
@@ -354,13 +391,17 @@ export function CacheManagementPanel({
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+      <h4
+        style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+      >
         Cache Storage
       </h4>
       {isLoading ? (
         <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading...</p>
       ) : caches.length === 0 ? (
-        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>No caches found.</p>
+        <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+          No caches found.
+        </p>
       ) : (
         <>
           <div style={{ display: 'grid', gap: '0.75rem' }}>
@@ -374,9 +415,17 @@ export function CacheManagementPanel({
                   fontSize: '0.875rem',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <span style={{ fontWeight: 500 }}>{cache.name}</span>
-                  <span style={{ color: '#6b7280' }}>{cache.itemCount} items</span>
+                  <span style={{ color: '#6b7280' }}>
+                    {cache.itemCount} items
+                  </span>
                 </div>
                 <button
                   onClick={() => handleClearCache(cache.name)}
@@ -388,7 +437,8 @@ export function CacheManagementPanel({
                     color: '#ef4444',
                     border: 'none',
                     borderRadius: '0.25rem',
-                    cursor: isClearing === cache.name ? 'not-allowed' : 'pointer',
+                    cursor:
+                      isClearing === cache.name ? 'not-allowed' : 'pointer',
                     opacity: isClearing === cache.name ? 0.5 : 1,
                     fontSize: '0.75rem',
                   }}
@@ -424,11 +474,7 @@ export function CacheManagementPanel({
 /**
  * Queue Stats Panel
  */
-export function QueueStatsPanel({
-  stats,
-}: {
-  stats?: QueueStats;
-}): ReactNode {
+export function QueueStatsPanel({ stats }: { stats?: QueueStats }): ReactNode {
   const defaultStats: QueueStats = stats || {
     pending: 0,
     syncing: 0,
@@ -445,13 +491,17 @@ export function QueueStatsPanel({
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+      <h4
+        style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+      >
         Offline Queue
       </h4>
       <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.875rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Pending:</span>
-          <span style={{ color: defaultStats.pending > 0 ? '#f59e0b' : '#10b981' }}>
+          <span
+            style={{ color: defaultStats.pending > 0 ? '#f59e0b' : '#10b981' }}
+          >
             {defaultStats.pending}
           </span>
         </div>
@@ -465,7 +515,9 @@ export function QueueStatsPanel({
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>Failed:</span>
-          <span style={{ color: defaultStats.failed > 0 ? '#ef4444' : '#6b7280' }}>
+          <span
+            style={{ color: defaultStats.failed > 0 ? '#ef4444' : '#6b7280' }}
+          >
             {defaultStats.failed}
           </span>
         </div>
@@ -486,7 +538,9 @@ export function ConflictsPanel(): ReactNode {
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+      <h4
+        style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+      >
         Conflicts
       </h4>
       <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.875rem' }}>
@@ -502,14 +556,22 @@ export function ConflictsPanel(): ReactNode {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ color: '#6b7280' }}>High Severity:</span>
-          <span style={{ color: stats.highSeverity > 0 ? '#ef4444' : '#6b7280' }}>
+          <span
+            style={{ color: stats.highSeverity > 0 ? '#ef4444' : '#6b7280' }}
+          >
             {stats.highSeverity}
           </span>
         </div>
       </div>
       {unresolvedConflicts.length > 0 && (
         <div style={{ marginTop: '0.75rem' }}>
-          <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              color: '#6b7280',
+              marginBottom: '0.5rem',
+            }}
+          >
             Unresolved conflicts:
           </p>
           {unresolvedConflicts.slice(0, 3).map((conflict) => (
@@ -525,11 +587,21 @@ export function ConflictsPanel(): ReactNode {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{conflict.type}</span>
-                <span style={{ color: conflict.severity === 'high' ? '#ef4444' : '#f59e0b' }}>
+                <span
+                  style={{
+                    color: conflict.severity === 'high' ? '#ef4444' : '#f59e0b',
+                  }}
+                >
                   {conflict.severity}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.25rem',
+                  marginTop: '0.25rem',
+                }}
+              >
                 <button
                   onClick={() => resolveConflict(conflict.id, 'local-wins')}
                   style={{
@@ -585,13 +657,17 @@ export function OfflineDiagnostics({
 }: OfflineDiagnosticsProps): ReactNode {
   return (
     <div className={className} role="region" aria-label="Offline diagnostics">
-      <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
+      <h3
+        style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}
+      >
         Offline Diagnostics
       </h3>
 
       {showNetworkStatus && <NetworkStatusPanel />}
       {showServiceWorker && <ServiceWorkerPanel />}
-      {showCacheManagement && <CacheManagementPanel onClearCache={onClearCache} />}
+      {showCacheManagement && (
+        <CacheManagementPanel onClearCache={onClearCache} />
+      )}
       {showQueueStats && <QueueStatsPanel />}
       {showConflicts && <ConflictsPanel />}
     </div>

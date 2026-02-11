@@ -10,7 +10,13 @@
  * Deploy this alongside your Cloudflare Worker.
  */
 
-import type { PageSession, SerializedComponent, PresenceUser, WebhookConfig, WebhookPayload } from './types';
+import type {
+  PageSession,
+  SerializedComponent,
+  PresenceUser,
+  WebhookConfig,
+  WebhookPayload,
+} from './types';
 import { compileTreeToTSX } from './tree-compiler';
 
 interface Env {
@@ -18,11 +24,11 @@ interface Env {
   DB?: D1Database;
   // GitHub integration for tree PRs
   GITHUB_TOKEN?: string;
-  GITHUB_REPO?: string;        // "owner/repo"
-  GITHUB_TREE_PATH?: string;   // e.g., "apps/web/trees" or "packages/app/src/trees"
+  GITHUB_REPO?: string; // "owner/repo"
+  GITHUB_TREE_PATH?: string; // e.g., "apps/web/trees" or "packages/app/src/trees"
   GITHUB_BASE_BRANCH?: string; // Target branch for PRs (default: repo default)
-  GITHUB_DEV_BRANCH?: string;  // Branch to create from (default: base branch)
-  GITHUB_AUTO_MERGE?: string;  // "true" to auto-merge PRs
+  GITHUB_DEV_BRANCH?: string; // Branch to create from (default: base branch)
+  GITHUB_AUTO_MERGE?: string; // "true" to auto-merge PRs
   // Webhook secret for GitHub verification
   GITHUB_WEBHOOK_SECRET?: string;
   // Callback URL when session changes (for sync)
@@ -39,7 +45,17 @@ interface D1PreparedStatement {
 }
 
 interface WebSocketMessage {
-  type: 'cursor' | 'edit' | 'presence' | 'sync' | 'ping' | 'publish' | 'merge' | 'queue-sync' | 'conflict' | 'conflict-resolved';
+  type:
+    | 'cursor'
+    | 'edit'
+    | 'presence'
+    | 'sync'
+    | 'ping'
+    | 'publish'
+    | 'merge'
+    | 'queue-sync'
+    | 'conflict'
+    | 'conflict-resolved';
   payload: unknown;
 }
 
@@ -85,7 +101,8 @@ export class AeonPageSession {
 
     // Load webhooks from storage on init
     this.state.blockConcurrencyWhile(async () => {
-      this.webhooks = await this.state.storage.get<WebhookConfig[]>('webhooks') || [];
+      this.webhooks =
+        (await this.state.storage.get<WebhookConfig[]>('webhooks')) || [];
     });
   }
 
@@ -132,7 +149,8 @@ export class AeonPageSession {
     // Get user info from query params or headers
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId') || crypto.randomUUID();
-    const role = (url.searchParams.get('role') || 'user') as PresenceUser['role'];
+    const role = (url.searchParams.get('role') ||
+      'user') as PresenceUser['role'];
 
     // Accept the WebSocket
     (server as WebSocket & { accept: () => void }).accept();
@@ -150,23 +168,28 @@ export class AeonPageSession {
     // Send initial state
     const session = await this.getSession();
     if (session) {
-      server.send(JSON.stringify({
-        type: 'init',
-        payload: {
-          session,
-          presence: Array.from(this.sessions.values()),
-        },
-      }));
+      server.send(
+        JSON.stringify({
+          type: 'init',
+          payload: {
+            session,
+            presence: Array.from(this.sessions.values()),
+          },
+        }),
+      );
     }
 
     // Broadcast join to others
-    this.broadcast({
-      type: 'presence',
-      payload: {
-        action: 'join',
-        user: presence,
+    this.broadcast(
+      {
+        type: 'presence',
+        payload: {
+          action: 'join',
+          user: presence,
+        },
       },
-    }, server);
+      server,
+    );
 
     // Handle messages
     server.addEventListener('message', async (event: MessageEvent) => {
@@ -194,11 +217,14 @@ export class AeonPageSession {
       }
     });
 
-    // @ts-expect-error - Cloudflare Workers WebSocket Response
+
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private async handleMessage(ws: WebSocket, message: WebSocketMessage): Promise<void> {
+  private async handleMessage(
+    ws: WebSocket,
+    message: WebSocketMessage,
+  ): Promise<void> {
     const user = this.sessions.get(ws);
     if (!user) return;
 
@@ -209,26 +235,32 @@ export class AeonPageSession {
       case 'cursor': {
         const payload = message.payload as CursorPayload;
         user.cursor = { x: payload.x, y: payload.y };
-        this.broadcast({
-          type: 'cursor',
-          payload: {
-            userId: user.userId,
-            cursor: user.cursor,
+        this.broadcast(
+          {
+            type: 'cursor',
+            payload: {
+              userId: user.userId,
+              cursor: user.cursor,
+            },
           },
-        }, ws);
+          ws,
+        );
         break;
       }
 
       case 'edit': {
         const payload = message.payload as EditPayload;
         await this.applyEdit(payload, user.userId);
-        this.broadcast({
-          type: 'edit',
-          payload: {
-            ...payload,
-            userId: user.userId,
+        this.broadcast(
+          {
+            type: 'edit',
+            payload: {
+              ...payload,
+              userId: user.userId,
+            },
           },
-        }, ws);
+          ws,
+        );
         break;
       }
 
@@ -236,18 +268,23 @@ export class AeonPageSession {
         const payload = message.payload as PresencePayload;
         user.status = payload.status;
         user.editing = payload.editing;
-        this.broadcast({
-          type: 'presence',
-          payload: {
-            action: 'update',
-            user,
+        this.broadcast(
+          {
+            type: 'presence',
+            payload: {
+              action: 'update',
+              user,
+            },
           },
-        }, ws);
+          ws,
+        );
         break;
       }
 
       case 'ping': {
-        ws.send(JSON.stringify({ type: 'pong', payload: { timestamp: Date.now() } }));
+        ws.send(
+          JSON.stringify({ type: 'pong', payload: { timestamp: Date.now() } }),
+        );
         break;
       }
 
@@ -257,11 +294,38 @@ export class AeonPageSession {
         if (session) {
           const prNumber = await this.createTreePR(session);
           const autoMerged = this.env.GITHUB_AUTO_MERGE === 'true';
-          ws.send(JSON.stringify({ type: 'publish', payload: { status: 'created', route: session.route, prNumber, autoMerged } }));
-          this.broadcast({ type: 'publish', payload: { status: 'created', userId: user.userId, route: session.route, prNumber, autoMerged } }, ws);
+          ws.send(
+            JSON.stringify({
+              type: 'publish',
+              payload: {
+                status: 'created',
+                route: session.route,
+                prNumber,
+                autoMerged,
+              },
+            }),
+          );
+          this.broadcast(
+            {
+              type: 'publish',
+              payload: {
+                status: 'created',
+                userId: user.userId,
+                route: session.route,
+                prNumber,
+                autoMerged,
+              },
+            },
+            ws,
+          );
 
           // Fire webhook for publish event
-          await this.fireWebhook('session.published', session, prNumber as number | undefined, user.userId);
+          await this.fireWebhook(
+            'session.published',
+            session,
+            prNumber as number | undefined,
+            user.userId,
+          );
         }
         break;
       }
@@ -271,14 +335,37 @@ export class AeonPageSession {
         const payload = message.payload as PublishPayload;
         if (payload.prNumber) {
           const merged = await this.mergePR(payload.prNumber);
-          ws.send(JSON.stringify({ type: 'merge', payload: { status: merged ? 'merged' : 'failed', prNumber: payload.prNumber } }));
+          ws.send(
+            JSON.stringify({
+              type: 'merge',
+              payload: {
+                status: merged ? 'merged' : 'failed',
+                prNumber: payload.prNumber,
+              },
+            }),
+          );
           if (merged) {
-            this.broadcast({ type: 'merge', payload: { status: 'merged', userId: user.userId, prNumber: payload.prNumber } }, ws);
+            this.broadcast(
+              {
+                type: 'merge',
+                payload: {
+                  status: 'merged',
+                  userId: user.userId,
+                  prNumber: payload.prNumber,
+                },
+              },
+              ws,
+            );
 
             // Fire webhook for merge event
             const session = await this.getSession();
             if (session) {
-              await this.fireWebhook('session.merged', session, payload.prNumber, user.userId);
+              await this.fireWebhook(
+                'session.merged',
+                session,
+                payload.prNumber,
+                user.userId,
+              );
             }
           }
         }
@@ -329,17 +416,18 @@ export class AeonPageSession {
     if (!this.env.DB) return;
 
     try {
-      await this.env.DB
-        .prepare(`
+      await this.env.DB.prepare(
+        `
           INSERT OR REPLACE INTO sessions (session_id, route, tree, data, schema_version, updated_at)
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `)
+        `,
+      )
         .bind(
           this.state.id.toString(),
           session.route,
           JSON.stringify(session.tree),
           JSON.stringify(session.data),
-          session.schema.version
+          session.schema.version,
         )
         .run();
     } catch (err) {
@@ -350,7 +438,9 @@ export class AeonPageSession {
   /**
    * Create a GitHub PR when tree changes
    */
-  private async createTreePR(session: PageSession): Promise<number | undefined> {
+  private async createTreePR(
+    session: PageSession,
+  ): Promise<number | undefined> {
     if (!this.env.GITHUB_TOKEN || !this.env.GITHUB_REPO) return undefined;
 
     const [owner, repo] = this.env.GITHUB_REPO.split('/');
@@ -367,46 +457,68 @@ export class AeonPageSession {
     const content = btoa(tsx);
 
     try {
-      const headers = { 'Authorization': `token ${this.env.GITHUB_TOKEN}`, 'User-Agent': 'aeon-flux' };
+      const headers = {
+        Authorization: `token ${this.env.GITHUB_TOKEN}`,
+        'User-Agent': 'aeon-flux',
+      };
 
       // Get repo info for default branch
-      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
-      const repoData = await repoRes.json() as { default_branch: string };
+      const repoRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { headers },
+      );
+      const repoData = (await repoRes.json()) as { default_branch: string };
 
       // Determine branches
       const baseBranch = this.env.GITHUB_BASE_BRANCH || repoData.default_branch;
       const devBranch = this.env.GITHUB_DEV_BRANCH || baseBranch;
 
       // Get SHA from dev branch (branch off from here)
-      const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${devBranch}`, { headers });
-      const refData = await refRes.json() as { object: { sha: string } };
+      const refRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${devBranch}`,
+        { headers },
+      );
+      const refData = (await refRes.json()) as { object: { sha: string } };
 
       // Create feature branch
       await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: refData.object.sha }),
+        body: JSON.stringify({
+          ref: `refs/heads/${branch}`,
+          sha: refData.object.sha,
+        }),
       });
 
       // Create/update file
-      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        method: 'PUT',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `Update tree: ${session.route}`, content, branch }),
-      });
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+        {
+          method: 'PUT',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Update tree: ${session.route}`,
+            content,
+            branch,
+          }),
+        },
+      );
 
       // Create PR targeting base branch
-      const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `🌳 Tree update: ${session.route}`,
-          head: branch,
-          base: baseBranch,
-          body: `Automated PR from aeon-flux collaborative editing.\n\n**Route:** \`${session.route}\`\n**Session:** \`${this.state.id.toString()}\`\n**From:** \`${devBranch}\` → \`${baseBranch}\``,
-        }),
-      });
-      const prData = await prRes.json() as { number: number };
+      const prRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/pulls`,
+        {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: `🌳 Tree update: ${session.route}`,
+            head: branch,
+            base: baseBranch,
+            body: `Automated PR from aeon-flux collaborative editing.\n\n**Route:** \`${session.route}\`\n**Session:** \`${this.state.id.toString()}\`\n**From:** \`${devBranch}\` → \`${baseBranch}\``,
+          }),
+        },
+      );
+      const prData = (await prRes.json()) as { number: number };
 
       // Auto-merge if enabled
       if (this.env.GITHUB_AUTO_MERGE === 'true' && prData.number) {
@@ -427,17 +539,23 @@ export class AeonPageSession {
     if (!this.env.GITHUB_TOKEN || !this.env.GITHUB_REPO) return false;
 
     const [owner, repo] = this.env.GITHUB_REPO.split('/');
-    const headers = { 'Authorization': `token ${this.env.GITHUB_TOKEN}`, 'User-Agent': 'aeon-flux' };
+    const headers = {
+      Authorization: `token ${this.env.GITHUB_TOKEN}`,
+      'User-Agent': 'aeon-flux',
+    };
 
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`, {
-        method: 'PUT',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commit_title: `🌳 Merge tree update #${prNumber}`,
-          merge_method: 'squash',
-        }),
-      });
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`,
+        {
+          method: 'PUT',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            commit_title: `🌳 Merge tree update #${prNumber}`,
+            merge_method: 'squash',
+          }),
+        },
+      );
       return res.ok;
     } catch (err) {
       console.error('Failed to merge PR:', err);
@@ -468,19 +586,34 @@ export class AeonPageSession {
       }
 
       // Parse the verified body
-      const payload = JSON.parse(body);
-      return this.processGitHubWebhook(payload, request.headers.get('X-GitHub-Event') || 'push');
+      const payload = JSON.parse(body) as {
+        ref?: string;
+        commits?: Array<{ modified?: string[]; added?: string[] }>;
+      };
+      return this.processGitHubWebhook(
+        payload,
+        request.headers.get('X-GitHub-Event') || 'push',
+      );
     }
 
     // No secret configured, process directly
-    const payload = await request.json();
-    return this.processGitHubWebhook(payload, request.headers.get('X-GitHub-Event') || 'push');
+    const payload = (await request.json()) as {
+      ref?: string;
+      commits?: Array<{ modified?: string[]; added?: string[] }>;
+    };
+    return this.processGitHubWebhook(
+      payload,
+      request.headers.get('X-GitHub-Event') || 'push',
+    );
   }
 
   /**
    * Verify GitHub webhook signature
    */
-  private async verifyGitHubSignature(body: string, signature: string): Promise<boolean> {
+  private async verifyGitHubSignature(
+    body: string,
+    signature: string,
+  ): Promise<boolean> {
     if (!this.env.GITHUB_WEBHOOK_SECRET) return false;
 
     const encoder = new TextEncoder();
@@ -489,13 +622,15 @@ export class AeonPageSession {
       encoder.encode(this.env.GITHUB_WEBHOOK_SECRET),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
-      ['sign']
+      ['sign'],
     );
 
     const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
-    const computed = 'sha256=' + Array.from(new Uint8Array(sig))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    const computed =
+      'sha256=' +
+      Array.from(new Uint8Array(sig))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
 
     return signature === computed;
   }
@@ -504,8 +639,11 @@ export class AeonPageSession {
    * Process GitHub webhook events
    */
   private async processGitHubWebhook(
-    payload: { ref?: string; commits?: Array<{ modified?: string[]; added?: string[] }> },
-    event: string
+    payload: {
+      ref?: string;
+      commits?: Array<{ modified?: string[]; added?: string[] }>;
+    },
+    event: string,
   ): Promise<Response> {
     // Only process push events
     if (event !== 'push') {
@@ -515,11 +653,11 @@ export class AeonPageSession {
     // Check if this push affects our tree path
     const treePath = this.env.GITHUB_TREE_PATH || 'pages';
     const affectedFiles = [
-      ...(payload.commits?.flatMap(c => c.modified || []) || []),
-      ...(payload.commits?.flatMap(c => c.added || []) || []),
+      ...(payload.commits?.flatMap((c) => c.modified || []) || []),
+      ...(payload.commits?.flatMap((c) => c.added || []) || []),
     ];
 
-    const relevantFiles = affectedFiles.filter(f => f.startsWith(treePath));
+    const relevantFiles = affectedFiles.filter((f) => f.startsWith(treePath));
     if (relevantFiles.length === 0) {
       return Response.json({ status: 'ignored', reason: 'no relevant files' });
     }
@@ -550,7 +688,7 @@ export class AeonPageSession {
     switch (request.method) {
       case 'GET': {
         // List registered webhooks (without secrets)
-        const safeWebhooks = this.webhooks.map(w => ({
+        const safeWebhooks = this.webhooks.map((w) => ({
           url: w.url,
           events: w.events,
           hasSecret: !!w.secret,
@@ -560,7 +698,7 @@ export class AeonPageSession {
 
       case 'POST': {
         // Register a new webhook
-        const config = await request.json() as WebhookConfig;
+        const config = (await request.json()) as WebhookConfig;
         if (!config.url || !config.events || config.events.length === 0) {
           return new Response('Invalid webhook config', { status: 400 });
         }
@@ -574,8 +712,8 @@ export class AeonPageSession {
 
       case 'DELETE': {
         // Remove a webhook by URL
-        const { url } = await request.json() as { url: string };
-        this.webhooks = this.webhooks.filter(w => w.url !== url);
+        const { url } = (await request.json()) as { url: string };
+        this.webhooks = this.webhooks.filter((w) => w.url !== url);
         await this.state.storage.put('webhooks', this.webhooks);
 
         return Response.json({ status: 'removed', url });
@@ -614,7 +752,7 @@ export class AeonPageSession {
     event: WebhookPayload['event'],
     session: PageSession,
     prNumber?: number,
-    triggeredBy?: string
+    triggeredBy?: string,
   ): Promise<void> {
     const payload: WebhookPayload = {
       event,
@@ -627,9 +765,13 @@ export class AeonPageSession {
     };
 
     // Fire to registered webhooks
-    const eventType = event.split('.')[1] as 'edit' | 'publish' | 'merge' | 'all';
+    const eventType = event.split('.')[1] as
+      | 'edit'
+      | 'publish'
+      | 'merge'
+      | 'all';
     const relevantWebhooks = this.webhooks.filter(
-      w => w.events.includes('all') || w.events.includes(eventType as any)
+      (w) => w.events.includes('all') || w.events.includes(eventType as any),
     );
 
     const webhookPromises = relevantWebhooks.map(async (webhook) => {
@@ -649,11 +791,15 @@ export class AeonPageSession {
             encoder.encode(webhook.secret),
             { name: 'HMAC', hash: 'SHA-256' },
             false,
-            ['sign']
+            ['sign'],
           );
-          const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+          const sig = await crypto.subtle.sign(
+            'HMAC',
+            key,
+            encoder.encode(body),
+          );
           headers['X-Aeon-Signature'] = Array.from(new Uint8Array(sig))
-            .map(b => b.toString(16).padStart(2, '0'))
+            .map((b) => b.toString(16).padStart(2, '0'))
             .join('');
         }
 
@@ -680,7 +826,7 @@ export class AeonPageSession {
           body: JSON.stringify(payload),
         })
           .then(() => {})
-          .catch(err => console.error('Failed to fire sync webhook:', err))
+          .catch((err) => console.error('Failed to fire sync webhook:', err)),
       );
     }
 
@@ -699,7 +845,7 @@ export class AeonPageSession {
       }
 
       case 'PUT': {
-        const session = await request.json() as PageSession;
+        const session = (await request.json()) as PageSession;
         await this.saveSession(session);
         return new Response('OK', { status: 200 });
       }
@@ -719,7 +865,7 @@ export class AeonPageSession {
     }
 
     try {
-      const body = await request.json() as PageSession;
+      const body = (await request.json()) as PageSession;
 
       // Check if session already exists
       const existing = await this.getSession();
@@ -744,8 +890,11 @@ export class AeonPageSession {
     } catch (err) {
       console.error('Failed to initialize session:', err);
       return new Response(
-        JSON.stringify({ error: 'Failed to initialize session', message: err instanceof Error ? err.message : 'Unknown error' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Failed to initialize session',
+          message: err instanceof Error ? err.message : 'Unknown error',
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
   }
@@ -761,7 +910,7 @@ export class AeonPageSession {
       }
 
       case 'PUT': {
-        const tree = await request.json() as SerializedComponent;
+        const tree = (await request.json()) as SerializedComponent;
         await this.state.storage.put('tree', tree);
         return new Response('OK', { status: 200 });
       }
@@ -785,7 +934,11 @@ export class AeonPageSession {
     return this.session;
   }
 
-  private async saveSession(session: PageSession, triggeredBy?: string, fireWebhooks = true): Promise<void> {
+  private async saveSession(
+    session: PageSession,
+    triggeredBy?: string,
+    fireWebhooks = true,
+  ): Promise<void> {
     // Increment version
     session.version = (session.version || 0) + 1;
     session.updatedAt = new Date().toISOString();
@@ -798,7 +951,12 @@ export class AeonPageSession {
 
     // Fire webhooks for session update
     if (fireWebhooks) {
-      await this.fireWebhook('session.updated', session, undefined, triggeredBy);
+      await this.fireWebhook(
+        'session.updated',
+        session,
+        undefined,
+        triggeredBy,
+      );
     }
   }
 
@@ -816,7 +974,7 @@ export class AeonPageSession {
     }
 
     try {
-      const batch = await request.json() as {
+      const batch = (await request.json()) as {
         batchId: string;
         operations: Array<{
           operationId: string;
@@ -828,7 +986,11 @@ export class AeonPageSession {
       };
 
       const synced: string[] = [];
-      const failed: Array<{ operationId: string; error: string; retryable: boolean }> = [];
+      const failed: Array<{
+        operationId: string;
+        error: string;
+        retryable: boolean;
+      }> = [];
       const conflicts: Array<{
         operationId: string;
         remoteVersion: Record<string, unknown>;
@@ -840,7 +1002,10 @@ export class AeonPageSession {
         try {
           // Check for conflicts with current session state
           const session = await this.getSession();
-          if (session && (op.type === 'session_update' || op.type === 'tree_update')) {
+          if (
+            session &&
+            (op.type === 'session_update' || op.type === 'tree_update')
+          ) {
             // Simple last-write-wins for now
             // More sophisticated CRDT-based resolution could be added
             const currentVersion = session.version || 0;
@@ -849,7 +1014,10 @@ export class AeonPageSession {
             if (opVersion < currentVersion) {
               conflicts.push({
                 operationId: op.operationId,
-                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt || '' },
+                remoteVersion: {
+                  version: currentVersion,
+                  updatedAt: session.updatedAt || '',
+                },
                 strategy: 'remote-wins',
               });
               continue;
@@ -861,7 +1029,11 @@ export class AeonPageSession {
             const currentSession = await this.getSession();
             if (currentSession) {
               const newSession = { ...currentSession, ...op.data };
-              await this.saveSession(newSession as PageSession, 'sync-queue', true);
+              await this.saveSession(
+                newSession as PageSession,
+                'sync-queue',
+                true,
+              );
             }
           } else if (op.type === 'tree_update') {
             const tree = op.data as unknown as SerializedComponent;
@@ -903,8 +1075,11 @@ export class AeonPageSession {
     } catch (err) {
       console.error('Failed to process sync queue:', err);
       return new Response(
-        JSON.stringify({ error: 'Failed to process sync queue', message: err instanceof Error ? err.message : 'Unknown error' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Failed to process sync queue',
+          message: err instanceof Error ? err.message : 'Unknown error',
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
   }
@@ -938,7 +1113,7 @@ export class AeonPageSession {
       }>({ prefix: 'conflict:' });
 
       const unresolvedConflicts = Array.from(conflicts.values()).filter(
-        (c) => !(c as { resolved?: boolean }).resolved
+        (c) => !(c as { resolved?: boolean }).resolved,
       );
 
       return Response.json({
@@ -951,7 +1126,7 @@ export class AeonPageSession {
       console.error('Failed to get queue status:', err);
       return new Response(
         JSON.stringify({ error: 'Failed to get queue status' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
   }
@@ -960,18 +1135,21 @@ export class AeonPageSession {
    * Handle conflict resolution (POST /resolve-conflict)
    * Manually resolve a detected conflict
    */
-  private async handleResolveConflictRequest(request: Request): Promise<Response> {
+  private async handleResolveConflictRequest(
+    request: Request,
+  ): Promise<Response> {
     if (request.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
 
     try {
-      const { conflictId, strategy, resolvedData, resolvedBy } = await request.json() as {
-        conflictId: string;
-        strategy: 'local-wins' | 'remote-wins' | 'merge' | 'manual';
-        resolvedData?: Record<string, unknown>;
-        resolvedBy?: string;
-      };
+      const { conflictId, strategy, resolvedData, resolvedBy } =
+        (await request.json()) as {
+          conflictId: string;
+          strategy: 'local-wins' | 'remote-wins' | 'merge' | 'manual';
+          resolvedData?: Record<string, unknown>;
+          resolvedBy?: string;
+        };
 
       // Get the conflict
       const conflict = await this.state.storage.get<{
@@ -983,10 +1161,10 @@ export class AeonPageSession {
       }>(`conflict:${conflictId}`);
 
       if (!conflict) {
-        return new Response(
-          JSON.stringify({ error: 'Conflict not found' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Conflict not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
       // Determine resolved data based on strategy
@@ -1004,8 +1182,10 @@ export class AeonPageSession {
         case 'manual':
           if (!resolvedData) {
             return new Response(
-              JSON.stringify({ error: 'resolvedData required for manual strategy' }),
-              { status: 400, headers: { 'Content-Type': 'application/json' } }
+              JSON.stringify({
+                error: 'resolvedData required for manual strategy',
+              }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } },
             );
           }
           finalData = resolvedData;
@@ -1016,7 +1196,11 @@ export class AeonPageSession {
       const session = await this.getSession();
       if (session) {
         session.data = { ...session.data, ...finalData };
-        await this.saveSession(session, resolvedBy || 'conflict-resolution', true);
+        await this.saveSession(
+          session,
+          resolvedBy || 'conflict-resolution',
+          true,
+        );
       }
 
       // Mark conflict as resolved
@@ -1050,8 +1234,11 @@ export class AeonPageSession {
     } catch (err) {
       console.error('Failed to resolve conflict:', err);
       return new Response(
-        JSON.stringify({ error: 'Failed to resolve conflict', message: err instanceof Error ? err.message : 'Unknown error' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Failed to resolve conflict',
+          message: err instanceof Error ? err.message : 'Unknown error',
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
   }
@@ -1089,7 +1276,10 @@ export class AeonRoutesRegistry {
     switch (request.method) {
       case 'POST': {
         // Get route by path
-        const { path } = await request.json() as { action: string; path: string };
+        const { path } = (await request.json()) as {
+          action: string;
+          path: string;
+        };
         const route = await this.state.storage.get(`route:${path}`);
         if (!route) {
           return new Response('Not found', { status: 404 });
@@ -1099,14 +1289,14 @@ export class AeonRoutesRegistry {
 
       case 'PUT': {
         // Save route
-        const route = await request.json() as { pattern: string };
+        const route = (await request.json()) as { pattern: string };
         await this.state.storage.put(`route:${route.pattern}`, route);
         return new Response('OK', { status: 200 });
       }
 
       case 'DELETE': {
         // Delete route
-        const { path } = await request.json() as { path: string };
+        const { path } = (await request.json()) as { path: string };
         await this.state.storage.delete(`route:${path}`);
         return new Response('OK', { status: 200 });
       }

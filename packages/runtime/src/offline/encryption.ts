@@ -19,7 +19,11 @@
  * Binary Format: [version:1][nonce:12][ciphertext:*][auth_tag:16]
  */
 
-import type { OfflineOperation, EncryptedPayload, EncryptionKeyMaterial } from './types';
+import type {
+  OfflineOperation,
+  EncryptedPayload,
+  EncryptionKeyMaterial,
+} from './types';
 
 // ============================================================================
 // Constants
@@ -46,7 +50,7 @@ export class OfflineOperationEncryption {
   async deriveKeyFromUCAN(
     userId: string,
     signingKeyBytes: Uint8Array,
-    context: string
+    context: string,
   ): Promise<EncryptionKeyMaterial> {
     const cacheKey = `${userId}:${context}`;
 
@@ -61,7 +65,7 @@ export class OfflineOperationEncryption {
       signingKeyBytes.buffer as ArrayBuffer,
       'HKDF',
       false,
-      ['deriveKey']
+      ['deriveKey'],
     );
 
     // Derive AES-256-GCM key using HKDF
@@ -78,7 +82,7 @@ export class OfflineOperationEncryption {
       baseKey,
       { name: 'AES-GCM', length: 256 },
       false,
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
 
     const material: EncryptionKeyMaterial = {
@@ -96,7 +100,7 @@ export class OfflineOperationEncryption {
    */
   async deriveKeyFromSession(
     sessionId: string,
-    context: string
+    context: string,
   ): Promise<EncryptionKeyMaterial> {
     const cacheKey = `session:${sessionId}:${context}`;
 
@@ -111,7 +115,7 @@ export class OfflineOperationEncryption {
       sessionBytes,
       'HKDF',
       false,
-      ['deriveKey']
+      ['deriveKey'],
     );
 
     const info = new TextEncoder().encode(`aeon-session-operation:${context}`);
@@ -127,7 +131,7 @@ export class OfflineOperationEncryption {
       baseKey,
       { name: 'AES-GCM', length: 256 },
       false,
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
 
     const material: EncryptionKeyMaterial = {
@@ -145,8 +149,17 @@ export class OfflineOperationEncryption {
    * Returns binary format: [version:1][nonce:12][ciphertext+tag]
    */
   async encryptOperation(
-    operation: Omit<OfflineOperation, 'id' | 'status' | 'encryptedData' | 'bytesSize' | 'failedCount' | 'retryCount' | 'maxRetries'>,
-    keyMaterial: EncryptionKeyMaterial
+    operation: Omit<
+      OfflineOperation,
+      | 'id'
+      | 'status'
+      | 'encryptedData'
+      | 'bytesSize'
+      | 'failedCount'
+      | 'retryCount'
+      | 'maxRetries'
+    >,
+    keyMaterial: EncryptionKeyMaterial,
   ): Promise<Uint8Array> {
     // Serialize operation to JSON
     const operationJson = JSON.stringify({
@@ -171,12 +184,14 @@ export class OfflineOperationEncryption {
         tagLength: TAG_LENGTH * 8, // bits
       },
       keyMaterial.key,
-      plaintext
+      plaintext,
     );
 
     // Serialize to binary: [version:1][nonce:12][ciphertext+tag]
     const ciphertextBytes = new Uint8Array(ciphertext);
-    const serialized = new Uint8Array(1 + NONCE_LENGTH + ciphertextBytes.length);
+    const serialized = new Uint8Array(
+      1 + NONCE_LENGTH + ciphertextBytes.length,
+    );
 
     serialized[0] = ENCRYPTION_VERSION;
     serialized.set(nonce, 1);
@@ -190,8 +205,19 @@ export class OfflineOperationEncryption {
    */
   async decryptOperation(
     encryptedData: Uint8Array,
-    keyMaterial: EncryptionKeyMaterial
-  ): Promise<Omit<OfflineOperation, 'id' | 'status' | 'encryptedData' | 'bytesSize' | 'failedCount' | 'retryCount' | 'maxRetries'>> {
+    keyMaterial: EncryptionKeyMaterial,
+  ): Promise<
+    Omit<
+      OfflineOperation,
+      | 'id'
+      | 'status'
+      | 'encryptedData'
+      | 'bytesSize'
+      | 'failedCount'
+      | 'retryCount'
+      | 'maxRetries'
+    >
+  > {
     // Verify version
     const version = encryptedData[0];
     if (version !== ENCRYPTION_VERSION) {
@@ -210,7 +236,7 @@ export class OfflineOperationEncryption {
         tagLength: TAG_LENGTH * 8,
       },
       keyMaterial.key,
-      ciphertext
+      ciphertext,
     );
 
     // Parse JSON
@@ -237,7 +263,7 @@ export class OfflineOperationEncryption {
       type: string;
       data: Record<string, unknown>;
     }>,
-    keyMaterial: EncryptionKeyMaterial
+    keyMaterial: EncryptionKeyMaterial,
   ): Promise<EncryptedPayload> {
     const batchJson = JSON.stringify({
       operations,
@@ -255,7 +281,7 @@ export class OfflineOperationEncryption {
         tagLength: TAG_LENGTH * 8,
       },
       keyMaterial.key,
-      plaintext
+      plaintext,
     );
 
     return {
@@ -270,13 +296,15 @@ export class OfflineOperationEncryption {
    */
   async decryptSyncBatch(
     encrypted: EncryptedPayload,
-    keyMaterial: EncryptionKeyMaterial
-  ): Promise<Array<{
-    operationId: string;
-    sessionId: string;
-    type: string;
-    data: Record<string, unknown>;
-  }>> {
+    keyMaterial: EncryptionKeyMaterial,
+  ): Promise<
+    Array<{
+      operationId: string;
+      sessionId: string;
+      type: string;
+      data: Record<string, unknown>;
+    }>
+  > {
     if (encrypted.version !== ENCRYPTION_VERSION) {
       throw new Error(`Unsupported encryption version: ${encrypted.version}`);
     }
@@ -288,7 +316,7 @@ export class OfflineOperationEncryption {
         tagLength: TAG_LENGTH * 8,
       },
       keyMaterial.key,
-      encrypted.ciphertext.buffer as ArrayBuffer
+      encrypted.ciphertext.buffer as ArrayBuffer,
     );
 
     const batchJson = new TextDecoder().decode(plaintext);
@@ -360,7 +388,9 @@ export function generateOperationId(): string {
 /**
  * Estimate the encrypted size of an operation
  */
-export function estimateEncryptedSize(operation: Record<string, unknown>): number {
+export function estimateEncryptedSize(
+  operation: Record<string, unknown>,
+): number {
   const json = JSON.stringify(operation);
   // JSON size + version byte + nonce + auth tag + some padding
   return json.length + 1 + NONCE_LENGTH + TAG_LENGTH + 16;

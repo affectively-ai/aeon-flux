@@ -92,10 +92,18 @@ describe('EncryptedOfflineQueue', () => {
     });
 
     test('emits operation:queued event', async () => {
-      let eventData: { operationId: string; sessionId: string; size: number } | null = null;
+      let eventData: {
+        operationId: string;
+        sessionId: string;
+        size: number;
+      } | null = null;
 
       queue.on('operation:queued', (data) => {
-        eventData = data as { operationId: string; sessionId: string; size: number };
+        eventData = data as {
+          operationId: string;
+          sessionId: string;
+          size: number;
+        };
       });
 
       await queue.queueOperation({
@@ -121,7 +129,7 @@ describe('EncryptedOfflineQueue', () => {
           data: {},
           priority: 'normal',
           createdAt: Date.now(),
-        })
+        }),
       ).rejects.toThrow('Queue not initialized');
     });
 
@@ -541,7 +549,10 @@ describe('EncryptedOfflineQueue', () => {
       });
 
       const encryption = getOperationEncryption();
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'queue-test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'queue-test',
+      );
 
       await encryptedQueue.initialize({ keyMaterial });
 

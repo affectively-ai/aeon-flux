@@ -44,12 +44,18 @@ export function ensureDataLayer(name = 'dataLayer'): unknown[] {
 /**
  * Push event to dataLayer
  */
-export function pushToDataLayer(event: DataLayerEvent, dataLayerName = 'dataLayer'): void {
+export function pushToDataLayer(
+  event: DataLayerEvent,
+  dataLayerName = 'dataLayer',
+): void {
   const dataLayer = ensureDataLayer(dataLayerName);
   dataLayer.push(event);
 
   // Debug logging
-  if ((window as Window & { __AEON_ANALYTICS_DEBUG__?: boolean }).__AEON_ANALYTICS_DEBUG__) {
+  if (
+    (window as Window & { __AEON_ANALYTICS_DEBUG__?: boolean })
+      .__AEON_ANALYTICS_DEBUG__
+  ) {
     console.log('[Aeon Analytics]', event.event, event);
   }
 }
@@ -74,7 +80,10 @@ function createBaseEvent(eventName: string, prefix = 'aeon'): AeonEventBase {
 /**
  * Build context event from ESI state
  */
-export function buildContextEvent(esiState: ESIState, prefix = 'aeon'): ContextEvent {
+export function buildContextEvent(
+  esiState: ESIState,
+  prefix = 'aeon',
+): ContextEvent {
   return {
     ...createBaseEvent('context', prefix),
     event: `${prefix}.context` as 'aeon.context',
@@ -107,7 +116,7 @@ export function buildPageViewEvent(
   title: string,
   merkleRoot: string,
   esiState: ESIState,
-  prefix = 'aeon'
+  prefix = 'aeon',
 ): PageViewEvent {
   return {
     ...createBaseEvent('pageview', prefix),
@@ -147,7 +156,7 @@ export function buildClickEvent(
   element: ElementInfo,
   position: PositionInfo,
   context: Partial<ESIState>,
-  prefix = 'aeon'
+  prefix = 'aeon',
 ): ClickEvent {
   return {
     ...createBaseEvent('click', prefix),
@@ -172,7 +181,7 @@ export function buildClickEvent(
  */
 export function extractElementInfo(
   element: HTMLElement,
-  maxTextLength = 100
+  maxTextLength = 100,
 ): ElementInfo {
   // Get text content, truncated
   let text = element.innerText || element.textContent || '';
@@ -214,7 +223,7 @@ export function extractPositionInfo(event: MouseEvent): PositionInfo {
  */
 export function pushContextEvent(
   esiState: ESIState,
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): void {
   const event = buildContextEvent(esiState, config.eventPrefix);
   pushToDataLayer(event, config.dataLayerName);
@@ -228,9 +237,15 @@ export function pushPageViewEvent(
   title: string,
   merkleRoot: string,
   esiState: ESIState,
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): void {
-  const event = buildPageViewEvent(path, title, merkleRoot, esiState, config.eventPrefix);
+  const event = buildPageViewEvent(
+    path,
+    title,
+    merkleRoot,
+    esiState,
+    config.eventPrefix,
+  );
   pushToDataLayer(event, config.dataLayerName);
 }
 
@@ -244,7 +259,7 @@ export function pushClickEvent(
   element: ElementInfo,
   position: PositionInfo,
   context: Partial<ESIState>,
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): void {
   const event = buildClickEvent(
     merkleHash,
@@ -253,7 +268,7 @@ export function pushClickEvent(
     element,
     position,
     context,
-    config.eventPrefix
+    config.eventPrefix,
   );
   pushToDataLayer(event, config.dataLayerName);
 }
@@ -266,7 +281,9 @@ export function pushClickEvent(
  * Enable/disable debug logging
  */
 export function setDebugMode(enabled: boolean): void {
-  (window as Window & { __AEON_ANALYTICS_DEBUG__?: boolean }).__AEON_ANALYTICS_DEBUG__ = enabled;
+  (
+    window as Window & { __AEON_ANALYTICS_DEBUG__?: boolean }
+  ).__AEON_ANALYTICS_DEBUG__ = enabled;
 }
 
 /**

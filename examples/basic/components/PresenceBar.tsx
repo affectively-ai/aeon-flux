@@ -13,7 +13,9 @@ export function PresenceBar({ users }: PresenceBarProps) {
       {/* Online indicator */}
       <div className="flex items-center gap-1">
         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-        <span className="text-sm text-gray-600">{onlineUsers.length} online</span>
+        <span className="text-sm text-gray-600">
+          {onlineUsers.length} online
+        </span>
       </div>
 
       {awayUsers.length > 0 && (
@@ -21,7 +23,9 @@ export function PresenceBar({ users }: PresenceBarProps) {
           <div className="w-px h-4 bg-gray-200" />
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-            <span className="text-sm text-gray-500">{awayUsers.length} away</span>
+            <span className="text-sm text-gray-500">
+              {awayUsers.length} away
+            </span>
           </div>
         </>
       )}
@@ -44,7 +48,12 @@ export function PresenceBar({ users }: PresenceBarProps) {
 
 function UserAvatar({ user }: { user: PresenceUser }) {
   const isAgent = user.role === 'assistant';
-  const statusColor = user.status === 'online' ? 'bg-green-500' : user.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400';
+  const statusColor =
+    user.status === 'online'
+      ? 'bg-green-500'
+      : user.status === 'away'
+        ? 'bg-yellow-500'
+        : 'bg-gray-400';
 
   return (
     <div

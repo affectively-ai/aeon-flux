@@ -4,7 +4,12 @@
 
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { HeuristicAdapter } from './heuristic-adapter';
-import type { UserContext, ComponentTree, ComponentNode, ThemeMode } from './types';
+import type {
+  UserContext,
+  ComponentTree,
+  ComponentNode,
+  ThemeMode,
+} from './types';
 
 // Mock component tree
 function createMockTree(nodes: ComponentNode[] = []): ComponentTree {
@@ -206,7 +211,11 @@ describe('HeuristicAdapter', () => {
         },
       });
 
-      const decision = await customAdapter.route('/', happyContext, createMockTree());
+      const decision = await customAdapter.route(
+        '/',
+        happyContext,
+        createMockTree(),
+      );
 
       expect(decision.accent).toBe('#FFD700');
     });
@@ -215,7 +224,9 @@ describe('HeuristicAdapter', () => {
       const customAdapter = new HeuristicAdapter({
         signals: {
           deriveTheme: (ctx) =>
-            ctx.emotionState?.valence && ctx.emotionState.valence < 0 ? 'dark' : 'light',
+            ctx.emotionState?.valence && ctx.emotionState.valence < 0
+              ? 'dark'
+              : 'light',
         },
       });
 
@@ -229,7 +240,11 @@ describe('HeuristicAdapter', () => {
         },
       });
 
-      const decision = await customAdapter.route('/', sadContext, createMockTree());
+      const decision = await customAdapter.route(
+        '/',
+        sadContext,
+        createMockTree(),
+      );
 
       expect(decision.theme).toBe('dark');
     });
@@ -262,8 +277,16 @@ describe('HeuristicAdapter', () => {
       const freeContext = createMockContext({ tier: 'free' });
       const starterContext = createMockContext({ tier: 'starter' });
 
-      const freeDecision = await customAdapter.route('/', freeContext, createMockTree());
-      const starterDecision = await customAdapter.route('/', starterContext, createMockTree());
+      const freeDecision = await customAdapter.route(
+        '/',
+        freeContext,
+        createMockTree(),
+      );
+      const starterDecision = await customAdapter.route(
+        '/',
+        starterContext,
+        createMockTree(),
+      );
 
       expect(freeDecision.featureFlags?.premiumFeature).toBe(false);
       expect(starterDecision.featureFlags?.premiumFeature).toBe(true);

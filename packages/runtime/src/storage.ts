@@ -12,7 +12,11 @@
  * - Custom adapters
  */
 
-import type { RouteDefinition, PageSession, SerializedComponent } from './types';
+import type {
+  RouteDefinition,
+  PageSession,
+  SerializedComponent,
+} from './types';
 
 /**
  * Storage adapter interface - implement this for custom backends
@@ -234,26 +238,25 @@ export class D1StorageAdapter implements StorageAdapter {
 
   async saveRoute(route: RouteDefinition): Promise<void> {
     await this.db
-      .prepare(`
+      .prepare(
+        `
         INSERT OR REPLACE INTO routes (path, pattern, session_id, component_id, layout, is_aeon, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `)
+      `,
+      )
       .bind(
         route.pattern,
         route.pattern,
         route.sessionId,
         route.componentId,
         route.layout ?? null,
-        route.isAeon ? 1 : 0
+        route.isAeon ? 1 : 0,
       )
       .run();
   }
 
   async deleteRoute(path: string): Promise<void> {
-    await this.db
-      .prepare('DELETE FROM routes WHERE path = ?')
-      .bind(path)
-      .run();
+    await this.db.prepare('DELETE FROM routes WHERE path = ?').bind(path).run();
   }
 
   async getSession(sessionId: string): Promise<PageSession | null> {
@@ -278,7 +281,10 @@ export class D1StorageAdapter implements StorageAdapter {
       presence: presenceResults.results.map((p) => ({
         userId: p.user_id as string,
         role: p.role as 'user' | 'assistant' | 'monitor' | 'admin',
-        cursor: p.cursor_x !== null ? { x: p.cursor_x as number, y: p.cursor_y as number } : undefined,
+        cursor:
+          p.cursor_x !== null
+            ? { x: p.cursor_x as number, y: p.cursor_y as number }
+            : undefined,
         editing: p.editing as string | undefined,
         status: p.status as 'online' | 'away' | 'offline',
         lastActivity: p.last_activity as string,
@@ -288,16 +294,18 @@ export class D1StorageAdapter implements StorageAdapter {
 
   async saveSession(session: PageSession): Promise<void> {
     await this.db
-      .prepare(`
+      .prepare(
+        `
         INSERT OR REPLACE INTO sessions (session_id, route, tree, data, schema_version, updated_at)
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `)
+      `,
+      )
       .bind(
         this.routeToSessionId(session.route),
         session.route,
         JSON.stringify(session.tree),
         JSON.stringify(session.data),
-        session.schema.version
+        session.schema.version,
       )
       .run();
   }
@@ -314,10 +322,12 @@ export class D1StorageAdapter implements StorageAdapter {
 
   async saveTree(sessionId: string, tree: SerializedComponent): Promise<void> {
     await this.db
-      .prepare(`
+      .prepare(
+        `
         UPDATE sessions SET tree = ?, updated_at = CURRENT_TIMESTAMP
         WHERE session_id = ?
-      `)
+      `,
+      )
       .bind(JSON.stringify(tree), sessionId)
       .run();
   }
@@ -352,8 +362,13 @@ interface DurableObjectStorage {
   put<T>(entries: Record<string, T>): Promise<void>;
   delete(key: string): Promise<boolean>;
   delete(keys: string[]): Promise<number>;
-  list<T = unknown>(options?: { prefix?: string; limit?: number }): Promise<Map<string, T>>;
-  transaction<T>(closure: (txn: DurableObjectStorage) => Promise<T>): Promise<T>;
+  list<T = unknown>(options?: {
+    prefix?: string;
+    limit?: number;
+  }): Promise<Map<string, T>>;
+  transaction<T>(
+    closure: (txn: DurableObjectStorage) => Promise<T>,
+  ): Promise<T>;
 }
 
 interface DurableObjectState {
@@ -417,12 +432,12 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
         method: 'POST',
         body: JSON.stringify({ action: 'get', path }),
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
 
     if (!response.ok) return null;
 
-    const route = await response.json() as RouteDefinition | null;
+    const route = (await response.json()) as RouteDefinition | null;
     if (route) {
       this.routeCache.set(path, route);
     }
@@ -436,7 +451,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
     const response = await routesStub.fetch(
       new Request('http://internal/routes', {
         method: 'GET',
-      })
+      }),
     );
 
     if (!response.ok) return [];
@@ -452,7 +467,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
         method: 'PUT',
         body: JSON.stringify(route),
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
 
     // Update cache
@@ -468,7 +483,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
         method: 'DELETE',
         body: JSON.stringify({ path }),
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
 
     this.routeCache.delete(path);
@@ -481,7 +496,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
     const response = await stub.fetch(
       new Request('http://internal/session', {
         method: 'GET',
-      })
+      }),
     );
 
     if (!response.ok) return null;
@@ -498,7 +513,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
         method: 'PUT',
         body: JSON.stringify(session),
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
   }
 
@@ -509,7 +524,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
     const response = await stub.fetch(
       new Request('http://internal/tree', {
         method: 'GET',
-      })
+      }),
     );
 
     if (!response.ok) return null;
@@ -525,7 +540,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
         method: 'PUT',
         body: JSON.stringify(tree),
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
   }
 
@@ -684,7 +699,7 @@ interface DashClient {
   subscribe<T>(
     collection: string,
     filter: DashFilter | undefined,
-    callback: (changes: DashChange<T>[]) => void
+    callback: (changes: DashChange<T>[]) => void,
   ): DashSubscription;
 
   /** Batch operations */
@@ -773,7 +788,7 @@ export class DashStorageAdapter implements StorageAdapter {
       routesCollection?: string;
       sessionsCollection?: string;
       presenceCollection?: string;
-    }
+    },
   ) {
     this.client = client;
     this.collections = {
@@ -793,7 +808,7 @@ export class DashStorageAdapter implements StorageAdapter {
   async getRoute(path: string): Promise<RouteDefinition | null> {
     const route = await this.client.get<RouteDefinition>(
       this.collections.routes,
-      this.pathToId(path)
+      this.pathToId(path),
     );
     return route;
   }
@@ -801,7 +816,7 @@ export class DashStorageAdapter implements StorageAdapter {
   async getAllRoutes(): Promise<RouteDefinition[]> {
     const routes = await this.client.query<RouteDefinition>(
       this.collections.routes,
-      { orderBy: { field: 'pattern', direction: 'asc' } }
+      { orderBy: { field: 'pattern', direction: 'asc' } },
     );
     return routes;
   }
@@ -810,7 +825,7 @@ export class DashStorageAdapter implements StorageAdapter {
     await this.client.set(
       this.collections.routes,
       this.pathToId(route.pattern),
-      route
+      route,
     );
   }
 
@@ -821,7 +836,7 @@ export class DashStorageAdapter implements StorageAdapter {
   async getSession(sessionId: string): Promise<PageSession | null> {
     const session = await this.client.get<PageSession>(
       this.collections.sessions,
-      sessionId
+      sessionId,
     );
 
     if (!session) return null;
@@ -831,7 +846,7 @@ export class DashStorageAdapter implements StorageAdapter {
       this.collections.presence,
       {
         where: [{ field: 'sessionId', op: '==', value: sessionId }],
-      }
+      },
     );
 
     return {
@@ -874,12 +889,12 @@ export class DashStorageAdapter implements StorageAdapter {
    * Subscribe to real-time route changes
    */
   subscribeToRoutes(
-    callback: (changes: DashChange<RouteDefinition>[]) => void
+    callback: (changes: DashChange<RouteDefinition>[]) => void,
   ): DashSubscription {
     const sub = this.client.subscribe<RouteDefinition>(
       this.collections.routes,
       undefined,
-      callback
+      callback,
     );
     this.subscriptions.push(sub);
     return sub;
@@ -890,12 +905,12 @@ export class DashStorageAdapter implements StorageAdapter {
    */
   subscribeToSession(
     sessionId: string,
-    callback: (changes: DashChange<PageSession>[]) => void
+    callback: (changes: DashChange<PageSession>[]) => void,
   ): DashSubscription {
     const sub = this.client.subscribe<PageSession>(
       this.collections.sessions,
       { where: [{ field: 'id', op: '==', value: sessionId }] },
-      callback
+      callback,
     );
     this.subscriptions.push(sub);
     return sub;
@@ -906,12 +921,12 @@ export class DashStorageAdapter implements StorageAdapter {
    */
   subscribeToPresence(
     sessionId: string,
-    callback: (changes: DashChange<PresenceRecord>[]) => void
+    callback: (changes: DashChange<PresenceRecord>[]) => void,
   ): DashSubscription {
     const sub = this.client.subscribe<PresenceRecord>(
       this.collections.presence,
       { where: [{ field: 'sessionId', op: '==', value: sessionId }] },
-      callback
+      callback,
     );
     this.subscriptions.push(sub);
     return sub;
@@ -923,7 +938,7 @@ export class DashStorageAdapter implements StorageAdapter {
   async updatePresence(
     sessionId: string,
     userId: string,
-    presence: Partial<PresenceRecord>
+    presence: Partial<PresenceRecord>,
   ): Promise<void> {
     await this.client.set(this.collections.presence, `${sessionId}:${userId}`, {
       sessionId,
@@ -965,22 +980,20 @@ interface PresenceRecord {
 /**
  * Create a storage adapter based on configuration
  */
-export function createStorageAdapter(
-  config: {
-    type: 'file' | 'd1' | 'durable-object' | 'hybrid' | 'dash' | 'custom';
-    pagesDir?: string;
-    dataDir?: string;
-    d1?: D1Database;
-    durableObjectNamespace?: DurableObjectNamespace;
-    dash?: DashClient;
-    dashCollections?: {
-      routes?: string;
-      sessions?: string;
-      presence?: string;
-    };
-    custom?: StorageAdapter;
-  }
-): StorageAdapter {
+export function createStorageAdapter(config: {
+  type: 'file' | 'd1' | 'durable-object' | 'hybrid' | 'dash' | 'custom';
+  pagesDir?: string;
+  dataDir?: string;
+  d1?: D1Database;
+  durableObjectNamespace?: DurableObjectNamespace;
+  dash?: DashClient;
+  dashCollections?: {
+    routes?: string;
+    sessions?: string;
+    presence?: string;
+  };
+  custom?: StorageAdapter;
+}): StorageAdapter {
   switch (config.type) {
     case 'd1':
       if (!config.d1) {
@@ -990,13 +1003,17 @@ export function createStorageAdapter(
 
     case 'durable-object':
       if (!config.durableObjectNamespace) {
-        throw new Error('Durable Object namespace required for durable-object storage adapter');
+        throw new Error(
+          'Durable Object namespace required for durable-object storage adapter',
+        );
       }
       return new DurableObjectStorageAdapter(config.durableObjectNamespace);
 
     case 'hybrid':
       if (!config.durableObjectNamespace || !config.d1) {
-        throw new Error('Both Durable Object namespace and D1 database required for hybrid storage adapter');
+        throw new Error(
+          'Both Durable Object namespace and D1 database required for hybrid storage adapter',
+        );
       }
       return new HybridStorageAdapter({
         namespace: config.durableObjectNamespace,

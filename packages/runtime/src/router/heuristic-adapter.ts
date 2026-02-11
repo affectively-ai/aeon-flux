@@ -187,7 +187,7 @@ function defaultPredictNavigation(
   currentPath: string,
   context: UserContext,
   defaultPaths: string[],
-  topN: number
+  topN: number,
 ): string[] {
   const history = context.recentPages;
 
@@ -219,7 +219,10 @@ function defaultPredictNavigation(
 /**
  * Default component relevance scoring
  */
-function defaultScoreRelevance(node: ComponentNode, context: UserContext): number {
+function defaultScoreRelevance(
+  node: ComponentNode,
+  context: UserContext,
+): number {
   let score = 50; // Base score
 
   // Tier gating
@@ -268,7 +271,9 @@ function defaultScoreRelevance(node: ComponentNode, context: UserContext): numbe
       if (signal.startsWith('tier:')) {
         const requiredTier = signal.slice('tier:'.length) as UserTier;
         const tierOrder: UserTier[] = ['free', 'starter', 'pro', 'enterprise'];
-        if (tierOrder.indexOf(context.tier) >= tierOrder.indexOf(requiredTier)) {
+        if (
+          tierOrder.indexOf(context.tier) >= tierOrder.indexOf(requiredTier)
+        ) {
           score += 15;
         }
       }
@@ -289,7 +294,7 @@ function defaultScoreRelevance(node: ComponentNode, context: UserContext): numbe
 function orderComponentsByRelevance(
   tree: ComponentTree,
   context: UserContext,
-  scoreRelevance: (node: ComponentNode, context: UserContext) => number
+  scoreRelevance: (node: ComponentNode, context: UserContext) => number,
 ): string[] {
   const scored: Array<{ id: string; score: number }> = [];
 
@@ -300,9 +305,7 @@ function orderComponentsByRelevance(
     });
   });
 
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .map((s) => s.id);
+  return scored.sort((a, b) => b.score - a.score).map((s) => s.id);
 }
 
 /**
@@ -311,7 +314,7 @@ function orderComponentsByRelevance(
 function findHiddenComponents(
   tree: ComponentTree,
   context: UserContext,
-  scoreRelevance: (node: ComponentNode, context: UserContext) => number
+  scoreRelevance: (node: ComponentNode, context: UserContext) => number,
 ): string[] {
   const hidden: string[] = [];
 
@@ -335,7 +338,7 @@ function findHiddenComponents(
 function computeSkeletonHints(
   route: string,
   context: UserContext,
-  tree: ComponentTree
+  tree: ComponentTree,
 ): SkeletonHints {
   // Determine layout type from route - apps can override via custom signals
   let layout: SkeletonHints['layout'] = 'custom';
@@ -374,7 +377,10 @@ function computeSkeletonHints(
 // Prefetch Depth by Connection
 // ============================================================================
 
-function getPrefetchDepth(context: UserContext): { prefetch: number; prerender: number } {
+function getPrefetchDepth(context: UserContext): {
+  prefetch: number;
+  prerender: number;
+} {
   switch (context.connection) {
     case 'fast':
     case '4g':
@@ -410,7 +416,7 @@ export class HeuristicAdapter implements RouterAdapter {
   async route(
     path: string,
     context: UserContext,
-    tree: ComponentTree
+    tree: ComponentTree,
   ): Promise<RouteDecision> {
     const startTime = Date.now();
 
@@ -434,13 +440,22 @@ export class HeuristicAdapter implements RouterAdapter {
     const density = determineDensity(context);
 
     // Relevance scoring - use custom or default
-    const scoreRelevance = this.config.signals.scoreRelevance ?? defaultScoreRelevance;
+    const scoreRelevance =
+      this.config.signals.scoreRelevance ?? defaultScoreRelevance;
 
     // Order components by relevance
-    const componentOrder = orderComponentsByRelevance(tree, context, scoreRelevance);
+    const componentOrder = orderComponentsByRelevance(
+      tree,
+      context,
+      scoreRelevance,
+    );
 
     // Find hidden components
-    const hiddenComponents = findHiddenComponents(tree, context, scoreRelevance);
+    const hiddenComponents = findHiddenComponents(
+      tree,
+      context,
+      scoreRelevance,
+    );
 
     // Predict likely next paths - use custom or default
     const predictions = this.config.signals.predictNavigation
@@ -449,10 +464,11 @@ export class HeuristicAdapter implements RouterAdapter {
           path,
           context,
           this.config.defaultPaths,
-          this.config.maxSpeculationPaths
+          this.config.maxSpeculationPaths,
         );
 
-    const { prefetch: prefetchDepth, prerender: prerenderCount } = getPrefetchDepth(context);
+    const { prefetch: prefetchDepth, prerender: prerenderCount } =
+      getPrefetchDepth(context);
 
     const prefetch = predictions.slice(0, prefetchDepth);
     const prerender = predictions.slice(0, prerenderCount);
@@ -480,7 +496,7 @@ export class HeuristicAdapter implements RouterAdapter {
 
   async speculate(
     currentPath: string,
-    context: UserContext
+    context: UserContext,
   ): Promise<string[]> {
     return this.config.signals.predictNavigation
       ? this.config.signals.predictNavigation(currentPath, context)
@@ -488,14 +504,11 @@ export class HeuristicAdapter implements RouterAdapter {
           currentPath,
           context,
           this.config.defaultPaths,
-          this.config.maxSpeculationPaths
+          this.config.maxSpeculationPaths,
         );
   }
 
-  personalizeTree(
-    tree: ComponentTree,
-    decision: RouteDecision
-  ): ComponentTree {
+  personalizeTree(tree: ComponentTree, decision: RouteDecision): ComponentTree {
     const cloned = tree.clone();
 
     // Hide components that should be hidden
@@ -542,4 +555,3 @@ export class HeuristicAdapter implements RouterAdapter {
     return `${base}-${userId.slice(0, 8)}-${sessionPrefix.slice(0, 8)}`;
   }
 }
-

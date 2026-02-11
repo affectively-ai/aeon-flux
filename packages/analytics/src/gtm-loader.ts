@@ -48,7 +48,7 @@ export function injectGTM(config: GTMConfig): boolean {
   if (!validateContainerId(config.containerId)) {
     console.error(
       `[Aeon Analytics] Invalid GTM container ID: ${config.containerId}. ` +
-      'Expected format: GTM-XXXXXX'
+        'Expected format: GTM-XXXXXX',
     );
     return false;
   }
@@ -84,7 +84,7 @@ export function injectGTMNoScript(containerId: string): boolean {
 
   // Check if noscript already exists
   const existingNoscript = document.querySelector(
-    `noscript iframe[src*="googletagmanager.com/ns.html?id=${containerId}"]`
+    `noscript iframe[src*="googletagmanager.com/ns.html?id=${containerId}"]`,
   );
   if (existingNoscript) {
     return false;
@@ -162,7 +162,7 @@ export function generateGTMNoScriptTag(containerId: string): string {
  */
 export function generateDataLayerScript(
   initialData: Record<string, unknown>,
-  dataLayerName = 'dataLayer'
+  dataLayerName = 'dataLayer',
 ): string {
   const dataJson = JSON.stringify(initialData);
   return `<script>window.${dataLayerName}=window.${dataLayerName}||[];window.${dataLayerName}.push(${dataJson});</script>`;
@@ -193,7 +193,7 @@ export function isGTMReady(): boolean {
     (item) =>
       typeof item === 'object' &&
       item !== null &&
-      (item as Record<string, unknown>).event === 'gtm.js'
+      (item as Record<string, unknown>).event === 'gtm.js',
   );
 }
 

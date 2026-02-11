@@ -42,7 +42,7 @@ export function useAeonServiceWorker() {
       try {
         const registration = await navigator.serviceWorker.register(
           '/.aeon/sw.js',
-          { scope: '/' }
+          { scope: '/' },
         );
 
         registrationRef.current = registration;
@@ -65,7 +65,9 @@ export function useAeonServiceWorker() {
           }
         });
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to register SW'));
+        setError(
+          err instanceof Error ? err : new Error('Failed to register SW'),
+        );
       }
     };
 
@@ -168,7 +170,7 @@ export function useCacheStatus(): CacheStatus & { refresh: () => void } {
     // Use MessageChannel for request/response
     const channel = new MessageChannel();
 
-    channel.port1.onmessage = (event) => {
+    channel.port1.onmessage = (event: MessageEvent) => {
       const data = event.data;
       setStatus({
         cached: data.cached,

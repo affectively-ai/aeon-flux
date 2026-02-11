@@ -44,7 +44,10 @@ export interface SpeculationState {
 
 function supportsSpeculationRules(): boolean {
   if (typeof document === 'undefined') return false;
-  return 'supports' in HTMLScriptElement && HTMLScriptElement.supports?.('speculationrules');
+  return (
+    'supports' in HTMLScriptElement &&
+    HTMLScriptElement.supports?.('speculationrules')
+  );
 }
 
 function supportsLinkPrefetch(): boolean {
@@ -62,7 +65,7 @@ function supportsLinkPrefetch(): boolean {
  */
 function addSpeculationRules(
   prefetch: string[],
-  prerender: string[]
+  prerender: string[],
 ): HTMLScriptElement | null {
   if (!supportsSpeculationRules()) return null;
 
@@ -104,7 +107,9 @@ function linkPrefetch(path: string): HTMLLinkElement | null {
   if (!supportsLinkPrefetch()) return null;
 
   // Check if already prefetched
-  const existing = document.querySelector(`link[rel="prefetch"][href="${path}"]`);
+  const existing = document.querySelector(
+    `link[rel="prefetch"][href="${path}"]`,
+  );
   if (existing) return existing as HTMLLinkElement;
 
   const link = document.createElement('link');
@@ -158,7 +163,9 @@ export class SpeculationManager {
   initFromHints(prefetch: string[] = [], prerender: string[] = []): void {
     // Filter out already handled paths
     const newPrefetch = prefetch
-      .filter((p) => !this.state.prefetched.has(p) && !this.state.prerendered.has(p))
+      .filter(
+        (p) => !this.state.prefetched.has(p) && !this.state.prerendered.has(p),
+      )
       .slice(0, this.options.maxPrefetch);
 
     const newPrerender = prerender
@@ -285,7 +292,7 @@ export class SpeculationManager {
           }
         });
       },
-      { threshold: this.options.visibilityThreshold }
+      { threshold: this.options.visibilityThreshold },
     );
 
     observer.observe(element);
@@ -367,7 +374,7 @@ export class SpeculationManager {
 export function createSpeculationHook(
   useState: <T>(initial: T) => [T, (v: T) => void],
   useEffect: (effect: () => void | (() => void), deps: unknown[]) => void,
-  useRef: <T>(initial: T) => { current: T }
+  useRef: <T>(initial: T) => { current: T },
 ) {
   return function useSpeculation(options: SpeculationOptions = {}) {
     const managerRef = useRef<SpeculationManager | null>(null);
@@ -416,7 +423,9 @@ export function autoInitSpeculation(): SpeculationManager | null {
   if (typeof window === 'undefined') return null;
 
   // @ts-expect-error - Global hint injection
-  const hints = window.__AEON_SPECULATION__ as { prefetch?: string[]; prerender?: string[] } | undefined;
+  const hints = window.__AEON_SPECULATION__ as
+    | { prefetch?: string[]; prerender?: string[] }
+    | undefined;
 
   const manager = new SpeculationManager();
 

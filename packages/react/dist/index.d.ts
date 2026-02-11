@@ -37,7 +37,7 @@
  * }
  * ```
  */
-export { Link, type LinkProps, type TransitionType, type PrefetchStrategy, type PresenceRenderProps } from './Link';
+export { Link, type LinkProps, type TransitionType, type PrefetchStrategy, type PresenceRenderProps, } from './Link';
 export { AeonPageProvider, useAeonPage, type AeonPageProviderProps, type AeonPageContextValue, type PresenceUser, type SyncState, type VersionInfo, } from './provider';
 export { usePresence, useAeonSync, useAeonData } from './provider';
 export { useAeonNavigation, useNavigationPrediction, useLinkObserver, useTotalPreload, useRoutePresence, AeonNavigationContext, type AeonNavigationContextValue, } from './hooks/useAeonNavigation';

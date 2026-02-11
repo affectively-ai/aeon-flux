@@ -12,7 +12,9 @@ import {
 import type { OfflineOperation } from '../offline/types';
 
 // Helper to create mock operations
-function createMockOperation(overrides: Partial<OfflineOperation> = {}): OfflineOperation {
+function createMockOperation(
+  overrides: Partial<OfflineOperation> = {},
+): OfflineOperation {
   return {
     id: `op-${Math.random().toString(36).slice(2)}`,
     type: 'update',
@@ -250,7 +252,10 @@ describe('ConflictResolver', () => {
     });
 
     test('returns null for non-existent conflict', () => {
-      const resolution = resolver.resolveConflict('non-existent-id', 'local-wins');
+      const resolution = resolver.resolveConflict(
+        'non-existent-id',
+        'local-wins',
+      );
 
       expect(resolution).toBeNull();
     });
@@ -275,8 +280,14 @@ describe('ConflictResolver', () => {
 
     test('updates statistics on resolution', () => {
       // Use high severity conflict to avoid auto-resolution
-      const localOp = createMockOperation({ type: 'delete', data: { id: '123' } });
-      const remoteOp = createMockOperation({ type: 'update', data: { value: 'updated' } });
+      const localOp = createMockOperation({
+        type: 'delete',
+        data: { id: '123' },
+      });
+      const remoteOp = createMockOperation({
+        type: 'update',
+        data: { value: 'updated' },
+      });
 
       const conflict = resolver.detectConflict(localOp, remoteOp);
       // High severity conflicts are not auto-resolved
@@ -349,12 +360,24 @@ describe('ConflictResolver', () => {
 
   describe('getConflictsForSession', () => {
     test('returns conflicts for specific session', () => {
-      const localOp1 = createMockOperation({ sessionId: 'session-1', data: { v: 'l1' } });
-      const remoteOp1 = createMockOperation({ sessionId: 'session-1', data: { v: 'r1' } });
+      const localOp1 = createMockOperation({
+        sessionId: 'session-1',
+        data: { v: 'l1' },
+      });
+      const remoteOp1 = createMockOperation({
+        sessionId: 'session-1',
+        data: { v: 'r1' },
+      });
       resolver.detectConflict(localOp1, remoteOp1);
 
-      const localOp2 = createMockOperation({ sessionId: 'session-1', data: { v: 'l2' } });
-      const remoteOp2 = createMockOperation({ sessionId: 'session-1', data: { v: 'r2' } });
+      const localOp2 = createMockOperation({
+        sessionId: 'session-1',
+        data: { v: 'l2' },
+      });
+      const remoteOp2 = createMockOperation({
+        sessionId: 'session-1',
+        data: { v: 'r2' },
+      });
       resolver.detectConflict(localOp2, remoteOp2);
 
       const conflicts = resolver.getConflictsForSession('session-1');
@@ -391,14 +414,26 @@ describe('ConflictResolver', () => {
   describe('getStats', () => {
     test('returns correct statistics', () => {
       // Use high severity conflicts to avoid auto-resolution
-      const localOp1 = createMockOperation({ type: 'delete', data: { id: '1' } });
-      const remoteOp1 = createMockOperation({ type: 'update', data: { v: 'r1' } });
+      const localOp1 = createMockOperation({
+        type: 'delete',
+        data: { id: '1' },
+      });
+      const remoteOp1 = createMockOperation({
+        type: 'update',
+        data: { v: 'r1' },
+      });
       const conflict = resolver.detectConflict(localOp1, remoteOp1);
 
       resolver.resolveConflict(conflict!.id, 'local-wins');
 
-      const localOp2 = createMockOperation({ type: 'delete', data: { id: '2' } });
-      const remoteOp2 = createMockOperation({ type: 'update', data: { v: 'r2' } });
+      const localOp2 = createMockOperation({
+        type: 'delete',
+        data: { id: '2' },
+      });
+      const remoteOp2 = createMockOperation({
+        type: 'update',
+        data: { v: 'r2' },
+      });
       resolver.detectConflict(localOp2, remoteOp2);
 
       const stats = resolver.getStats();

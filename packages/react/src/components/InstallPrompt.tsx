@@ -61,7 +61,8 @@ export interface InstallPromptProps {
 export function useInstallPrompt(): InstallPromptState {
   const [isIOS, setIsIOS] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
@@ -70,14 +71,16 @@ export function useInstallPrompt(): InstallPromptState {
     }
 
     // Detect iOS
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+    const iOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
       !(window as unknown as { MSStream?: unknown }).MSStream;
     setIsIOS(iOS);
 
     // Detect standalone mode (already installed)
     const standalone =
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone ===
+        true;
     setIsInstalled(standalone);
 
     // For iOS, show instructions even if can't trigger prompt
@@ -104,12 +107,17 @@ export function useInstallPrompt(): InstallPromptState {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt,
+      );
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
-  const install = useCallback(async (): Promise<'accepted' | 'dismissed' | 'unavailable'> => {
+  const install = useCallback(async (): Promise<
+    'accepted' | 'dismissed' | 'unavailable'
+  > => {
     if (!deferredPrompt) {
       return 'unavailable';
     }
@@ -172,14 +180,30 @@ export function InstallPrompt({
     }
 
     return (
-      <div className={className} role="region" aria-label="Install app instructions">
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+      <div
+        className={className}
+        role="region"
+        aria-label="Install app instructions"
+      >
+        <h3
+          style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            marginBottom: '0.5rem',
+          }}
+        >
           Install App
         </h3>
         <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>
           To install this app on your iOS device:
         </p>
-        <ol style={{ fontSize: '0.875rem', paddingLeft: '1.5rem', listStyleType: 'decimal' }}>
+        <ol
+          style={{
+            fontSize: '0.875rem',
+            paddingLeft: '1.5rem',
+            listStyleType: 'decimal',
+          }}
+        >
           <li>Tap the share button in Safari</li>
           <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
           <li>Tap &quot;Add&quot; to confirm</li>
@@ -200,7 +224,13 @@ export function InstallPrompt({
 
   return (
     <div className={className} role="region" aria-label="Install app prompt">
-      <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+      <h3
+        style={{
+          fontSize: '1.125rem',
+          fontWeight: 600,
+          marginBottom: '0.5rem',
+        }}
+      >
         Install App
       </h3>
       <p style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>

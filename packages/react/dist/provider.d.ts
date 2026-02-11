@@ -57,7 +57,7 @@ export interface AeonPageProviderProps {
 /**
  * AeonPageProvider - Wraps a page with Aeon collaborative features
  */
-export declare function AeonPageProvider({ route, children, initialData }: AeonPageProviderProps): import("react/jsx-runtime").JSX.Element;
+export declare function AeonPageProvider({ route, children, initialData, }: AeonPageProviderProps): import("react/jsx-runtime").JSX.Element;
 /**
  * useAeonPage - Access Aeon page context
  */

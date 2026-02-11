@@ -62,12 +62,7 @@ export type {
 } from './types';
 
 // Constants
-export {
-  MERKLE_ATTR,
-  PATH_ATTR,
-  PATH_HASHES_ATTR,
-  TYPE_ATTR,
-} from './types';
+export { MERKLE_ATTR, PATH_ATTR, PATH_HASHES_ATTR, TYPE_ATTR } from './types';
 
 // ============================================================================
 // Merkle Tree

@@ -17,7 +17,10 @@ import {
   extractPositionInfo,
   pushClickEvent,
 } from './data-layer';
-import { parseMerkleFromElement, findNearestMerkleElement } from './merkle-tree';
+import {
+  parseMerkleFromElement,
+  findNearestMerkleElement,
+} from './merkle-tree';
 import { getESIContextSnapshot } from './context-bridge';
 
 // ============================================================================
@@ -49,7 +52,10 @@ let lastClickTime = 0;
 /**
  * Check if element should be excluded from tracking
  */
-function shouldExclude(element: HTMLElement, excludeSelectors: string[]): boolean {
+function shouldExclude(
+  element: HTMLElement,
+  excludeSelectors: string[],
+): boolean {
   for (const selector of excludeSelectors) {
     if (element.matches(selector) || element.closest(selector)) {
       return true;
@@ -63,7 +69,7 @@ function shouldExclude(element: HTMLElement, excludeSelectors: string[]): boolea
  */
 function createClickHandler(
   config: AnalyticsConfig,
-  options: ClickTrackingOptions
+  options: ClickTrackingOptions,
 ): (event: MouseEvent) => void {
   return (event: MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -101,7 +107,8 @@ function createClickHandler(
       if (merkleInfo) {
         merkleHash = merkleInfo.hash;
         treePath = options.includeTreePath !== false ? merkleInfo.path : [];
-        treePathHashes = options.includeTreePath !== false ? merkleInfo.pathHashes : [];
+        treePathHashes =
+          options.includeTreePath !== false ? merkleInfo.pathHashes : [];
       }
     } else {
       // No Merkle element found - generate path from DOM structure
@@ -112,9 +119,10 @@ function createClickHandler(
     const elementInfo = extractElementInfo(target, options.maxTextLength);
 
     // Extract position if enabled
-    const position = options.includePosition !== false
-      ? extractPositionInfo(event)
-      : { x: 0, y: 0, viewportX: 0, viewportY: 0 };
+    const position =
+      options.includePosition !== false
+        ? extractPositionInfo(event)
+        : { x: 0, y: 0, viewportX: 0, viewportY: 0 };
 
     // Get ESI context snapshot
     const context = getESIContextSnapshot();
@@ -130,7 +138,7 @@ function createClickHandler(
       {
         dataLayerName: config.dataLayerName,
         eventPrefix: config.eventPrefix,
-      }
+      },
     );
   };
 }
@@ -153,7 +161,7 @@ function generateDOMPath(element: HTMLElement): string[] {
     else if (current.className && typeof current.className === 'string') {
       const classes = current.className.split(' ').filter(Boolean);
       const meaningfulClass = classes.find(
-        (c) => !c.startsWith('_') && !c.match(/^[a-z]{1,3}\d+/)
+        (c) => !c.startsWith('_') && !c.match(/^[a-z]{1,3}\d+/),
       );
       if (meaningfulClass) {
         identifier += `.${meaningfulClass}`;
@@ -252,7 +260,10 @@ export function isClickTrackerActive(): boolean {
 export function trackClick(
   element: HTMLElement,
   event?: MouseEvent,
-  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix' | 'clickOptions'>
+  config?: Pick<
+    AnalyticsConfig,
+    'dataLayerName' | 'eventPrefix' | 'clickOptions'
+  >,
 ): void {
   const options = config?.clickOptions || {};
 
@@ -296,7 +307,7 @@ export function trackClick(
     {
       dataLayerName: config?.dataLayerName || 'dataLayer',
       eventPrefix: config?.eventPrefix || 'aeon',
-    }
+    },
   );
 }
 
@@ -311,7 +322,7 @@ export function trackInteraction(
   name: string,
   data: Record<string, unknown>,
   element?: HTMLElement,
-  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config?: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): void {
   const context = getESIContextSnapshot();
 

@@ -97,15 +97,17 @@ import {
   useESIPreferences,
   useESITier,
   useGlobalESIState,
+  useNavigation,
   useTranslation,
   useTranslationObserver,
   useTranslationOptional
-} from "../chunk-7zbxm162.js";
-import"../chunk-tgx0r0vn.js";
+} from "../chunk-44xw2d01.js";
+import"../chunk-pgbgfrym.js";
 export {
   useTranslationOptional,
   useTranslationObserver,
   useTranslation,
+  useNavigation,
   useGlobalESIState,
   useESITier,
   useESIPreferences,

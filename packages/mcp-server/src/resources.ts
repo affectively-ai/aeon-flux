@@ -17,21 +17,24 @@ import { getNavigationState } from './tools/navigation';
 export const sitemapResource: Resource = {
   uri: 'aeon://sitemap',
   name: 'Sitemap',
-  description: 'Full site structure with all available routes and their metadata',
+  description:
+    'Full site structure with all available routes and their metadata',
   mimeType: 'application/json',
 };
 
 export const sessionResource: Resource = {
   uri: 'aeon://session',
   name: 'Current Session',
-  description: 'Current user session data including navigation history, emotional state, and preferences',
+  description:
+    'Current user session data including navigation history, emotional state, and preferences',
   mimeType: 'application/json',
 };
 
 export const consciousnessResource: Resource = {
   uri: 'aeon://consciousness',
   name: 'Site Consciousness',
-  description: 'Current site consciousness state - awareness level, triggers, and Cyrano state',
+  description:
+    'Current site consciousness state - awareness level, triggers, and Cyrano state',
   mimeType: 'application/json',
 };
 
@@ -53,7 +56,12 @@ interface SessionState {
 }
 
 interface ConsciousnessState {
-  awarenessLevel: 'dormant' | 'observing' | 'attentive' | 'engaged' | 'intervening';
+  awarenessLevel:
+    | 'dormant'
+    | 'observing'
+    | 'attentive'
+    | 'engaged'
+    | 'intervening';
   triggerCount: number;
   pendingWhispers: number;
   orbState: 'idle' | 'listening' | 'thinking' | 'speaking';
@@ -95,7 +103,8 @@ export async function handleReadSitemap(): Promise<{
       {
         route: '/',
         title: 'Home',
-        description: 'Welcome to AFFECTIVELY - your emotional wellness companion',
+        description:
+          'Welcome to AFFECTIVELY - your emotional wellness companion',
         category: 'core',
         tier: 'free',
         keywords: ['home', 'start', 'welcome'],
@@ -322,7 +331,9 @@ export function setSessionState(state: Partial<SessionState>): void {
   sessionState = { ...sessionState, ...state };
 }
 
-export function setConsciousnessState(state: Partial<ConsciousnessState>): void {
+export function setConsciousnessState(
+  state: Partial<ConsciousnessState>,
+): void {
   consciousnessState = { ...consciousnessState, ...state };
 }
 

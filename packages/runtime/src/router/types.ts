@@ -69,7 +69,13 @@ export interface UserContext {
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type LayoutDensity = 'compact' | 'normal' | 'comfortable';
-export type LayoutType = 'dashboard' | 'chat' | 'settings' | 'tools' | 'marketing' | 'custom';
+export type LayoutType =
+  | 'dashboard'
+  | 'chat'
+  | 'settings'
+  | 'tools'
+  | 'marketing'
+  | 'custom';
 
 export interface SkeletonHints {
   layout: LayoutType;
@@ -157,26 +163,20 @@ export interface RouterAdapter {
   route(
     path: string,
     context: UserContext,
-    tree: ComponentTree
+    tree: ComponentTree,
   ): Promise<RouteDecision>;
 
   /**
    * Speculate likely next paths for prefetching
    * Returns ordered list of probable next routes
    */
-  speculate(
-    currentPath: string,
-    context: UserContext
-  ): Promise<string[]>;
+  speculate(currentPath: string, context: UserContext): Promise<string[]>;
 
   /**
    * Apply personalization to component tree
    * Returns modified tree based on route decision
    */
-  personalizeTree(
-    tree: ComponentTree,
-    decision: RouteDecision
-  ): ComponentTree;
+  personalizeTree(tree: ComponentTree, decision: RouteDecision): ComponentTree;
 
   /**
    * Compute accent color from emotion state
@@ -252,21 +252,21 @@ export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
  */
 
 export type ESIModel =
-  | 'llm'           // Text generation
-  | 'embed'         // Embeddings
-  | 'vision'        // Image analysis
-  | 'tts'           // Text-to-speech
-  | 'stt'           // Speech-to-text
-  | 'emotion'       // Emotion detection
-  | 'classify'      // Classification
-  | 'translate'     // Translation
-  | 'custom';       // Custom model
+  | 'llm' // Text generation
+  | 'embed' // Embeddings
+  | 'vision' // Image analysis
+  | 'tts' // Text-to-speech
+  | 'stt' // Speech-to-text
+  | 'emotion' // Emotion detection
+  | 'classify' // Classification
+  | 'translate' // Translation
+  | 'custom'; // Custom model
 
 export type ESIContentType =
-  | 'text'          // Plain text prompt
-  | 'base64'        // Base64 encoded (images, audio)
-  | 'json'          // Structured data
-  | 'template';     // Template with interpolation
+  | 'text' // Plain text prompt
+  | 'base64' // Base64 encoded (images, audio)
+  | 'json' // Structured data
+  | 'template'; // Template with interpolation
 
 export interface ESIParams {
   /** Model to use for inference */
@@ -390,22 +390,19 @@ export interface ESIProcessor {
   name: string;
 
   /** Process a single ESI directive */
-  process(
-    directive: ESIDirective,
-    context: UserContext
-  ): Promise<ESIResult>;
+  process(directive: ESIDirective, context: UserContext): Promise<ESIResult>;
 
   /** Process multiple directives (batch optimization) */
   processBatch(
     directives: ESIDirective[],
-    context: UserContext
+    context: UserContext,
   ): Promise<ESIResult[]>;
 
   /** Stream inference result */
   stream?(
     directive: ESIDirective,
     context: UserContext,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ): Promise<ESIResult>;
 
   /** Warm up the processor (pre-load models, etc.) */
@@ -438,11 +435,14 @@ export interface ESIConfig {
   processor?: ESIProcessor;
 
   /** Feature gating by tier */
-  tierLimits?: Record<UserTier, {
-    maxInferencesPerRequest: number;
-    allowedModels: ESIModel[];
-    maxTokens: number;
-  }>;
+  tierLimits?: Record<
+    UserTier,
+    {
+      maxInferencesPerRequest: number;
+      allowedModels: ESIModel[];
+      maxTokens: number;
+    }
+  >;
 }
 
 export const DEFAULT_ESI_CONFIG: ESIConfig = {
@@ -471,12 +471,29 @@ export const DEFAULT_ESI_CONFIG: ESIConfig = {
     },
     enterprise: {
       maxInferencesPerRequest: 100,
-      allowedModels: ['llm', 'embed', 'classify', 'vision', 'tts', 'stt', 'custom'],
+      allowedModels: [
+        'llm',
+        'embed',
+        'classify',
+        'vision',
+        'tts',
+        'stt',
+        'custom',
+      ],
       maxTokens: 32000,
     },
     admin: {
       maxInferencesPerRequest: 999999,
-      allowedModels: ['llm', 'embed', 'classify', 'vision', 'tts', 'stt', 'emotion', 'custom'],
+      allowedModels: [
+        'llm',
+        'embed',
+        'classify',
+        'vision',
+        'tts',
+        'stt',
+        'emotion',
+        'custom',
+      ],
       maxTokens: 999999,
     },
   },
@@ -578,7 +595,36 @@ export interface TranslationProviderConfig {
  * Supported language codes for translation
  */
 export type SupportedLanguageCode =
-  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'nl' | 'pl' | 'ru'
-  | 'zh' | 'ja' | 'ko' | 'ar' | 'hi' | 'bn' | 'vi' | 'th' | 'tr'
-  | 'id' | 'ms' | 'tl' | 'sv' | 'da' | 'no' | 'fi' | 'cs' | 'el'
-  | 'he' | 'uk' | 'ro' | 'hu' | 'ca' | 'hy';
+  | 'en'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'pt'
+  | 'nl'
+  | 'pl'
+  | 'ru'
+  | 'zh'
+  | 'ja'
+  | 'ko'
+  | 'ar'
+  | 'hi'
+  | 'bn'
+  | 'vi'
+  | 'th'
+  | 'tr'
+  | 'id'
+  | 'ms'
+  | 'tl'
+  | 'sv'
+  | 'da'
+  | 'no'
+  | 'fi'
+  | 'cs'
+  | 'el'
+  | 'he'
+  | 'uk'
+  | 'ro'
+  | 'hu'
+  | 'ca'
+  | 'hy';

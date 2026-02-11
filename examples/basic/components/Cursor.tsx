@@ -18,7 +18,7 @@ function userColor(userId: string): string {
   ];
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    hash = (hash << 5) - hash + userId.charCodeAt(i);
     hash = hash & hash;
   }
   return colors[Math.abs(hash) % colors.length];
@@ -76,9 +76,7 @@ export function Cursor({ user }: CursorProps) {
         {user.role === 'assistant' ? '🤖 ' : ''}
         {user.userId.slice(0, 8)}
         {user.editing && (
-          <span style={{ marginLeft: '4px', opacity: 0.8 }}>
-            editing
-          </span>
+          <span style={{ marginLeft: '4px', opacity: 0.8 }}>editing</span>
         )}
       </div>
     </div>

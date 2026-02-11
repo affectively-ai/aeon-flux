@@ -39,7 +39,13 @@
  */
 
 // Link component with prefetch/transitions/presence
-export { Link, type LinkProps, type TransitionType, type PrefetchStrategy, type PresenceRenderProps } from './Link';
+export {
+  Link,
+  type LinkProps,
+  type TransitionType,
+  type PrefetchStrategy,
+  type PresenceRenderProps,
+} from './Link';
 
 // Provider and main hook
 export {

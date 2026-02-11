@@ -100,6 +100,8 @@ export {
   useESIEmotionState,
   useESIPreferences,
   updateGlobalESIState,
+  // Edge-ready navigation hook (no Next.js dependency)
+  useNavigation,
 } from './esi-react';
 export type {
   ESIProviderProps,
@@ -109,6 +111,7 @@ export type {
   ESIVisionProps,
   UseESIInferOptions,
   GlobalESIState,
+  NavigationRouter,
 } from './esi-react';
 
 // ESI Translation React Components
@@ -131,9 +134,7 @@ export {
   useTranslationObserver,
   initTranslationObserver,
 } from './esi-translate-observer';
-export type {
-  TranslationObserverConfig,
-} from './esi-translate-observer';
+export type { TranslationObserverConfig } from './esi-translate-observer';
 
 // Adapters
 export { HeuristicAdapter } from './heuristic-adapter';
@@ -154,10 +155,7 @@ export {
   generateESIStateScript,
   generateESIStateScriptFromContext,
 } from './context-extractor';
-export type {
-  ContextExtractorOptions,
-  ESIState,
-} from './context-extractor';
+export type { ContextExtractorOptions, ESIState } from './context-extractor';
 
 // Speculation (client-side prefetching)
 export {
@@ -167,10 +165,7 @@ export {
   autoInitSpeculation,
   createSpeculationHook,
 } from './speculation';
-export type {
-  SpeculationOptions,
-  SpeculationState,
-} from './speculation';
+export type { SpeculationOptions, SpeculationState } from './speculation';
 
 // ESI Control Language
 export {
@@ -297,4 +292,7 @@ export {
   filterAccessibleNodes,
   getMostSpecificCapability,
 } from './merkle-capability';
-export type { NodeCapabilityVerifier, NodeVerifierOptions } from './merkle-capability';
+export type {
+  NodeCapabilityVerifier,
+  NodeVerifierOptions,
+} from './merkle-capability';

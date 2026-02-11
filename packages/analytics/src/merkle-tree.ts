@@ -36,7 +36,9 @@ async function sha256(message: string): Promise<string> {
   // Use Web Crypto API
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 
   return hashHex;
 }
@@ -90,7 +92,9 @@ function sortKeys(obj: unknown): unknown {
 /**
  * Sanitize props for hashing - remove functions, symbols, etc.
  */
-function sanitizeProps(props: Record<string, unknown> | undefined): Record<string, unknown> {
+function sanitizeProps(
+  props: Record<string, unknown> | undefined,
+): Record<string, unknown> {
   if (!props) return {};
 
   const sanitized: Record<string, unknown> = {};
@@ -130,7 +134,7 @@ function sanitizeProps(props: Record<string, unknown> | undefined): Record<strin
 export async function hashNodeAsync(
   type: string,
   props: Record<string, unknown>,
-  childHashes: string[]
+  childHashes: string[],
 ): Promise<string> {
   const content = JSON.stringify({
     type,
@@ -149,7 +153,7 @@ export async function hashNodeAsync(
 export function hashNodeSync(
   type: string,
   props: Record<string, unknown>,
-  childHashes: string[]
+  childHashes: string[],
 ): string {
   const content = JSON.stringify({
     type,
@@ -179,7 +183,7 @@ async function buildNodeAsync(
   parentPath: string[],
   parentPathHashes: string[],
   depth: number,
-  ctx: BuildContext
+  ctx: BuildContext,
 ): Promise<MerkleNode | null> {
   const node = ctx.tree.getNode(nodeId);
   if (!node) return null;
@@ -194,7 +198,7 @@ async function buildNodeAsync(
       [...parentPath, node.type],
       [...parentPathHashes], // Will be filled after we compute our hash
       depth + 1,
-      ctx
+      ctx,
     );
     if (childNode) {
       childHashes.push(childNode.hash);
@@ -241,7 +245,7 @@ function buildNodeSync(
   parentPath: string[],
   parentPathHashes: string[],
   depth: number,
-  ctx: BuildContext
+  ctx: BuildContext,
 ): MerkleNode | null {
   const node = ctx.tree.getNode(nodeId);
   if (!node) return null;
@@ -256,7 +260,7 @@ function buildNodeSync(
       [...parentPath, node.type],
       [...parentPathHashes],
       depth + 1,
-      ctx
+      ctx,
     );
     if (childNode) {
       childHashes.push(childNode.hash);
@@ -298,7 +302,9 @@ function buildNodeSync(
 /**
  * Build complete Merkle tree from ComponentTree (async)
  */
-export async function buildMerkleTree(tree: ComponentTree): Promise<MerkleTree> {
+export async function buildMerkleTree(
+  tree: ComponentTree,
+): Promise<MerkleTree> {
   const ctx: BuildContext = {
     nodes: new Map(),
     hashToId: new Map(),
@@ -368,7 +374,9 @@ export function buildMerkleTreeSync(tree: ComponentTree): MerkleTree {
 /**
  * Generate data attributes for a DOM element
  */
-export function getMerkleAttributes(merkleNode: MerkleNode): Record<string, string> {
+export function getMerkleAttributes(
+  merkleNode: MerkleNode,
+): Record<string, string> {
   return {
     'data-aeon-merkle': merkleNode.hash,
     'data-aeon-path': JSON.stringify(merkleNode.path),
@@ -409,7 +417,9 @@ export function parseMerkleFromElement(element: HTMLElement): {
 /**
  * Find nearest ancestor with Merkle attributes
  */
-export function findNearestMerkleElement(element: HTMLElement): HTMLElement | null {
+export function findNearestMerkleElement(
+  element: HTMLElement,
+): HTMLElement | null {
   let current: HTMLElement | null = element;
 
   while (current) {
@@ -429,7 +439,10 @@ export function findNearestMerkleElement(element: HTMLElement): HTMLElement | nu
 /**
  * Verify tree integrity by recomputing root hash
  */
-export async function verifyMerkleTree(tree: MerkleTree, componentTree: ComponentTree): Promise<boolean> {
+export async function verifyMerkleTree(
+  tree: MerkleTree,
+  componentTree: ComponentTree,
+): Promise<boolean> {
   const rebuilt = await buildMerkleTree(componentTree);
   return rebuilt.rootHash === tree.rootHash;
 }
@@ -439,14 +452,18 @@ export async function verifyMerkleTree(tree: MerkleTree, componentTree: Componen
  */
 export function diffMerkleTrees(
   oldTree: MerkleTree,
-  newTree: MerkleTree
+  newTree: MerkleTree,
 ): { added: MerkleNode[]; removed: MerkleNode[]; changed: MerkleNode[] } {
   const added: MerkleNode[] = [];
   const removed: MerkleNode[] = [];
   const changed: MerkleNode[] = [];
 
-  const oldHashes = new Set(Array.from(oldTree.nodes.values()).map((n) => n.hash));
-  const newHashes = new Set(Array.from(newTree.nodes.values()).map((n) => n.hash));
+  const oldHashes = new Set(
+    Array.from(oldTree.nodes.values()).map((n) => n.hash),
+  );
+  const newHashes = new Set(
+    Array.from(newTree.nodes.values()).map((n) => n.hash),
+  );
 
   // Find added nodes (in new but not in old)
   for (const [, node] of newTree.nodes) {

@@ -31,7 +31,7 @@ export default function Home() {
       <p>The CMS is the website.</p>
     </div>
   );
-}`
+}`,
     );
 
     await writeFile(
@@ -44,14 +44,14 @@ export default function BlogPost({ params }) {
       <h1>Blog Post</h1>
     </article>
   );
-}`
+}`,
     );
 
     await writeFile(
       join(pagesDir, 'blog', '[slug]', 'layout.tsx'),
       `export default function BlogLayout({ children }) {
   return <div className="blog-layout">{children}</div>;
-}`
+}`,
     );
 
     await writeFile(
@@ -64,7 +64,7 @@ export default function Docs() {
       <h1>Documentation</h1>
     </section>
   );
-}`
+}`,
     );
 
     await writeFile(
@@ -72,7 +72,7 @@ export default function Docs() {
       `// Static page - no directive
 export default function ApiDocs() {
   return { type: 'div', children: ['API Docs'] };
-}`
+}`,
     );
 
     // Create config
@@ -82,7 +82,7 @@ export default function ApiDocs() {
   pagesDir: './pages',
   runtime: 'cloudflare',
   output: { dir: '.aeon' },
-};`
+};`,
     );
 
     // Change to test directory
@@ -98,7 +98,7 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     expect(manifest.version).toBe('1.0.0');
@@ -112,20 +112,20 @@ export default function ApiDocs() {
 
     // Check dynamic route
     const blogRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('[slug]')
+      r.pattern.includes('[slug]'),
     );
     expect(blogRoute).toBeDefined();
     expect(blogRoute.isAeon).toBe(true);
 
     // Check optional catch-all
     const docsRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('[[...path]]')
+      r.pattern.includes('[[...path]]'),
     );
     expect(docsRoute).toBeDefined();
 
     // Check non-aeon route
     const apiRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('[...catchall]')
+      r.pattern.includes('[...catchall]'),
     );
     expect(apiRoute).toBeDefined();
     expect(apiRoute.isAeon).toBe(false);
@@ -136,7 +136,7 @@ export default function ApiDocs() {
 
     const migration = await readFile(
       join(outputDir, 'migrations', '0001_initial.sql'),
-      'utf-8'
+      'utf-8',
     );
 
     // Check for tables
@@ -145,9 +145,15 @@ export default function ApiDocs() {
     expect(migration).toContain('CREATE TABLE IF NOT EXISTS presence');
 
     // Check for indexes
-    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_routes_pattern');
-    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_sessions_route');
-    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_presence_session');
+    expect(migration).toContain(
+      'CREATE INDEX IF NOT EXISTS idx_routes_pattern',
+    );
+    expect(migration).toContain(
+      'CREATE INDEX IF NOT EXISTS idx_sessions_route',
+    );
+    expect(migration).toContain(
+      'CREATE INDEX IF NOT EXISTS idx_presence_session',
+    );
 
     // Check columns
     expect(migration).toContain('path TEXT PRIMARY KEY');
@@ -163,7 +169,7 @@ export default function ApiDocs() {
 
     // Check for route insertions
     expect(seed).toContain('INSERT OR REPLACE INTO routes');
-    expect(seed).toContain("pattern, session_id, component_id");
+    expect(seed).toContain('pattern, session_id, component_id');
 
     // Check for session insertions
     expect(seed).toContain('INSERT OR REPLACE INTO sessions');
@@ -180,7 +186,7 @@ export default function ApiDocs() {
 
     const worker = await readFile(
       join(outputDir, 'dist', 'worker.js'),
-      'utf-8'
+      'utf-8',
     );
 
     // Check for route matching
@@ -209,10 +215,7 @@ export default function ApiDocs() {
   test('generates wrangler.toml', async () => {
     await build({});
 
-    const wrangler = await readFile(
-      join(outputDir, 'wrangler.toml'),
-      'utf-8'
-    );
+    const wrangler = await readFile(join(outputDir, 'wrangler.toml'), 'utf-8');
 
     expect(wrangler).toContain('name = "aeon-flux"');
     expect(wrangler).toContain('main = "dist/worker.js"');
@@ -239,7 +242,7 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     const homeRoute = manifest.routes.find((r: any) => r.pattern === '/');
@@ -250,11 +253,11 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     const docsRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('docs')
+      r.pattern.includes('docs'),
     );
     expect(docsRoute.isAeon).toBe(true);
   });
@@ -263,11 +266,11 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     const apiRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('api')
+      r.pattern.includes('api'),
     );
     expect(apiRoute.isAeon).toBe(false);
   });
@@ -276,11 +279,11 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     const blogRoute = manifest.routes.find((r: any) =>
-      r.pattern.includes('[slug]')
+      r.pattern.includes('[slug]'),
     );
     expect(blogRoute.layout).toBeDefined();
   });
@@ -325,7 +328,7 @@ export default function ApiDocs() {
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
 
     expect(manifest.routes).toEqual([]);
@@ -339,14 +342,14 @@ export default function ApiDocs() {
     await mkdir(join(testDir, 'pages'), { recursive: true });
     await writeFile(
       join(testDir, 'pages', 'page.tsx'),
-      `'use aeon';\nexport default function Page() { return <div>Test</div>; }`
+      `'use aeon';\nexport default function Page() { return <div>Test</div>; }`,
     );
 
     await build({ config: 'nonexistent.config.ts' });
 
     // Should use defaults and still work
     const manifest = JSON.parse(
-      await readFile(join(testDir, '.aeon', 'manifest.json'), 'utf-8')
+      await readFile(join(testDir, '.aeon', 'manifest.json'), 'utf-8'),
     );
     expect(manifest.version).toBe('1.0.0');
   });
@@ -363,7 +366,7 @@ describe('AST to D1 sync', () => {
     await mkdir(pagesDir, { recursive: true });
     await writeFile(
       join(testDir, 'aeon.config.ts'),
-      `export default { pagesDir: './pages', runtime: 'cloudflare' };`
+      `export default { pagesDir: './pages', runtime: 'cloudflare' };`,
     );
     process.chdir(testDir);
   });
@@ -383,7 +386,7 @@ export default function Test() {
       <h1>Title</h1>
     </main>
   );
-}`
+}`,
     );
 
     await build({});
@@ -402,7 +405,7 @@ export default function Test() {
       Hello World Content Here
     </div>
   );
-}`
+}`,
     );
 
     await build({});
@@ -421,7 +424,7 @@ export default function Test() {
       Content
     </section>
   );
-}`
+}`,
     );
 
     await build({});
@@ -445,7 +448,7 @@ export default function Test() {
       <main>Content</main>
     </div>
   );
-}`
+}`,
     );
 
     await build({});
@@ -463,7 +466,7 @@ export default function Test() {
       `'use aeon';
 export default function Post() {
   return <article>Post</article>;
-}`
+}`,
     );
 
     await build({});
@@ -484,7 +487,7 @@ export default function Test() {
       It's a "test" with <special> & characters
     </div>
   );
-}`
+}`,
     );
 
     await build({});
@@ -498,13 +501,13 @@ export default function Test() {
   test('generates consistent session IDs', async () => {
     await writeFile(
       join(pagesDir, 'page.tsx'),
-      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`
+      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`,
     );
 
     await build({});
 
     const manifest = JSON.parse(
-      await readFile(join(outputDir, 'manifest.json'), 'utf-8')
+      await readFile(join(outputDir, 'manifest.json'), 'utf-8'),
     );
     const seed = await readFile(join(outputDir, 'seed.sql'), 'utf-8');
 
@@ -524,11 +527,11 @@ describe('Multi-layer caching', () => {
     await mkdir(pagesDir, { recursive: true });
     await writeFile(
       join(pagesDir, 'page.tsx'),
-      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`
+      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`,
     );
     await writeFile(
       join(testDir, 'aeon.config.ts'),
-      `export default { pagesDir: './pages', runtime: 'cloudflare' };`
+      `export default { pagesDir: './pages', runtime: 'cloudflare' };`,
     );
     process.chdir(testDir);
   });
@@ -551,7 +554,10 @@ describe('Multi-layer caching', () => {
   test('worker includes KV cache layer logic', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     // Check for KV cache first check
     expect(worker).toContain('env.PAGES_CACHE');
@@ -562,7 +568,10 @@ describe('Multi-layer caching', () => {
   test('worker includes D1 pre-rendered page layer', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('getPreRenderedPage');
     expect(worker).toContain("'X-Aeon-Cache': 'HIT-D1'");
@@ -572,7 +581,10 @@ describe('Multi-layer caching', () => {
   test('worker includes session-based fallback layer', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('getSession');
     expect(worker).toContain("'X-Aeon-Cache': 'MISS'");
@@ -582,7 +594,10 @@ describe('Multi-layer caching', () => {
   test('worker includes build version for cache invalidation', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('BUILD_VERSION');
     expect(worker).toContain('cached.version === BUILD_VERSION');
@@ -591,7 +606,10 @@ describe('Multi-layer caching', () => {
   test('worker caches KV-miss to KV after D1 hit', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     // After D1 hit, should cache in KV
     expect(worker).toContain('ctx.waitUntil');
@@ -602,7 +620,10 @@ describe('Multi-layer caching', () => {
   test('worker caches session-rendered pages to KV', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     // After session render, should cache in KV
     expect(worker).toContain('JSON.stringify(cacheData)');
@@ -612,7 +633,10 @@ describe('Multi-layer caching', () => {
   test('worker returns proper cache headers', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     // Check for cache control headers
     expect(worker).toContain('Cache-Control');
@@ -624,7 +648,10 @@ describe('Multi-layer caching', () => {
   test('getFromKV helper parses cached JSON correctly', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('async function getFromKV');
     expect(worker).toContain('JSON.parse(value)');
@@ -634,7 +661,10 @@ describe('Multi-layer caching', () => {
   test('cache key uses route pattern', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('const cacheKey = `page:${match.pattern}`');
   });
@@ -642,7 +672,10 @@ describe('Multi-layer caching', () => {
   test('CACHE_TTL is configurable', async () => {
     await build({});
 
-    const worker = await readFile(join(outputDir, 'dist', 'worker.js'), 'utf-8');
+    const worker = await readFile(
+      join(outputDir, 'dist', 'worker.js'),
+      'utf-8',
+    );
 
     expect(worker).toContain('const CACHE_TTL = 3600');
   });

@@ -5,11 +5,7 @@ import {
   setNavigationCache,
   type CachedSession,
 } from './cache';
-import {
-  AeonNavigationEngine,
-  getNavigator,
-  setNavigator,
-} from './navigation';
+import { AeonNavigationEngine, getNavigator, setNavigator } from './navigation';
 import {
   NavigationPredictor,
   getPredictor,
@@ -102,14 +98,9 @@ describe('NavigationCache', () => {
   });
 
   test('prefetches many sessions in parallel', async () => {
-    const fetcher = mock((id: string) =>
-      Promise.resolve(createSession(id))
-    );
+    const fetcher = mock((id: string) => Promise.resolve(createSession(id)));
 
-    const results = await cache.prefetchMany(
-      ['a', 'b', 'c'],
-      fetcher
-    );
+    const results = await cache.prefetchMany(['a', 'b', 'c'], fetcher);
 
     expect(results).toHaveLength(3);
     expect(fetcher).toHaveBeenCalledTimes(3);
@@ -122,9 +113,7 @@ describe('NavigationCache', () => {
       { sessionId: 's3', route: '/s3' },
     ];
 
-    const fetcher = mock((id: string) =>
-      Promise.resolve(createSession(id))
-    );
+    const fetcher = mock((id: string) => Promise.resolve(createSession(id)));
 
     const progress: number[] = [];
     await cache.preloadAll(manifest, fetcher, {

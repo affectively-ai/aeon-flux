@@ -17,7 +17,14 @@
  * Output: Everything needed for `wrangler deploy`
  */
 
-import { readFile, readdir, writeFile, mkdir, copyFile, stat } from 'fs/promises';
+import {
+  readFile,
+  readdir,
+  writeFile,
+  mkdir,
+  copyFile,
+  stat,
+} from 'fs/promises';
 import { join, resolve, relative } from 'path';
 // Import from build package (relative path for workspace development)
 import {
@@ -94,8 +101,12 @@ export async function build(options: BuildOptions): Promise<void> {
   const config = await loadConfig(resolve(cwd, configPath));
   const outputDir = resolve(cwd, config.output?.dir || '.aeon');
   const pagesDir = resolve(cwd, config.pagesDir || './pages');
-  const assetsDir = config.assetsDir ? resolve(cwd, config.assetsDir) : resolve(cwd, './public');
-  const fontsDir = config.fontsDir ? resolve(cwd, config.fontsDir) : resolve(cwd, './fonts');
+  const assetsDir = config.assetsDir
+    ? resolve(cwd, config.assetsDir)
+    : resolve(cwd, './public');
+  const fontsDir = config.fontsDir
+    ? resolve(cwd, config.fontsDir)
+    : resolve(cwd, './fonts');
   const prerenderEnabled = config.prerender?.enabled !== false;
   const version = `${Date.now().toString(36)}`;
 
@@ -119,12 +130,12 @@ export async function build(options: BuildOptions): Promise<void> {
   const allClasses = new Set<string>();
   for (const page of pages) {
     const classes = extractClassesFromTree(page.componentTree);
-    classes.forEach(c => allClasses.add(c));
+    classes.forEach((c) => allClasses.add(c));
   }
   const cssManifest = buildCSSManifest(allClasses);
   await writeFile(
     join(outputDir, 'manifests', 'css.json'),
-    JSON.stringify(cssManifest, null, 2)
+    JSON.stringify(cssManifest, null, 2),
   );
   console.log(`   ✓ CSS manifest (${allClasses.size} classes)`);
 
@@ -134,9 +145,11 @@ export async function build(options: BuildOptions): Promise<void> {
     assetManifest = await buildAssetManifest(assetsDir);
     await writeFile(
       join(outputDir, 'manifests', 'assets.json'),
-      JSON.stringify(assetManifest, null, 2)
+      JSON.stringify(assetManifest, null, 2),
     );
-    console.log(`   ✓ Asset manifest (${assetManifest.totalCount} assets, ${(assetManifest.totalSize / 1024).toFixed(1)}KB)`);
+    console.log(
+      `   ✓ Asset manifest (${assetManifest.totalCount} assets, ${(assetManifest.totalSize / 1024).toFixed(1)}KB)`,
+    );
   } catch {
     assetManifest = {
       version: '1.0.0',
@@ -154,9 +167,11 @@ export async function build(options: BuildOptions): Promise<void> {
     fontManifest = await buildFontManifest(fontsDir);
     await writeFile(
       join(outputDir, 'manifests', 'fonts.json'),
-      JSON.stringify(fontManifest, null, 2)
+      JSON.stringify(fontManifest, null, 2),
     );
-    console.log(`   ✓ Font manifest (${fontManifest.totalCount} fonts, ${(fontManifest.totalSize / 1024).toFixed(1)}KB)`);
+    console.log(
+      `   ✓ Font manifest (${fontManifest.totalCount} fonts, ${(fontManifest.totalSize / 1024).toFixed(1)}KB)`,
+    );
   } catch {
     fontManifest = {
       version: '1.0.0',
@@ -174,7 +189,7 @@ export async function build(options: BuildOptions): Promise<void> {
   const manifest = generateManifest(pages);
   await writeFile(
     join(outputDir, 'manifest.json'),
-    JSON.stringify(manifest, null, 2)
+    JSON.stringify(manifest, null, 2),
   );
   console.log('   ✓ manifest.json');
 
@@ -184,7 +199,7 @@ export async function build(options: BuildOptions): Promise<void> {
   const prerenderMigration = generatePreRenderMigrationSQL();
   await writeFile(
     join(outputDir, 'migrations', '0001_initial.sql'),
-    migration + '\n' + prerenderMigration
+    migration + '\n' + prerenderMigration,
   );
   console.log('   ✓ migrations/0001_initial.sql');
 
@@ -192,7 +207,7 @@ export async function build(options: BuildOptions): Promise<void> {
   let preRenderedPages: PreRenderedPage[] = [];
   if (prerenderEnabled && pages.length > 0) {
     console.log('5️⃣  Pre-rendering pages...');
-    const sessions: PageSession[] = pages.map(page => ({
+    const sessions: PageSession[] = pages.map((page) => ({
       route: page.route,
       tree: page.componentTree,
       data: {
@@ -216,45 +231,46 @@ export async function build(options: BuildOptions): Promise<void> {
 
     // Write pre-render seed SQL
     const prerenderSeed = generatePreRenderSeedSQL(preRenderedPages, version);
-    await writeFile(
-      join(outputDir, 'prerender-seed.sql'),
-      prerenderSeed
+    await writeFile(join(outputDir, 'prerender-seed.sql'), prerenderSeed);
+    console.log(
+      `   ✓ prerender-seed.sql (${preRenderedPages.length} pages, ${(result.totalSize / 1024).toFixed(1)}KB total)`,
     );
-    console.log(`   ✓ prerender-seed.sql (${preRenderedPages.length} pages, ${(result.totalSize / 1024).toFixed(1)}KB total)`);
   } else {
     console.log('5️⃣  Pre-rendering skipped (disabled or no pages)');
   }
 
   // Step 6: Store manifests for D1 (for runtime re-rendering)
   console.log('6️⃣  Generating manifest seed SQL...');
-  const manifestSeed = generateManifestSeedSQL(cssManifest, assetManifest, fontManifest, version);
-  await writeFile(
-    join(outputDir, 'manifest-seed.sql'),
-    manifestSeed
+  const manifestSeed = generateManifestSeedSQL(
+    cssManifest,
+    assetManifest,
+    fontManifest,
+    version,
   );
+  await writeFile(join(outputDir, 'manifest-seed.sql'), manifestSeed);
   console.log('   ✓ manifest-seed.sql (CSS, assets, fonts)');
 
   // Step 7: Generate seed data
   console.log('7️⃣  Generating D1 seed data...');
   const seedData = generateSeedData(pages);
-  await writeFile(
-    join(outputDir, 'seed.sql'),
-    seedData
-  );
+  await writeFile(join(outputDir, 'seed.sql'), seedData);
   console.log('   ✓ seed.sql');
 
   // Step 8: Copy WASM runtime
   console.log('8️⃣  Bundling WASM runtime...');
   try {
     // Try to find the WASM package
-    const wasmPkgPath = resolve(cwd, 'node_modules/@affectively/aeon-pages-runtime-wasm');
+    const wasmPkgPath = resolve(
+      cwd,
+      'node_modules/@affectively/aeon-pages-runtime-wasm',
+    );
     await copyFile(
       join(wasmPkgPath, 'aeon_pages_runtime_bg.wasm'),
-      join(outputDir, 'dist', 'runtime.wasm')
+      join(outputDir, 'dist', 'runtime.wasm'),
     );
     await copyFile(
       join(wasmPkgPath, 'aeon_pages_runtime.js'),
-      join(outputDir, 'dist', 'runtime.js')
+      join(outputDir, 'dist', 'runtime.js'),
     );
     console.log('   ✓ runtime.wasm (~20KB)');
   } catch {
@@ -279,8 +295,12 @@ export async function build(options: BuildOptions): Promise<void> {
   if (prerenderEnabled && preRenderedPages.length > 0) {
     console.log('📊 Pre-render stats:');
     console.log(`   Pages: ${preRenderedPages.length}`);
-    console.log(`   Total size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / 1024).toFixed(1)}KB`);
-    console.log(`   Avg size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / preRenderedPages.length / 1024).toFixed(1)}KB per page`);
+    console.log(
+      `   Total size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / 1024).toFixed(1)}KB`,
+    );
+    console.log(
+      `   Avg size: ${(preRenderedPages.reduce((a, p) => a + p.size, 0) / preRenderedPages.length / 1024).toFixed(1)}KB per page`,
+    );
     console.log('');
   }
 
@@ -292,13 +312,21 @@ export async function build(options: BuildOptions): Promise<void> {
   console.log('     wrangler kv:namespace create PAGES_CACHE');
   console.log('');
   console.log('  3. Run migration:');
-  console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'migrations/0001_initial.sql'))}`);
+  console.log(
+    `     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'migrations/0001_initial.sql'))}`,
+  );
   console.log('');
   console.log('  4. Seed data:');
-  console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'seed.sql'))}`);
-  console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'manifest-seed.sql'))}`);
+  console.log(
+    `     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'seed.sql'))}`,
+  );
+  console.log(
+    `     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'manifest-seed.sql'))}`,
+  );
   if (prerenderEnabled && preRenderedPages.length > 0) {
-    console.log(`     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'prerender-seed.sql'))}`);
+    console.log(
+      `     wrangler d1 execute aeon-flux --file=${relative(cwd, join(outputDir, 'prerender-seed.sql'))}`,
+    );
   }
   console.log('');
   console.log('  5. Update wrangler.toml with your IDs:');
@@ -516,9 +544,13 @@ function generateSeedData(pages: ParsedPage[]): string {
   for (const page of pages) {
     const sessionId = routeToSessionId(page.route);
     const escapedPattern = page.route.replace(/'/g, "''");
-    const escapedLayout = page.layout ? `'${page.layout.replace(/'/g, "''")}'` : 'NULL';
+    const escapedLayout = page.layout
+      ? `'${page.layout.replace(/'/g, "''")}'`
+      : 'NULL';
 
-    lines.push(`INSERT OR REPLACE INTO routes (path, pattern, session_id, component_id, layout, is_aeon) VALUES ('${escapedPattern}', '${escapedPattern}', '${sessionId}', '${sessionId}', ${escapedLayout}, ${page.isAeon ? 1 : 0});`);
+    lines.push(
+      `INSERT OR REPLACE INTO routes (path, pattern, session_id, component_id, layout, is_aeon) VALUES ('${escapedPattern}', '${escapedPattern}', '${sessionId}', '${sessionId}', ${escapedLayout}, ${page.isAeon ? 1 : 0});`,
+    );
   }
 
   lines.push('');
@@ -529,13 +561,18 @@ function generateSeedData(pages: ParsedPage[]): string {
     const escapedRoute = page.route.replace(/'/g, "''");
     const tree = JSON.stringify(page.componentTree).replace(/'/g, "''");
 
-    lines.push(`INSERT OR REPLACE INTO sessions (session_id, route, tree, data, schema_version) VALUES ('${sessionId}', '${escapedRoute}', '${tree}', '{}', '1.0.0');`);
+    lines.push(
+      `INSERT OR REPLACE INTO sessions (session_id, route, tree, data, schema_version) VALUES ('${sessionId}', '${escapedRoute}', '${tree}', '{}', '1.0.0');`,
+    );
   }
 
   return lines.join('\n');
 }
 
-function generateWorker(pages: ParsedPage[], prerenderEnabled: boolean = true): string {
+function generateWorker(
+  pages: ParsedPage[],
+  prerenderEnabled: boolean = true,
+): string {
   const routes = pages.map((p) => ({
     pattern: p.route,
     sessionId: routeToSessionId(p.route),

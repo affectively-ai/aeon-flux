@@ -73,7 +73,7 @@ export function AeonAnalyticsProvider({
       config.trackClicks,
       config.trackPageViews,
       config.syncESIContext,
-    ]
+    ],
   );
 
   return (
@@ -109,7 +109,7 @@ export function useAnalytics(): AnalyticsContextValue {
   if (!context) {
     throw new Error(
       'useAnalytics must be used within an AeonAnalyticsProvider. ' +
-      'Wrap your app with <AeonAnalyticsProvider gtmContainerId="GTM-XXXXXX">.'
+        'Wrap your app with <AeonAnalyticsProvider gtmContainerId="GTM-XXXXXX">.',
     );
   }
 
@@ -131,7 +131,7 @@ export function useAnalyticsOptional(): AnalyticsContextValue | null {
  * HOC to inject analytics props into a component
  */
 export function withAnalytics<P extends object>(
-  Component: React.ComponentType<P & { analytics: AnalyticsContextValue }>
+  Component: React.ComponentType<P & { analytics: AnalyticsContextValue }>,
 ): React.FC<P> {
   return function WrappedComponent(props: P) {
     const analytics = useAnalytics();
@@ -261,12 +261,16 @@ export function Track({
         for (const entry of entries) {
           if (entry.isIntersecting && !hasTrackedVisibility.current) {
             hasTrackedVisibility.current = true;
-            analytics.trackInteraction(event, { ...data, trigger: 'visible' }, element);
+            analytics.trackInteraction(
+              event,
+              { ...data, trigger: 'visible' },
+              element,
+            );
             observer.disconnect();
           }
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     observer.observe(element);
@@ -279,7 +283,11 @@ export function Track({
     return React.cloneElement(children, {
       ref,
       onClick: (e: React.MouseEvent<HTMLElement>) => {
-        analytics.trackInteraction(event, { ...data, trigger: 'click' }, e.currentTarget);
+        analytics.trackInteraction(
+          event,
+          { ...data, trigger: 'click' },
+          e.currentTarget,
+        );
         // Call original onClick if exists
         if (children.props.onClick) {
           children.props.onClick(e);

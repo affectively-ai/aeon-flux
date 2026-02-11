@@ -11,14 +11,20 @@
  * - Federation = Aeon of Aeons (cross-site sync)
  */
 
-import { useContext, useCallback, useSyncExternalStore, createContext } from 'react';
+import {
+  useContext,
+  useCallback,
+  useSyncExternalStore,
+  createContext,
+} from 'react';
 import type {
   AeonNavigationEngine,
   NavigationOptions,
   PrefetchOptions,
   NavigationState,
-  RoutePresenceInfo,
-} from '@affectively/aeon-pages-runtime';
+} from '@affectively/aeon-pages-runtime/navigation';
+import { getNavigator } from '@affectively/aeon-pages-runtime/navigation';
+import type { PresenceInfo as RoutePresenceInfo } from '@affectively/aeon-pages-runtime/navigation';
 
 // Navigation-level predicted route (simpler than ML predictor's version)
 export interface NavigationPrediction {
@@ -26,15 +32,14 @@ export interface NavigationPrediction {
   probability: number;
   reason: 'history' | 'hover' | 'visibility' | 'community';
 }
-import { getNavigator } from '@affectively/aeon-pages-runtime';
-
 
 // Context for providing custom navigation engine
 export interface AeonNavigationContextValue {
   navigator: AeonNavigationEngine;
 }
 
-export const AeonNavigationContext = createContext<AeonNavigationContextValue | null>(null);
+export const AeonNavigationContext =
+  createContext<AeonNavigationContextValue | null>(null);
 
 // Get navigator from context or use global singleton
 function useNavigator(): AeonNavigationEngine {
@@ -52,7 +57,7 @@ export function useAeonNavigation() {
   const state = useSyncExternalStore(
     useCallback((callback) => navigator.subscribe(callback), [navigator]),
     () => navigator.getState(),
-    () => navigator.getState()
+    () => navigator.getState(),
   );
 
   // Navigation function with view transitions
@@ -60,7 +65,7 @@ export function useAeonNavigation() {
     async (href: string, options?: NavigationOptions) => {
       await navigator.navigate(href, options);
     },
-    [navigator]
+    [navigator],
   );
 
   // Prefetch a route (session + presence)
@@ -68,7 +73,7 @@ export function useAeonNavigation() {
     async (href: string, options?: PrefetchOptions) => {
       await navigator.prefetch(href, options);
     },
-    [navigator]
+    [navigator],
   );
 
   // Go back in history
@@ -81,7 +86,7 @@ export function useAeonNavigation() {
     (href: string): boolean => {
       return navigator.isPreloaded(href);
     },
-    [navigator]
+    [navigator],
   );
 
   // Preload ALL routes (total preload strategy)
@@ -89,7 +94,7 @@ export function useAeonNavigation() {
     async (onProgress?: (loaded: number, total: number) => void) => {
       await navigator.preloadAll(onProgress);
     },
-    [navigator]
+    [navigator],
   );
 
   // Get cache statistics
@@ -136,15 +141,17 @@ export function useRoutePresence() {
     (route: string): RoutePresenceInfo | null => {
       return navigator.getPresence(route);
     },
-    [navigator]
+    [navigator],
   );
 
   // Subscribe to presence updates
   const subscribePresence = useCallback(
-    (callback: (route: string, presence: RoutePresenceInfo) => void): (() => void) => {
+    (
+      callback: (route: string, presence: RoutePresenceInfo) => void,
+    ): (() => void) => {
       return navigator.subscribePresence(callback);
     },
-    [navigator]
+    [navigator],
   );
 
   return {
@@ -156,7 +163,9 @@ export function useRoutePresence() {
 /**
  * Navigation prediction hook
  */
-export function useNavigationPrediction(): { predict: (fromRoute?: string) => NavigationPrediction[] } {
+export function useNavigationPrediction(): {
+  predict: (fromRoute?: string) => NavigationPrediction[];
+} {
   const navigator = useNavigator();
 
   // Get predictions for current route
@@ -165,7 +174,7 @@ export function useNavigationPrediction(): { predict: (fromRoute?: string) => Na
       const state = navigator.getState();
       return navigator.predict(fromRoute ?? state.current);
     },
-    [navigator]
+    [navigator],
   );
 
   return {
@@ -199,7 +208,7 @@ export function useTotalPreload() {
     async (onProgress?: (loaded: number, total: number) => void) => {
       await preloadAll(onProgress);
     },
-    [preloadAll]
+    [preloadAll],
   );
 
   return {
@@ -208,5 +217,3 @@ export function useTotalPreload() {
   };
 }
 
-// Re-export types for convenience
-export type { NavigationOptions, PrefetchOptions, NavigationState, RoutePresenceInfo };

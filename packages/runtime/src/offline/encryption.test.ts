@@ -21,7 +21,10 @@ describe('OfflineOperationEncryption', () => {
 
   describe('deriveKeyFromSession', () => {
     test('derives a key from session ID', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'test-context');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test-context',
+      );
 
       expect(keyMaterial).toBeDefined();
       expect(keyMaterial.key).toBeInstanceOf(CryptoKey);
@@ -30,23 +33,41 @@ describe('OfflineOperationEncryption', () => {
     });
 
     test('caches derived keys', async () => {
-      const key1 = await encryption.deriveKeyFromSession('session-123', 'test-context');
-      const key2 = await encryption.deriveKeyFromSession('session-123', 'test-context');
+      const key1 = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test-context',
+      );
+      const key2 = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test-context',
+      );
 
       // Should return the same cached key
       expect(key1).toBe(key2);
     });
 
     test('derives different keys for different sessions', async () => {
-      const key1 = await encryption.deriveKeyFromSession('session-1', 'test-context');
-      const key2 = await encryption.deriveKeyFromSession('session-2', 'test-context');
+      const key1 = await encryption.deriveKeyFromSession(
+        'session-1',
+        'test-context',
+      );
+      const key2 = await encryption.deriveKeyFromSession(
+        'session-2',
+        'test-context',
+      );
 
       expect(key1.userId).not.toBe(key2.userId);
     });
 
     test('derives different keys for different contexts', async () => {
-      const key1 = await encryption.deriveKeyFromSession('session-123', 'context-1');
-      const key2 = await encryption.deriveKeyFromSession('session-123', 'context-2');
+      const key1 = await encryption.deriveKeyFromSession(
+        'session-123',
+        'context-1',
+      );
+      const key2 = await encryption.deriveKeyFromSession(
+        'session-123',
+        'context-2',
+      );
 
       expect(key1.context).not.toBe(key2.context);
     });
@@ -55,7 +76,11 @@ describe('OfflineOperationEncryption', () => {
   describe('deriveKeyFromUCAN', () => {
     test('derives a key from UCAN signing key bytes', async () => {
       const signingKeyBytes = crypto.getRandomValues(new Uint8Array(32));
-      const keyMaterial = await encryption.deriveKeyFromUCAN('user-123', signingKeyBytes, 'ucan-context');
+      const keyMaterial = await encryption.deriveKeyFromUCAN(
+        'user-123',
+        signingKeyBytes,
+        'ucan-context',
+      );
 
       expect(keyMaterial).toBeDefined();
       expect(keyMaterial.key).toBeInstanceOf(CryptoKey);
@@ -65,8 +90,16 @@ describe('OfflineOperationEncryption', () => {
 
     test('caches UCAN-derived keys', async () => {
       const signingKeyBytes = crypto.getRandomValues(new Uint8Array(32));
-      const key1 = await encryption.deriveKeyFromUCAN('user-123', signingKeyBytes, 'ucan-context');
-      const key2 = await encryption.deriveKeyFromUCAN('user-123', signingKeyBytes, 'ucan-context');
+      const key1 = await encryption.deriveKeyFromUCAN(
+        'user-123',
+        signingKeyBytes,
+        'ucan-context',
+      );
+      const key2 = await encryption.deriveKeyFromUCAN(
+        'user-123',
+        signingKeyBytes,
+        'ucan-context',
+      );
 
       expect(key1).toBe(key2);
     });
@@ -74,7 +107,10 @@ describe('OfflineOperationEncryption', () => {
 
   describe('encryptOperation / decryptOperation', () => {
     test('encrypts and decrypts an operation correctly', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test',
+      );
 
       const operation = {
         type: 'update' as const,
@@ -84,14 +120,20 @@ describe('OfflineOperationEncryption', () => {
         createdAt: Date.now(),
       };
 
-      const encrypted = await encryption.encryptOperation(operation, keyMaterial);
+      const encrypted = await encryption.encryptOperation(
+        operation,
+        keyMaterial,
+      );
 
       expect(encrypted).toBeInstanceOf(Uint8Array);
       expect(encrypted.length).toBeGreaterThan(0);
       // First byte should be version
       expect(encrypted[0]).toBe(1);
 
-      const decrypted = await encryption.decryptOperation(encrypted, keyMaterial);
+      const decrypted = await encryption.decryptOperation(
+        encrypted,
+        keyMaterial,
+      );
 
       expect(decrypted.type).toBe(operation.type);
       expect(decrypted.sessionId).toBe(operation.sessionId);
@@ -100,7 +142,10 @@ describe('OfflineOperationEncryption', () => {
     });
 
     test('encrypted data differs for same plaintext (random nonce)', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test',
+      );
 
       const operation = {
         type: 'update' as const,
@@ -110,16 +155,28 @@ describe('OfflineOperationEncryption', () => {
         createdAt: Date.now(),
       };
 
-      const encrypted1 = await encryption.encryptOperation(operation, keyMaterial);
-      const encrypted2 = await encryption.encryptOperation(operation, keyMaterial);
+      const encrypted1 = await encryption.encryptOperation(
+        operation,
+        keyMaterial,
+      );
+      const encrypted2 = await encryption.encryptOperation(
+        operation,
+        keyMaterial,
+      );
 
       // Encrypted data should differ due to random nonce
       expect(encrypted1).not.toEqual(encrypted2);
     });
 
     test('fails to decrypt with wrong key', async () => {
-      const keyMaterial1 = await encryption.deriveKeyFromSession('session-1', 'test');
-      const keyMaterial2 = await encryption.deriveKeyFromSession('session-2', 'test');
+      const keyMaterial1 = await encryption.deriveKeyFromSession(
+        'session-1',
+        'test',
+      );
+      const keyMaterial2 = await encryption.deriveKeyFromSession(
+        'session-2',
+        'test',
+      );
 
       const operation = {
         type: 'update' as const,
@@ -129,13 +186,21 @@ describe('OfflineOperationEncryption', () => {
         createdAt: Date.now(),
       };
 
-      const encrypted = await encryption.encryptOperation(operation, keyMaterial1);
+      const encrypted = await encryption.encryptOperation(
+        operation,
+        keyMaterial1,
+      );
 
-      await expect(encryption.decryptOperation(encrypted, keyMaterial2)).rejects.toThrow();
+      await expect(
+        encryption.decryptOperation(encrypted, keyMaterial2),
+      ).rejects.toThrow();
     });
 
     test('fails to decrypt tampered data', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test',
+      );
 
       const operation = {
         type: 'update' as const,
@@ -145,16 +210,24 @@ describe('OfflineOperationEncryption', () => {
         createdAt: Date.now(),
       };
 
-      const encrypted = await encryption.encryptOperation(operation, keyMaterial);
+      const encrypted = await encryption.encryptOperation(
+        operation,
+        keyMaterial,
+      );
 
       // Tamper with the ciphertext
       encrypted[20] ^= 0xff;
 
-      await expect(encryption.decryptOperation(encrypted, keyMaterial)).rejects.toThrow();
+      await expect(
+        encryption.decryptOperation(encrypted, keyMaterial),
+      ).rejects.toThrow();
     });
 
     test('rejects unsupported encryption version', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'test',
+      );
 
       const operation = {
         type: 'update' as const,
@@ -164,35 +237,62 @@ describe('OfflineOperationEncryption', () => {
         createdAt: Date.now(),
       };
 
-      const encrypted = await encryption.encryptOperation(operation, keyMaterial);
+      const encrypted = await encryption.encryptOperation(
+        operation,
+        keyMaterial,
+      );
 
       // Change version byte to unsupported version
       encrypted[0] = 99;
 
-      await expect(encryption.decryptOperation(encrypted, keyMaterial)).rejects.toThrow(
-        'Unsupported encryption version: 99'
-      );
+      await expect(
+        encryption.decryptOperation(encrypted, keyMaterial),
+      ).rejects.toThrow('Unsupported encryption version: 99');
     });
   });
 
   describe('encryptSyncBatch / decryptSyncBatch', () => {
     test('encrypts and decrypts a batch of operations', async () => {
-      const keyMaterial = await encryption.deriveKeyFromSession('session-123', 'batch-test');
+      const keyMaterial = await encryption.deriveKeyFromSession(
+        'session-123',
+        'batch-test',
+      );
 
       const operations = [
-        { operationId: 'op-1', sessionId: 'session-123', type: 'create', data: { name: 'test1' } },
-        { operationId: 'op-2', sessionId: 'session-123', type: 'update', data: { name: 'test2' } },
-        { operationId: 'op-3', sessionId: 'session-123', type: 'delete', data: { id: '123' } },
+        {
+          operationId: 'op-1',
+          sessionId: 'session-123',
+          type: 'create',
+          data: { name: 'test1' },
+        },
+        {
+          operationId: 'op-2',
+          sessionId: 'session-123',
+          type: 'update',
+          data: { name: 'test2' },
+        },
+        {
+          operationId: 'op-3',
+          sessionId: 'session-123',
+          type: 'delete',
+          data: { id: '123' },
+        },
       ];
 
-      const encrypted = await encryption.encryptSyncBatch(operations, keyMaterial);
+      const encrypted = await encryption.encryptSyncBatch(
+        operations,
+        keyMaterial,
+      );
 
       expect(encrypted.version).toBe(1);
       expect(encrypted.nonce).toBeInstanceOf(Uint8Array);
       expect(encrypted.nonce.length).toBe(12);
       expect(encrypted.ciphertext).toBeInstanceOf(Uint8Array);
 
-      const decrypted = await encryption.decryptSyncBatch(encrypted, keyMaterial);
+      const decrypted = await encryption.decryptSyncBatch(
+        encrypted,
+        keyMaterial,
+      );
 
       expect(decrypted).toHaveLength(3);
       expect(decrypted[0].operationId).toBe('op-1');
@@ -209,20 +309,29 @@ describe('OfflineOperationEncryption', () => {
       encryption.clearKeyCache();
 
       // After clearing, deriving the same key should create a new one
-      const newKey = await encryption.deriveKeyFromSession('session-1', 'context-1');
+      const newKey = await encryption.deriveKeyFromSession(
+        'session-1',
+        'context-1',
+      );
       expect(newKey).toBeDefined();
     });
   });
 
   describe('removeKeyFromCache', () => {
     test('removes a specific key from cache', async () => {
-      const key1 = await encryption.deriveKeyFromSession('session-1', 'context-1');
+      const key1 = await encryption.deriveKeyFromSession(
+        'session-1',
+        'context-1',
+      );
       await encryption.deriveKeyFromSession('session-2', 'context-2');
 
       encryption.removeKeyFromCache('session-1', 'context-1');
 
       // session-1 key should be regenerated
-      const newKey1 = await encryption.deriveKeyFromSession('session-1', 'context-1');
+      const newKey1 = await encryption.deriveKeyFromSession(
+        'session-1',
+        'context-1',
+      );
       expect(newKey1).not.toBe(key1);
     });
   });

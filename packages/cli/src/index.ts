@@ -44,19 +44,22 @@ async function main() {
 
     case 'dev':
       await import('./commands/dev').then((m) =>
-        m.dev({ port: parseInt(values.port || '3000'), config: values.config })
+        m.dev({ port: parseInt(values.port || '3000'), config: values.config }),
       );
       break;
 
     case 'build':
       await import('./commands/build').then((m) =>
-        m.build({ config: values.config })
+        m.build({ config: values.config }),
       );
       break;
 
     case 'start':
       await import('./commands/start').then((m) =>
-        m.start({ port: parseInt(values.port || '3000'), config: values.config })
+        m.start({
+          port: parseInt(values.port || '3000'),
+          config: values.config,
+        }),
       );
       break;
 

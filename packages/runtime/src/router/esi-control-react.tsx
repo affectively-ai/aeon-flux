@@ -47,11 +47,7 @@ import {
   type JSX,
 } from 'react';
 import type { ZodType, ZodTypeDef } from 'zod';
-import type {
-  ESIParams,
-  ESIResult,
-  UserContext,
-} from './types';
+import type { ESIParams, ESIResult, UserContext } from './types';
 import type { PresenceUser } from './types';
 import {
   parseWithSchema,
@@ -141,7 +137,9 @@ export function ESIStructured<T>({
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
-  const promptText = prompt || (typeof children === 'string' ? children : String(children || ''));
+  const promptText =
+    prompt ||
+    (typeof children === 'string' ? children : String(children || ''));
   const fullPrompt = promptText + generateSchemaPrompt(schema);
 
   useEffect(() => {
@@ -298,7 +296,7 @@ export function ESIIf<T>({
         setConditionMet(false);
       }
     },
-    [when, onEvaluate]
+    [when, onEvaluate],
   );
 
   return (
@@ -430,7 +428,7 @@ export function ESIMatch<T>({
       setMatchedIndex(-1);
       onMatch?.(result, -1);
     },
-    [cases, onMatch]
+    [cases, onMatch],
   );
 
   const finalPrompt = prompt || promptFromChildren;
@@ -446,7 +444,9 @@ export function ESIMatch<T>({
         onSuccess={handleSuccess}
         render={() => null}
       />
-      {matchedIndex !== null && matchedIndex >= 0 && cases[matchedIndex]?.content}
+      {matchedIndex !== null &&
+        matchedIndex >= 0 &&
+        cases[matchedIndex]?.content}
       {matchedIndex === -1 && defaultCase}
     </span>
   );
@@ -546,7 +546,9 @@ export function ESICollaborative<T>({
   }, [presence.users, reactToPresenceChange, presenceDebounce]);
 
   // Build presence-aware prompt
-  const basePrompt = prompt || (typeof children === 'string' ? children : String(children || ''));
+  const basePrompt =
+    prompt ||
+    (typeof children === 'string' ? children : String(children || ''));
   const presenceDescription = describeUsers(debouncedUsers);
 
   const collaborativePrompt = `[Audience Context]
@@ -562,7 +564,7 @@ Consider ALL viewers when generating your response. The content should be releva
       setResult(data);
       onSuccess?.(data, debouncedUsers);
     },
-    [debouncedUsers, onSuccess]
+    [debouncedUsers, onSuccess],
   );
 
   return (
@@ -644,7 +646,9 @@ export function ESIReflect<T>({
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const basePrompt = prompt || (typeof children === 'string' ? children : String(children || ''));
+  const basePrompt =
+    prompt ||
+    (typeof children === 'string' ? children : String(children || ''));
 
   useEffect(() => {
     if (!enabled) {
@@ -726,7 +730,9 @@ ${basePrompt}`;
     if (showProgress && currentResult) {
       return (
         <span className={className}>
-          {render ? render(currentResult, iteration) : JSON.stringify(currentResult)}
+          {render
+            ? render(currentResult, iteration)
+            : JSON.stringify(currentResult)}
           <span> (refining... iteration {iteration})</span>
         </span>
       );
@@ -739,7 +745,9 @@ ${basePrompt}`;
   }
 
   if (render) {
-    return <span className={className}>{render(currentResult, iteration)}</span>;
+    return (
+      <span className={className}>{render(currentResult, iteration)}</span>
+    );
   }
 
   return <span className={className}>{JSON.stringify(currentResult)}</span>;
@@ -832,7 +840,9 @@ export function ESIOptimize<T>({
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const basePrompt = prompt || (typeof children === 'string' ? children : String(children || ''));
+  const basePrompt =
+    prompt ||
+    (typeof children === 'string' ? children : String(children || ''));
 
   // Check if we should optimize
   const shouldOptimize = !onlyWhenAlone || presence.users.length <= 1;
@@ -886,7 +896,9 @@ Additionally, include a self-assessment in this format:
 
       // Try to parse the wrapped result
       try {
-        const parsed = JSON.parse(extractJson(firstResult.output)) as OptimizationWrapper<T>;
+        const parsed = JSON.parse(
+          extractJson(firstResult.output),
+        ) as OptimizationWrapper<T>;
         const validated = schema.safeParse(parsed.result);
 
         if (validated.success) {
@@ -955,13 +967,16 @@ Include your improved self-assessment:
           }
 
           try {
-            const parsed = JSON.parse(extractJson(improvedResult.output)) as OptimizationWrapper<T> & {
+            const parsed = JSON.parse(
+              extractJson(improvedResult.output),
+            ) as OptimizationWrapper<T> & {
               improvementsMade?: string[];
             };
             const validated = schema.safeParse(parsed.result);
 
             if (validated.success) {
-              const newQuality = parsed.selfAssessment?.quality || currentQuality;
+              const newQuality =
+                parsed.selfAssessment?.quality || currentQuality;
 
               // Only accept if quality improved
               if (newQuality > currentQuality) {
@@ -1055,7 +1070,10 @@ export interface ESIAutoProps<T> {
   schema: ZodType<T, ZodTypeDef, unknown>;
 
   /** Custom render */
-  render?: (data: T, mode: 'collaborative' | 'optimized' | 'basic') => ReactNode;
+  render?: (
+    data: T,
+    mode: 'collaborative' | 'optimized' | 'basic',
+  ) => ReactNode;
 
   /** Minimum users for collaborative mode */
   collaborativeThreshold?: number;
@@ -1197,11 +1215,16 @@ export function ESIShow({
       if (typeof val === 'boolean') return { success: true, data: val };
       if (typeof val === 'string') {
         const lower = val.toLowerCase().trim();
-        if (lower === 'true' || lower === 'yes' || lower === '1') return { success: true, data: true };
-        if (lower === 'false' || lower === 'no' || lower === '0') return { success: true, data: false };
+        if (lower === 'true' || lower === 'yes' || lower === '1')
+          return { success: true, data: true };
+        if (lower === 'false' || lower === 'no' || lower === '0')
+          return { success: true, data: false };
       }
       if (typeof val === 'object' && val !== null && 'result' in val) {
-        return { success: true, data: Boolean((val as { result: unknown }).result) };
+        return {
+          success: true,
+          data: Boolean((val as { result: unknown }).result),
+        };
       }
       return { success: false, error: 'Not a boolean' };
     },
@@ -1294,9 +1317,20 @@ export interface ESIWhenProps {
  *   <BirthdayBanner />
  * </ESI.When>
  */
-export function ESIWhen({ condition, children, loading, cacheTtl, className }: ESIWhenProps): JSX.Element {
+export function ESIWhen({
+  condition,
+  children,
+  loading,
+  cacheTtl,
+  className,
+}: ESIWhenProps): JSX.Element {
   return (
-    <ESIShow condition={condition} loading={loading} cacheTtl={cacheTtl} className={className}>
+    <ESIShow
+      condition={condition}
+      loading={loading}
+      cacheTtl={cacheTtl}
+      className={className}
+    >
       {children}
     </ESIShow>
   );
@@ -1326,9 +1360,20 @@ export interface ESIUnlessProps {
  *   <OnboardingPrompt />
  * </ESI.Unless>
  */
-export function ESIUnless({ condition, children, loading, cacheTtl, className }: ESIUnlessProps): JSX.Element {
+export function ESIUnless({
+  condition,
+  children,
+  loading,
+  cacheTtl,
+  className,
+}: ESIUnlessProps): JSX.Element {
   return (
-    <ESIHide condition={condition} loading={loading} cacheTtl={cacheTtl} className={className}>
+    <ESIHide
+      condition={condition}
+      loading={loading}
+      cacheTtl={cacheTtl}
+      className={className}
+    >
       {children}
     </ESIHide>
   );
@@ -1359,12 +1404,24 @@ const TIER_LEVELS = { free: 0, starter: 1, pro: 2, enterprise: 3, admin: 999 };
  *   <AdvancedFeature />
  * </ESI.TierGate>
  */
-export function ESITierGate({ minTier, children, fallback = null, className }: ESITierGateProps): JSX.Element {
+export function ESITierGate({
+  minTier,
+  children,
+  fallback = null,
+  className,
+}: ESITierGateProps): JSX.Element {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Check global ESI state for tier
-    const state = (typeof window !== 'undefined' && (window as unknown as { __AEON_ESI_STATE__?: { userTier?: string; isAdmin?: boolean } }).__AEON_ESI_STATE__) || {};
+    const state =
+      (typeof window !== 'undefined' &&
+        (
+          window as unknown as {
+            __AEON_ESI_STATE__?: { userTier?: string; isAdmin?: boolean };
+          }
+        ).__AEON_ESI_STATE__) ||
+      {};
 
     // Admins bypass ALL tier restrictions
     if (state.isAdmin === true || state.userTier === 'admin') {
@@ -1422,7 +1479,20 @@ export function ESIEmotionGate({
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const state = (typeof window !== 'undefined' && (window as unknown as { __AEON_ESI_STATE__?: { emotionState?: { primary?: string; valence?: number; arousal?: number } } }).__AEON_ESI_STATE__) || {};
+    const state =
+      (typeof window !== 'undefined' &&
+        (
+          window as unknown as {
+            __AEON_ESI_STATE__?: {
+              emotionState?: {
+                primary?: string;
+                valence?: number;
+                arousal?: number;
+              };
+            };
+          }
+        ).__AEON_ESI_STATE__) ||
+      {};
     const emotion = state.emotionState || {};
 
     let access = true;
@@ -1439,12 +1509,18 @@ export function ESIEmotionGate({
 
     // Check valence range
     if (valenceRange && emotion.valence !== undefined) {
-      access = access && emotion.valence >= valenceRange[0] && emotion.valence <= valenceRange[1];
+      access =
+        access &&
+        emotion.valence >= valenceRange[0] &&
+        emotion.valence <= valenceRange[1];
     }
 
     // Check arousal range
     if (arousalRange && emotion.arousal !== undefined) {
-      access = access && emotion.arousal >= arousalRange[0] && emotion.arousal <= arousalRange[1];
+      access =
+        access &&
+        emotion.arousal >= arousalRange[0] &&
+        emotion.arousal <= arousalRange[1];
     }
 
     setHasAccess(access);
@@ -1557,7 +1633,8 @@ export function ESIABTest({
   useEffect(() => {
     if (random || !selectionPrompt) {
       // Random selection
-      const selected = variantKeys[Math.floor(Math.random() * variantKeys.length)];
+      const selected =
+        variantKeys[Math.floor(Math.random() * variantKeys.length)];
       setSelectedVariant(selected);
       onSelect?.(selected);
     }
@@ -1687,7 +1764,11 @@ export function ESIForEach<T>({
       }}
       render={(data) => {
         if (data.length === 0) return <>{empty}</>;
-        return <Wrapper className={className}>{data.map((item, i) => render(item, i))}</Wrapper>;
+        return (
+          <Wrapper className={className}>
+            {data.map((item, i) => render(item, i))}
+          </Wrapper>
+        );
       }}
     />
   );
@@ -1850,7 +1931,9 @@ export function ESISelect<T extends string>({
       const match = options.find((o) => o.toLowerCase() === str);
       if (match) return { success: true, data: match as T };
       // Partial match
-      const partial = options.find((o) => str.includes(o.toLowerCase()) || o.toLowerCase().includes(str));
+      const partial = options.find(
+        (o) => str.includes(o.toLowerCase()) || o.toLowerCase().includes(str),
+      );
       if (partial) return { success: true, data: partial as T };
       return { success: false, error: 'No match' };
     },
@@ -1917,7 +2000,8 @@ export function ESIScore({
       loading={loading}
       className={className}
       render={(score) => {
-        const label = thresholds.find((t) => score <= t.value)?.label || 'unknown';
+        const label =
+          thresholds.find((t) => score <= t.value)?.label || 'unknown';
         return render(score, label);
       }}
     />

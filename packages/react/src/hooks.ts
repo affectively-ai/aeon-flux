@@ -72,7 +72,7 @@ export function useEditableElement(elementPath: string) {
     (value: unknown) => {
       updateTree(elementPath, value);
     },
-    [elementPath, updateTree]
+    [elementPath, updateTree],
   );
 
   return {
@@ -133,14 +133,14 @@ export function useCollaborativeInput(key: string) {
 
   // Find if someone else is editing this field
   const editingBy = presence.find(
-    (user) => user.editing === key && user.userId !== localUser?.userId
+    (user) => user.editing === key && user.userId !== localUser?.userId,
   );
 
   const onChange = useCallback(
     (newValue: string) => {
       setData(key, newValue);
     },
-    [key, setData]
+    [key, setData],
   );
 
   const onFocus = useCallback(() => {
@@ -166,7 +166,10 @@ export function useCollaborativeInput(key: string) {
 /**
  * useAeonEffect - Run effect when Aeon data changes
  */
-export function useAeonEffect(key: string, effect: (value: unknown) => void | (() => void)) {
+export function useAeonEffect(
+  key: string,
+  effect: (value: unknown) => void | (() => void),
+) {
   const { data } = useAeonPage();
   const value = data[key];
 

@@ -190,7 +190,7 @@ export class NavigationPredictor {
   private mergePrediction(
     predictions: Map<string, PredictedRoute>,
     prediction: PredictedRoute,
-    weight: number
+    weight: number,
   ): void {
     const existing = predictions.get(prediction.route);
     if (existing) {
@@ -201,7 +201,10 @@ export class NavigationPredictor {
         (existing.probability * (existing.confidence ?? 1) +
           prediction.probability * (prediction.confidence ?? 1) * weight) /
         totalWeight;
-      existing.confidence = Math.max(existing.confidence, prediction.confidence);
+      existing.confidence = Math.max(
+        existing.confidence,
+        prediction.confidence,
+      );
       // Keep the higher-confidence reason
       if (prediction.confidence > (existing.confidence ?? 0)) {
         existing.reason = prediction.reason;
@@ -313,10 +316,10 @@ export class NavigationPredictor {
     return {
       history: this.history,
       transitionMatrix: Array.from(this.transitionMatrix.entries()).map(
-        ([from, toMap]) => [from, Array.from(toMap.entries())]
+        ([from, toMap]) => [from, Array.from(toMap.entries())],
       ),
       timePatterns: Array.from(this.timePatterns.entries()).map(
-        ([route, hourMap]) => [route, Array.from(hourMap.entries())]
+        ([route, hourMap]) => [route, Array.from(hourMap.entries())],
       ),
     };
   }
@@ -338,7 +341,7 @@ export class NavigationPredictor {
         data.transitionMatrix.map(([from, toEntries]) => [
           from,
           new Map(toEntries),
-        ])
+        ]),
       );
     }
 
@@ -347,7 +350,7 @@ export class NavigationPredictor {
         data.timePatterns.map(([route, hourEntries]) => [
           route,
           new Map(hourEntries),
-        ])
+        ]),
       );
     }
   }

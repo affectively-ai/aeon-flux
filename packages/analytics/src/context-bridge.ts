@@ -29,7 +29,9 @@ export function hasESIState(): boolean {
 /**
  * Get specific ESI state property
  */
-export function getESIProperty<K extends keyof ESIState>(key: K): ESIState[K] | undefined {
+export function getESIProperty<K extends keyof ESIState>(
+  key: K,
+): ESIState[K] | undefined {
   const state = getESIState();
   return state ? state[key] : undefined;
 }
@@ -45,7 +47,7 @@ let unsubscribe: (() => void) | null = null;
  * Subscribe to ESI state changes
  */
 export function subscribeToESIChanges(
-  callback: (state: ESIState) => void
+  callback: (state: ESIState) => void,
 ): () => void {
   const state = window.__AEON_ESI_STATE__;
 
@@ -65,7 +67,7 @@ export function subscribeToESIChanges(
  * Sync current ESI state to dataLayer
  */
 export function syncESIToDataLayer(
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): boolean {
   const esiState = getESIState();
 
@@ -82,7 +84,7 @@ export function syncESIToDataLayer(
  */
 export function pushPageView(
   config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
-  merkleRoot = ''
+  merkleRoot = '',
 ): boolean {
   const esiState = getESIState();
 
@@ -95,7 +97,7 @@ export function pushPageView(
     document.title,
     merkleRoot,
     esiState,
-    config
+    config,
   );
 
   return true;
@@ -109,7 +111,7 @@ export function pushPageView(
  * Start watching for ESI state changes and sync to dataLayer
  */
 export function watchESIChanges(
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>
+  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix'>,
 ): () => void {
   // Clean up any existing subscription
   if (unsubscribe) {
@@ -137,7 +139,10 @@ export function watchESIChanges(
  * Initialize context bridge with full sync
  */
 export function initContextBridge(
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix' | 'syncESIContext'>
+  config: Pick<
+    AnalyticsConfig,
+    'dataLayerName' | 'eventPrefix' | 'syncESIContext'
+  >,
 ): () => void {
   if (config.syncESIContext === false) {
     return () => {};
@@ -191,8 +196,11 @@ export function waitForESIState(timeout = 5000): Promise<ESIState | null> {
  * Initialize context bridge with retry
  */
 export async function initContextBridgeWithRetry(
-  config: Pick<AnalyticsConfig, 'dataLayerName' | 'eventPrefix' | 'syncESIContext'>,
-  timeout = 5000
+  config: Pick<
+    AnalyticsConfig,
+    'dataLayerName' | 'eventPrefix' | 'syncESIContext'
+  >,
+  timeout = 5000,
 ): Promise<() => void> {
   if (config.syncESIContext === false) {
     return () => {};
@@ -268,7 +276,9 @@ export function hasFeature(feature: keyof ESIState['features']): boolean {
  * Check if user meets minimum tier requirement
  * Admins always meet any tier requirement
  */
-export function meetsTierRequirement(requiredTier: ESIState['userTier']): boolean {
+export function meetsTierRequirement(
+  requiredTier: ESIState['userTier'],
+): boolean {
   const state = getESIState();
 
   if (!state) {
@@ -281,7 +291,13 @@ export function meetsTierRequirement(requiredTier: ESIState['userTier']): boolea
   }
 
   // Tier hierarchy: free < starter < pro < enterprise
-  const tierOrder: ESIState['userTier'][] = ['free', 'starter', 'pro', 'enterprise', 'admin'];
+  const tierOrder: ESIState['userTier'][] = [
+    'free',
+    'starter',
+    'pro',
+    'enterprise',
+    'admin',
+  ];
   const userTierIndex = tierOrder.indexOf(state.userTier);
   const requiredTierIndex = tierOrder.indexOf(requiredTier);
 

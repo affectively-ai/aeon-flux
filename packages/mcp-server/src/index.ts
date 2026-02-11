@@ -67,7 +67,7 @@ const server = new Server(
       tools: {},
       resources: {},
     },
-  }
+  },
 );
 
 // ============================================================================
@@ -96,11 +96,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleNavigate(args as { route: string; autoAccept?: boolean });
 
     case 'suggest_route':
-      return handleSuggestRoute(args as {
-        route: string;
-        reason: string;
-        autoAccept?: boolean;
-      });
+      return handleSuggestRoute(
+        args as {
+          route: string;
+          reason: string;
+          autoAccept?: boolean;
+        },
+      );
 
     case 'get_current_route':
       return handleGetCurrentRoute();
@@ -112,17 +114,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return handleSpeculate(args as { depth?: number });
 
     case 'personalize':
-      return handlePersonalize(args as {
-        theme?: 'light' | 'dark';
-        accent?: string;
-        density?: 'compact' | 'normal' | 'comfortable';
-      });
+      return handlePersonalize(
+        args as {
+          theme?: 'light' | 'dark';
+          accent?: string;
+          density?: 'compact' | 'normal' | 'comfortable';
+        },
+      );
 
     case 'invoke_tool':
-      return handleInvokeTool(args as {
-        toolId: string;
-        params?: Record<string, unknown>;
-      });
+      return handleInvokeTool(
+        args as {
+          toolId: string;
+          params?: Record<string, unknown>;
+        },
+      );
 
     default:
       throw new Error(`Unknown tool: ${name}`);
@@ -135,11 +141,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
-    resources: [
-      sitemapResource,
-      sessionResource,
-      consciousnessResource,
-    ],
+    resources: [sitemapResource, sessionResource, consciousnessResource],
   };
 });
 

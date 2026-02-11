@@ -1,5 +1,5 @@
 {
-  "name": "@affectively/aeon-flux",
+  "name": "@affectively/aeon-pages",
   "version": "1.3.0",
   "description": "Collaborative page surface with CRDT-based flux state, Edge Side Inference, and zero-CLS rendering. Pages that think.",
   "type": "module",
@@ -16,6 +16,14 @@
       "import": "./packages/runtime/dist/index.js",
       "types": "./packages/runtime/dist/index.d.ts"
     },
+    "./runtime": {
+      "import": "./packages/runtime/dist/index.js",
+      "types": "./packages/runtime/dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./packages/react/dist/index.js",
+      "types": "./packages/react/dist/index.d.ts"
+    },
     "./esi": {
       "import": "./packages/runtime/dist/router/index.js",
       "types": "./packages/runtime/dist/router/index.d.ts"
@@ -23,10 +31,6 @@
     "./server": {
       "import": "./packages/runtime/dist/server.js",
       "types": "./packages/runtime/dist/server.d.ts"
-    },
-    "./react": {
-      "import": "./packages/react/dist/index.js",
-      "types": "./packages/react/dist/index.d.ts"
     },
     "./auth": {
       "import": "@affectively/auth",

@@ -67,7 +67,7 @@ export interface TranslationContextValue {
       targetLanguage?: string;
       sourceLanguage?: string;
       context?: string;
-    }
+    },
   ) => Promise<TranslationResult>;
 
   /** Is translation currently loading */
@@ -139,16 +139,24 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
         defaultLanguage ||
           headConfig.defaultLanguage ||
           globalState.preferences?.language ||
-          fallbackLanguage
+          fallbackLanguage,
       ),
-    [defaultLanguage, headConfig.defaultLanguage, globalState.preferences?.language, fallbackLanguage]
+    [
+      defaultLanguage,
+      headConfig.defaultLanguage,
+      globalState.preferences?.language,
+      fallbackLanguage,
+    ],
   );
 
   const [language, setLanguageState] = useState(initialLanguage);
   const [isTranslating, setIsTranslating] = useState(false);
 
   // Resolve endpoint
-  const endpoint = propEndpoint || headConfig.endpoint || 'https://ai-gateway.taylorbuley.workers.dev';
+  const endpoint =
+    propEndpoint ||
+    headConfig.endpoint ||
+    'https://ai-gateway.taylorbuley.workers.dev';
   const cacheTtl = propCacheTtl || headConfig.cacheTtl || 86400;
 
   // Get ESI context for processing
@@ -167,9 +175,11 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
         targetLanguage?: string;
         sourceLanguage?: string;
         context?: string;
-      } = {}
+      } = {},
     ): Promise<TranslationResult> => {
-      const targetLang = normalizeLanguageCode(options.targetLanguage || language);
+      const targetLang = normalizeLanguageCode(
+        options.targetLanguage || language,
+      );
       const sourceLang = options.sourceLanguage || 'auto';
 
       // Check cache
@@ -177,7 +187,7 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
         text,
         sourceLang,
         targetLang,
-        options.context
+        options.context,
       );
       const cached = getCachedTranslation(cacheKey);
       if (cached) {
@@ -199,7 +209,7 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
 
         const result: TranslationResult = {
           original: text,
-          translated: esiResult.success ? (esiResult.output || text) : text,
+          translated: esiResult.success ? esiResult.output || text : text,
           sourceLanguage: sourceLang,
           targetLanguage: targetLang,
           confidence: esiResult.success ? 0.95 : 0,
@@ -228,7 +238,7 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
         setIsTranslating(false);
       }
     },
-    [language, cacheTtl, esiContext]
+    [language, cacheTtl, esiContext],
   );
 
   const contextValue = useMemo(
@@ -241,7 +251,7 @@ export const TranslationProvider: FC<TranslationProviderProps> = ({
       endpoint,
       cacheTtl,
     }),
-    [language, setLanguage, translate, isTranslating, endpoint, cacheTtl]
+    [language, setLanguage, translate, isTranslating, endpoint, cacheTtl],
   );
 
   return (
@@ -391,8 +401,10 @@ export const ESITranslate: FC<ESITranslateProps> = ({
 
   // Get text to translate
   const textToTranslate = useMemo(
-    () => text || (typeof children === 'string' ? children : String(children || '')),
-    [text, children]
+    () =>
+      text ||
+      (typeof children === 'string' ? children : String(children || '')),
+    [text, children],
   );
 
   // Determine target language
@@ -401,9 +413,9 @@ export const ESITranslate: FC<ESITranslateProps> = ({
       normalizeLanguageCode(
         propTargetLanguage ||
           translationContext?.language ||
-          detectTargetLanguage(undefined, globalState)
+          detectTargetLanguage(undefined, globalState),
       ),
-    [propTargetLanguage, translationContext?.language, globalState]
+    [propTargetLanguage, translationContext?.language, globalState],
   );
 
   // Skip translation if source and target are the same
@@ -429,7 +441,7 @@ export const ESITranslate: FC<ESITranslateProps> = ({
       textToTranslate,
       sourceLanguage,
       targetLanguage,
-      context
+      context,
     );
     const cached = getCachedTranslation(cacheKey);
     if (cached) {
@@ -487,7 +499,8 @@ export const ESITranslate: FC<ESITranslateProps> = ({
       } catch (err) {
         setIsLoading(false);
         setOutput(textToTranslate);
-        const errorMsg = err instanceof Error ? err.message : 'Translation failed';
+        const errorMsg =
+          err instanceof Error ? err.message : 'Translation failed';
         setError(errorMsg);
         onError?.(errorMsg);
       }
@@ -524,7 +537,11 @@ export const ESITranslate: FC<ESITranslateProps> = ({
     return <Component className={className}>{render(result)}</Component>;
   }
 
-  return <Component className={className}>{output || (isLoading ? loading : '')}</Component>;
+  return (
+    <Component className={className}>
+      {output || (isLoading ? loading : '')}
+    </Component>
+  );
 };
 
 // ============================================================================

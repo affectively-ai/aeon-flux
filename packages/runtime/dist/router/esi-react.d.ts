@@ -347,6 +347,29 @@ export declare function useESIPreferences(): GlobalESIState['preferences'];
  * ```
  */
 export declare function updateGlobalESIState(partial: Partial<GlobalESIState>): void;
+export interface NavigationRouter {
+    push: (url: string) => void;
+    replace: (url: string) => void;
+    back: () => void;
+    prefetch: (url: string) => void;
+}
+/**
+ * Edge-ready navigation hook - works in both Next.js and edge environments
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const router = useNavigation();
+ *
+ *   return (
+ *     <button onClick={() => router.push('/dashboard')}>
+ *       Go to Dashboard
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export declare function useNavigation(): NavigationRouter;
 export declare const ESI: {
     Provider: FC<ESIProviderProps>;
     Infer: FC<ESIInferProps>;

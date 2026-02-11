@@ -10,7 +10,13 @@
  * part of the ongoing conversation between user and Cyrano.
  */
 
-import type { ESIDirective, ESIResult, UserContext, UserTier, ESIParams } from './types';
+import type {
+  ESIDirective,
+  ESIResult,
+  UserContext,
+  UserTier,
+  ESIParams,
+} from './types';
 
 // ============================================================================
 // Whisper Channel Types
@@ -124,18 +130,18 @@ export interface SessionContext {
  * Cyrano response intent types
  */
 export type CyranoIntent =
-  | 'greeting'              // Initial greeting
-  | 'proactive-check-in'    // Unprompted check-in
-  | 'supportive-presence'   // Gentle acknowledgment
-  | 'gentle-nudge'          // Soft suggestion
-  | 'tool-suggestion'       // Recommend a tool
-  | 'navigation-hint'       // Suggest a route
-  | 'intervention'          // Protective intervention
-  | 'celebration'           // Celebrate progress
-  | 'reflection'            // Prompt reflection
-  | 'guidance'              // Offer guidance
-  | 'farewell'              // Session ending
-  | 'custom';               // Custom intent
+  | 'greeting' // Initial greeting
+  | 'proactive-check-in' // Unprompted check-in
+  | 'supportive-presence' // Gentle acknowledgment
+  | 'gentle-nudge' // Soft suggestion
+  | 'tool-suggestion' // Recommend a tool
+  | 'navigation-hint' // Suggest a route
+  | 'intervention' // Protective intervention
+  | 'celebration' // Celebrate progress
+  | 'reflection' // Prompt reflection
+  | 'guidance' // Offer guidance
+  | 'farewell' // Session ending
+  | 'custom'; // Custom intent
 
 /**
  * Cyrano response tone
@@ -153,20 +159,20 @@ export type CyranoTone =
  * Trigger conditions for Cyrano response
  */
 export type CyranoTrigger =
-  | `dwell:>${number}s`           // Dwell time exceeded
-  | `scroll:>${number}`           // Scroll depth exceeded
-  | `emotion:${string}`           // Emotion detected
-  | `behavior:aimless`            // Aimless clicking
-  | `behavior:hesitation`         // Hesitation detected
-  | `hrv:<${number}`              // HRV below threshold
-  | `stress:>${number}`           // Stress above threshold
-  | `session:start`               // Session started
-  | `session:idle:${number}m`     // Idle for N minutes
-  | `navigation:to:${string}`     // Navigated to route
-  | `tool:completed:${string}`    // Tool completed
-  | `time:${string}`              // Time-based trigger
-  | 'always'                      // Always trigger
-  | 'never';                      // Never trigger (manual only)
+  | `dwell:>${number}s` // Dwell time exceeded
+  | `scroll:>${number}` // Scroll depth exceeded
+  | `emotion:${string}` // Emotion detected
+  | `behavior:aimless` // Aimless clicking
+  | `behavior:hesitation` // Hesitation detected
+  | `hrv:<${number}` // HRV below threshold
+  | `stress:>${number}` // Stress above threshold
+  | `session:start` // Session started
+  | `session:idle:${number}m` // Idle for N minutes
+  | `navigation:to:${string}` // Navigated to route
+  | `tool:completed:${string}` // Tool completed
+  | `time:${string}` // Time-based trigger
+  | 'always' // Always trigger
+  | 'never'; // Never trigger (manual only)
 
 /**
  * Cyrano whisper configuration
@@ -263,17 +269,17 @@ export interface HaloInsightConfig {
  * Chat exhaust types - everything becomes conversation
  */
 export type ChatExhaustType =
-  | 'system'            // Session start, env data
-  | 'esi:context'       // Page drops context
-  | 'halo→cyrano'       // Halo whispers to Cyrano
-  | 'cyrano→page'       // Cyrano whispers to page
-  | 'behavior'          // User action
-  | 'emotion'           // Emotion shift detected
-  | 'user'              // Explicit user message
-  | 'cyrano'            // Cyrano response
-  | 'tool:invoke'       // Tool invocation
-  | 'tool:complete'     // Tool completion
-  | 'navigation';       // Route change
+  | 'system' // Session start, env data
+  | 'esi:context' // Page drops context
+  | 'halo→cyrano' // Halo whispers to Cyrano
+  | 'cyrano→page' // Cyrano whispers to page
+  | 'behavior' // User action
+  | 'emotion' // Emotion shift detected
+  | 'user' // Explicit user message
+  | 'cyrano' // Cyrano response
+  | 'tool:invoke' // Tool invocation
+  | 'tool:complete' // Tool completion
+  | 'navigation'; // Route change
 
 /**
  * Individual chat exhaust entry
@@ -331,12 +337,14 @@ export function esiContext(
     emitExhaust?: boolean;
     /** Custom directive ID */
     id?: string;
-  } = {}
+  } = {},
 ): ESIDirective {
   const { emitExhaust = true, id } = options;
 
   return {
-    id: id || `esi-context-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    id:
+      id ||
+      `esi-context-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     params: {
       model: 'custom',
       custom: {
@@ -373,7 +381,7 @@ export function esiContext(
  */
 export function esiCyrano(
   config: CyranoWhisperConfig,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIDirective {
   const {
     intent,
@@ -436,7 +444,10 @@ export function esiCyrano(
 /**
  * Build system prompt for Cyrano based on intent and tone
  */
-function buildCyranoSystemPrompt(intent: CyranoIntent, tone: CyranoTone): string {
+function buildCyranoSystemPrompt(
+  intent: CyranoIntent,
+  tone: CyranoTone,
+): string {
   const toneGuide: Record<CyranoTone, string> = {
     warm: 'Be warm, caring, and approachable. Use gentle language.',
     calm: 'Be calm, measured, and reassuring. Use a steady pace.',
@@ -473,18 +484,28 @@ Respond to the emotional context provided.`;
 /**
  * Build prompt for Cyrano based on intent and trigger
  */
-function buildCyranoPrompt(intent: CyranoIntent, trigger: CyranoTrigger): string {
+function buildCyranoPrompt(
+  intent: CyranoIntent,
+  trigger: CyranoTrigger,
+): string {
   const prompts: Record<CyranoIntent, string> = {
-    greeting: 'Generate a warm greeting based on the time of day and user context.',
-    'proactive-check-in': 'Check in with the user based on their emotional state and behavior.',
-    'supportive-presence': 'Acknowledge the user\'s presence and current activity.',
-    'gentle-nudge': 'Gently suggest the user might benefit from a particular action.',
-    'tool-suggestion': 'Suggest a specific tool that could help with the user\'s current state.',
-    'navigation-hint': 'Suggest the user might want to explore a different area.',
-    intervention: 'Offer supportive intervention based on detected stress or difficulty.',
-    celebration: 'Celebrate the user\'s progress or achievement.',
+    greeting:
+      'Generate a warm greeting based on the time of day and user context.',
+    'proactive-check-in':
+      'Check in with the user based on their emotional state and behavior.',
+    'supportive-presence':
+      "Acknowledge the user's presence and current activity.",
+    'gentle-nudge':
+      'Gently suggest the user might benefit from a particular action.',
+    'tool-suggestion':
+      "Suggest a specific tool that could help with the user's current state.",
+    'navigation-hint':
+      'Suggest the user might want to explore a different area.',
+    intervention:
+      'Offer supportive intervention based on detected stress or difficulty.',
+    celebration: "Celebrate the user's progress or achievement.",
     reflection: 'Invite the user to reflect on their current experience.',
-    guidance: 'Offer helpful guidance for the user\'s current situation.',
+    guidance: "Offer helpful guidance for the user's current situation.",
     farewell: 'Say goodbye warmly, acknowledging the session.',
     custom: 'Respond appropriately to the context provided.',
   };
@@ -518,7 +539,7 @@ function buildCyranoPrompt(intent: CyranoIntent, trigger: CyranoTrigger): string
  */
 export function esiHalo(
   config: HaloInsightConfig,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIDirective {
   const {
     observe,
@@ -569,7 +590,7 @@ export function esiHalo(
 export function evaluateTrigger(
   trigger: CyranoTrigger,
   context: UserContext,
-  sessionContext?: SessionContext
+  sessionContext?: SessionContext,
 ): boolean {
   if (trigger === 'always') return true;
   if (trigger === 'never') return false;
@@ -599,8 +620,10 @@ export function evaluateTrigger(
     case 'emotion': {
       // emotion:anxious
       const targetEmotion = condition;
-      return sessionContext?.emotion?.primary === targetEmotion ||
-             context.emotionState?.primary === targetEmotion;
+      return (
+        sessionContext?.emotion?.primary === targetEmotion ||
+        context.emotionState?.primary === targetEmotion
+      );
     }
 
     case 'behavior': {
@@ -672,7 +695,7 @@ export function evaluateTrigger(
 export function createExhaustEntry(
   directive: ESIDirective,
   result: ESIResult,
-  type: ChatExhaustType
+  type: ChatExhaustType,
 ): ChatExhaustEntry {
   return {
     type,
@@ -696,11 +719,14 @@ export function createExhaustEntry(
 /**
  * Common tool suggestions based on context
  */
-export const CYRANO_TOOL_SUGGESTIONS: Record<string, {
-  triggers: CyranoTrigger[];
-  tool: string;
-  reason: string;
-}> = {
+export const CYRANO_TOOL_SUGGESTIONS: Record<
+  string,
+  {
+    triggers: CyranoTrigger[];
+    tool: string;
+    reason: string;
+  }
+> = {
   breathing: {
     triggers: ['stress:>70', 'hrv:<40', 'emotion:anxious'],
     tool: 'breathing/4-7-8',
@@ -714,7 +740,7 @@ export const CYRANO_TOOL_SUGGESTIONS: Record<string, {
   journaling: {
     triggers: ['dwell:>120s', 'emotion:reflective'],
     tool: 'journaling/freeform',
-    reason: 'Would you like to write about what\'s on your mind?',
+    reason: "Would you like to write about what's on your mind?",
   },
   insights: {
     triggers: ['navigation:to:/insights', 'dwell:>60s'],
@@ -728,9 +754,10 @@ export const CYRANO_TOOL_SUGGESTIONS: Record<string, {
  */
 export function getToolSuggestions(
   context: UserContext,
-  sessionContext?: SessionContext
+  sessionContext?: SessionContext,
 ): Array<{ tool: string; reason: string; priority: number }> {
-  const suggestions: Array<{ tool: string; reason: string; priority: number }> = [];
+  const suggestions: Array<{ tool: string; reason: string; priority: number }> =
+    [];
 
   for (const [, config] of Object.entries(CYRANO_TOOL_SUGGESTIONS)) {
     for (const trigger of config.triggers) {
@@ -738,7 +765,8 @@ export function getToolSuggestions(
         suggestions.push({
           tool: config.tool,
           reason: config.reason,
-          priority: trigger.startsWith('stress') || trigger.startsWith('hrv') ? 2 : 1,
+          priority:
+            trigger.startsWith('stress') || trigger.startsWith('hrv') ? 2 : 1,
         });
         break; // One suggestion per tool
       }

@@ -121,7 +121,16 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
    * Queue an operation
    */
   async queueOperation(
-    operation: Omit<OfflineOperation, 'id' | 'status' | 'encryptedData' | 'bytesSize' | 'failedCount' | 'retryCount' | 'maxRetries'>
+    operation: Omit<
+      OfflineOperation,
+      | 'id'
+      | 'status'
+      | 'encryptedData'
+      | 'bytesSize'
+      | 'failedCount'
+      | 'retryCount'
+      | 'maxRetries'
+    >,
   ): Promise<string> {
     if (!this.isInitialized) {
       throw new Error('Queue not initialized');
@@ -133,7 +142,10 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
 
     // Encrypt if enabled and key material available
     if (this.config.encryption.enabled && this.keyMaterial) {
-      encryptedData = await this.encryption.encryptOperation(operation, this.keyMaterial);
+      encryptedData = await this.encryption.encryptOperation(
+        operation,
+        this.keyMaterial,
+      );
       size = encryptedData.byteLength;
     } else {
       size = estimateEncryptedSize(operation);
@@ -197,7 +209,8 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
     // Sort by priority (high > normal > low) then by createdAt
     pending.sort((a, b) => {
       const priorityOrder = { high: 0, normal: 1, low: 2 };
-      const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+      const priorityDiff =
+        priorityOrder[a.priority] - priorityOrder[b.priority];
       if (priorityDiff !== 0) return priorityDiff;
       return a.createdAt - b.createdAt;
     });
@@ -209,13 +222,25 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
    * Get decrypted operation data
    */
   async getDecryptedOperation(
-    operationId: string
-  ): Promise<Omit<OfflineOperation, 'id' | 'status' | 'encryptedData' | 'bytesSize' | 'failedCount' | 'retryCount' | 'maxRetries'> | null> {
+    operationId: string,
+  ): Promise<Omit<
+    OfflineOperation,
+    | 'id'
+    | 'status'
+    | 'encryptedData'
+    | 'bytesSize'
+    | 'failedCount'
+    | 'retryCount'
+    | 'maxRetries'
+  > | null> {
     const op = this.operations.get(operationId);
     if (!op) return null;
 
     if (op.encryptedData && this.keyMaterial) {
-      return this.encryption.decryptOperation(op.encryptedData, this.keyMaterial);
+      return this.encryption.decryptOperation(
+        op.encryptedData,
+        this.keyMaterial,
+      );
     }
 
     return {
@@ -335,7 +360,8 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
     });
 
     const compactionNeeded =
-      this.currentBytes / this.config.maxLocalCapacity > this.config.compactionThreshold;
+      this.currentBytes / this.config.maxLocalCapacity >
+      this.config.compactionThreshold;
 
     return {
       total: this.operations.size,
@@ -435,7 +461,9 @@ export function getOfflineQueue(): EncryptedOfflineQueue {
 /**
  * Create a new queue with custom configuration
  */
-export function createOfflineQueue(config?: Partial<EncryptedQueueConfig>): EncryptedOfflineQueue {
+export function createOfflineQueue(
+  config?: Partial<EncryptedQueueConfig>,
+): EncryptedOfflineQueue {
   return new EncryptedOfflineQueue(config);
 }
 

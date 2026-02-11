@@ -243,7 +243,12 @@ export interface RouteOperation {
 // =============================================================================
 
 /** Shape types for skeleton rendering */
-export type SkeletonShape = 'rect' | 'circle' | 'text-line' | 'text-block' | 'container';
+export type SkeletonShape =
+  | 'rect'
+  | 'circle'
+  | 'text-line'
+  | 'text-block'
+  | 'container';
 
 /** Source of skeleton inference */
 export type SkeletonSource = 'tailwind' | 'prop-defaults' | 'hint' | 'measured';
@@ -349,7 +354,11 @@ export interface WebhookConfig {
 /** Webhook payload sent to callback URLs */
 export interface WebhookPayload {
   /** Event type */
-  event: 'session.updated' | 'session.published' | 'session.merged' | 'github.push';
+  event:
+    | 'session.updated'
+    | 'session.published'
+    | 'session.merged'
+    | 'github.push';
 
   /** Session ID */
   sessionId: string;
@@ -402,7 +411,11 @@ export interface PresenceInfo {
  * - aeon:admin - Full admin access (bypasses all restrictions)
  * - aeon:* - Wildcard (all permissions)
  */
-export type AeonCapabilityAction = 'aeon:read' | 'aeon:write' | 'aeon:admin' | 'aeon:*';
+export type AeonCapabilityAction =
+  | 'aeon:read'
+  | 'aeon:write'
+  | 'aeon:admin'
+  | 'aeon:*';
 
 /**
  * Node-level capability actions (Merkle hash-based)
@@ -410,10 +423,15 @@ export type AeonCapabilityAction = 'aeon:read' | 'aeon:write' | 'aeon:admin' | '
  * - aeon:node:write - Write access to specific node by Merkle hash
  * - aeon:node:* - All permissions on specific node
  */
-export type AeonNodeCapabilityAction = 'aeon:node:read' | 'aeon:node:write' | 'aeon:node:*';
+export type AeonNodeCapabilityAction =
+  | 'aeon:node:read'
+  | 'aeon:node:write'
+  | 'aeon:node:*';
 
 /** All capability action types */
-export type AeonCapabilityActionType = AeonCapabilityAction | AeonNodeCapabilityAction;
+export type AeonCapabilityActionType =
+  | AeonCapabilityAction
+  | AeonNodeCapabilityAction;
 
 /** UCAN capability for Aeon pages */
 export interface AeonCapability {
@@ -496,7 +514,14 @@ export type PresenceUser = PresenceInfo;
 // =============================================================================
 
 /** HTTP methods supported for API routes */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+export type HttpMethod =
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'PATCH'
+  | 'DELETE'
+  | 'HEAD'
+  | 'OPTIONS';
 
 /** Cloudflare Workers environment bindings */
 export interface AeonEnv {
@@ -551,11 +576,28 @@ export interface D1ExecResult {
 
 /** KV Namespace interface */
 export interface KVNamespace {
-  get(key: string, options?: { type?: 'text' | 'json' | 'arrayBuffer' | 'stream' }): Promise<string | null>;
-  getWithMetadata<T = unknown>(key: string): Promise<{ value: string | null; metadata: T | null }>;
-  put(key: string, value: string | ArrayBuffer | ReadableStream, options?: { expirationTtl?: number; metadata?: unknown }): Promise<void>;
+  get(
+    key: string,
+    options?: { type?: 'text' | 'json' | 'arrayBuffer' | 'stream' },
+  ): Promise<string | null>;
+  getWithMetadata<T = unknown>(
+    key: string,
+  ): Promise<{ value: string | null; metadata: T | null }>;
+  put(
+    key: string,
+    value: string | ArrayBuffer | ReadableStream,
+    options?: { expirationTtl?: number; metadata?: unknown },
+  ): Promise<void>;
   delete(key: string): Promise<void>;
-  list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{ keys: { name: string }[]; list_complete: boolean; cursor?: string }>;
+  list(options?: {
+    prefix?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
 }
 
 /** Durable Object Namespace interface */
@@ -578,7 +620,11 @@ export interface DurableObjectStub {
 
 /** Workers AI interface */
 export interface Ai {
-  run<T = unknown>(model: string, inputs: unknown, options?: { gateway?: { id: string } }): Promise<T>;
+  run<T = unknown>(
+    model: string,
+    inputs: unknown,
+    options?: { gateway?: { id: string } },
+  ): Promise<T>;
 }
 
 /** Context passed to API route handlers */
@@ -603,7 +649,7 @@ export interface ExecutionContext {
 
 /** API route handler function */
 export type ApiRouteHandler<E extends AeonEnv = AeonEnv> = (
-  context: AeonContext<E>
+  context: AeonContext<E>,
 ) => Response | Promise<Response>;
 
 /** API route module - exports handlers for each HTTP method */

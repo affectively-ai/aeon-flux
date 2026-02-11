@@ -10,7 +10,8 @@
  * - Site = Aeon of sessions (routes are collaborative)
  * - Federation = Aeon of Aeons (cross-site sync)
  */
-import type { AeonNavigationEngine, NavigationOptions, PrefetchOptions, NavigationState, RoutePresenceInfo } from '@affectively/aeon-pages-runtime';
+import type { AeonNavigationEngine, NavigationOptions, PrefetchOptions } from '@affectively/aeon-pages-runtime/navigation';
+import type { PresenceInfo as RoutePresenceInfo } from '@affectively/aeon-pages-runtime/navigation';
 export interface NavigationPrediction {
     route: string;
     probability: number;
@@ -24,16 +25,16 @@ export declare const AeonNavigationContext: import("react").Context<AeonNavigati
  * Main navigation hook - provides navigation, prefetch, and state
  */
 export declare function useAeonNavigation(): {
-    current: string;
-    previous: string | null;
-    history: string[];
-    isNavigating: boolean;
+    current: any;
+    previous: any;
+    history: any;
+    isNavigating: any;
     navigate: (href: string, options?: NavigationOptions) => Promise<void>;
     prefetch: (href: string, options?: PrefetchOptions) => Promise<void>;
     back: () => Promise<void>;
     preloadAll: (onProgress?: (loaded: number, total: number) => void) => Promise<void>;
     isPreloaded: (href: string) => boolean;
-    getCacheStats: () => import("@affectively/aeon-pages-runtime").CacheStats;
+    getCacheStats: () => any;
 };
 /**
  * Route Presence hook - subscribe to who's viewing/editing routes
@@ -61,13 +62,12 @@ export declare function useNavigationPrediction(): {
  * Hook for observing links and auto-prefetching
  */
 export declare function useLinkObserver(containerRef: React.RefObject<Element>): {
-    observe: () => () => void;
+    observe: () => any;
 };
 /**
  * Hook for total preload progress
  */
 export declare function useTotalPreload(): {
     startPreload: (onProgress?: (loaded: number, total: number) => void) => Promise<void>;
-    getStats: () => import("@affectively/aeon-pages-runtime").CacheStats;
+    getStats: () => any;
 };
-export type { NavigationOptions, PrefetchOptions, NavigationState, RoutePresenceInfo };

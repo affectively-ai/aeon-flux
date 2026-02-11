@@ -12,7 +12,9 @@ import {
 import type { OfflineOperation } from '../offline/types';
 
 // Helper to create mock operations
-function createMockOperation(overrides: Partial<OfflineOperation> = {}): OfflineOperation {
+function createMockOperation(
+  overrides: Partial<OfflineOperation> = {},
+): OfflineOperation {
   return {
     id: `op-${Math.random().toString(36).slice(2)}`,
     type: 'update',
@@ -272,7 +274,9 @@ describe('SyncCoordinator', () => {
       coordinator.startSyncBatch(batch.batchId);
       const statsAfter = coordinator.getStats();
 
-      expect(statsAfter.totalSyncsAttempted).toBe(statsBefore.totalSyncsAttempted + 1);
+      expect(statsAfter.totalSyncsAttempted).toBe(
+        statsBefore.totalSyncsAttempted + 1,
+      );
     });
 
     test('does nothing for non-existent batch', () => {
@@ -356,7 +360,9 @@ describe('SyncCoordinator', () => {
       coordinator.completeSyncBatch(batch.batchId, {
         success: false,
         synced: [],
-        failed: [{ operationId: 'op-1', error: 'Network error', retryable: true }],
+        failed: [
+          { operationId: 'op-1', error: 'Network error', retryable: true },
+        ],
         conflicts: [],
         serverTimestamp: Date.now(),
       });

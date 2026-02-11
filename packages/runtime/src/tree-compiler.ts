@@ -28,7 +28,7 @@ interface CompilerOptions {
  */
 export function compileTreeToTSX(
   tree: TreeNode | TreeNode[],
-  options: CompilerOptions
+  options: CompilerOptions,
 ): string {
   const { route, useAeon = true, imports = {}, format = true } = options;
 
@@ -48,7 +48,9 @@ export function compileTreeToTSX(
       importLines.push(`import { ${component} } from '${imports[component]}';`);
     } else if (!isHTMLElement(component)) {
       // Default import path for unknown components
-      importLines.push(`import { ${component} } from '@/components/${component}';`);
+      importLines.push(
+        `import { ${component} } from '@/components/${component}';`,
+      );
     }
   }
 
@@ -92,9 +94,12 @@ export function compileTreeToTSX(
 /**
  * Collect all component types used in the tree
  */
-function collectComponents(node: TreeNode | TreeNode[], set: Set<string>): void {
+function collectComponents(
+  node: TreeNode | TreeNode[],
+  set: Set<string>,
+): void {
   if (Array.isArray(node)) {
-    node.forEach(n => collectComponents(n, set));
+    node.forEach((n) => collectComponents(n, set));
     return;
   }
 
@@ -104,7 +109,7 @@ function collectComponents(node: TreeNode | TreeNode[], set: Set<string>): void 
 
   if (node.children) {
     if (Array.isArray(node.children)) {
-      node.children.forEach(child => {
+      node.children.forEach((child) => {
         if (typeof child === 'object') {
           collectComponents(child, set);
         }
@@ -122,7 +127,7 @@ function nodeToJSX(node: TreeNode | TreeNode[], indent: number = 0): string {
   if (Array.isArray(node)) {
     if (node.length === 0) return `${spaces}{null}`;
     if (node.length === 1) return nodeToJSX(node[0], indent);
-    return `${spaces}<>\n${node.map(n => nodeToJSX(n, indent + 1)).join('\n')}\n${spaces}</>`;
+    return `${spaces}<>\n${node.map((n) => nodeToJSX(n, indent + 1)).join('\n')}\n${spaces}</>`;
   }
 
   const { type, props = {}, children, text } = node;
@@ -146,12 +151,14 @@ function nodeToJSX(node: TreeNode | TreeNode[], indent: number = 0): string {
 
   // With children
   const childrenJSX = Array.isArray(children)
-    ? children.map(child => {
-        if (typeof child === 'string') {
-          return `${spaces}  ${escapeJSX(child)}`;
-        }
-        return nodeToJSX(child, indent + 1);
-      }).join('\n')
+    ? children
+        .map((child) => {
+          if (typeof child === 'string') {
+            return `${spaces}  ${escapeJSX(child)}`;
+          }
+          return nodeToJSX(child, indent + 1);
+        })
+        .join('\n')
     : `${spaces}  ${escapeJSX(String(children))}`;
 
   return `${spaces}<${tagName}${propsStr}>\n${childrenJSX}\n${spaces}</${tagName}>`;
@@ -161,29 +168,31 @@ function nodeToJSX(node: TreeNode | TreeNode[], indent: number = 0): string {
  * Convert props object to JSX props string
  */
 function propsToString(props: Record<string, unknown>): string {
-  const entries = Object.entries(props).filter(([key]) =>
-    !['children', 'id', 'text', 'content'].includes(key)
+  const entries = Object.entries(props).filter(
+    ([key]) => !['children', 'id', 'text', 'content'].includes(key),
   );
 
   if (entries.length === 0) return '';
 
-  const propsArr = entries.map(([key, value]) => {
-    // Handle different value types
-    if (typeof value === 'string') {
-      return `${key}="${escapeAttr(value)}"`;
-    }
-    if (typeof value === 'boolean') {
-      return value ? key : `${key}={false}`;
-    }
-    if (typeof value === 'number') {
-      return `${key}={${value}}`;
-    }
-    if (value === null || value === undefined) {
-      return null;
-    }
-    // Objects/arrays as JSX expressions
-    return `${key}={${JSON.stringify(value)}}`;
-  }).filter(Boolean);
+  const propsArr = entries
+    .map(([key, value]) => {
+      // Handle different value types
+      if (typeof value === 'string') {
+        return `${key}="${escapeAttr(value)}"`;
+      }
+      if (typeof value === 'boolean') {
+        return value ? key : `${key}={false}`;
+      }
+      if (typeof value === 'number') {
+        return `${key}={${value}}`;
+      }
+      if (value === null || value === undefined) {
+        return null;
+      }
+      // Objects/arrays as JSX expressions
+      return `${key}={${JSON.stringify(value)}}`;
+    })
+    .filter(Boolean);
 
   return propsArr.length > 0 ? ' ' + propsArr.join(' ') : '';
 }
@@ -197,7 +206,7 @@ function routeToComponentName(route: string): string {
   const parts = route
     .replace(/^\/|\/$/g, '')
     .split('/')
-    .map(part => {
+    .map((part) => {
       // Handle dynamic segments
       if (part.startsWith('[') && part.endsWith(']')) {
         return 'Dynamic' + capitalize(part.slice(1, -1));
@@ -213,13 +222,49 @@ function routeToComponentName(route: string): string {
  */
 function isHTMLElement(type: string): boolean {
   const htmlElements = [
-    'div', 'span', 'p', 'a', 'button', 'input', 'form',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'ul', 'ol', 'li', 'nav', 'header', 'footer', 'main', 'section', 'article', 'aside',
-    'img', 'video', 'audio', 'canvas', 'svg',
-    'table', 'thead', 'tbody', 'tr', 'td', 'th',
-    'label', 'select', 'option', 'textarea',
-    'strong', 'em', 'code', 'pre', 'blockquote',
+    'div',
+    'span',
+    'p',
+    'a',
+    'button',
+    'input',
+    'form',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'ul',
+    'ol',
+    'li',
+    'nav',
+    'header',
+    'footer',
+    'main',
+    'section',
+    'article',
+    'aside',
+    'img',
+    'video',
+    'audio',
+    'canvas',
+    'svg',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'td',
+    'th',
+    'label',
+    'select',
+    'option',
+    'textarea',
+    'strong',
+    'em',
+    'code',
+    'pre',
+    'blockquote',
   ];
   return htmlElements.includes(type.toLowerCase());
 }
@@ -246,7 +291,5 @@ function escapeJSX(str: string): string {
  * Escape string for JSX attribute
  */
 function escapeAttr(str: string): string {
-  return str
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

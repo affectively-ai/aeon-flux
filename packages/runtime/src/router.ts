@@ -70,7 +70,10 @@ export class AeonRouter {
     for (const parsed of this.routes) {
       const params = this.matchSegments(parsed.segments, pathSegments);
       if (params !== null) {
-        const sessionId = this.resolveSessionId(parsed.definition.sessionId, params);
+        const sessionId = this.resolveSessionId(
+          parsed.definition.sessionId,
+          params,
+        );
         return {
           route: parsed.definition,
           params,
@@ -118,7 +121,8 @@ export class AeonRouter {
 
         if (entry.isDirectory()) {
           // Skip route groups in URL but process their contents
-          const isRouteGroup = entry.name.startsWith('(') && entry.name.endsWith(')');
+          const isRouteGroup =
+            entry.name.startsWith('(') && entry.name.endsWith(')');
           const newPrefix = isRouteGroup ? prefix : `${prefix}/${entry.name}`;
           await this.scanDirectory(fullPath, newPrefix);
         } else if (entry.name === 'page.tsx' || entry.name === 'page.ts') {
@@ -134,12 +138,16 @@ export class AeonRouter {
     }
   }
 
-  private async createRouteFromFile(filePath: string, prefix: string): Promise<ParsedRoute | null> {
+  private async createRouteFromFile(
+    filePath: string,
+    prefix: string,
+  ): Promise<ParsedRoute | null> {
     try {
       // Read file to check for 'use aeon' directive
       const file = Bun.file(filePath);
       const content = await file.text();
-      const isAeon = content.includes("'use aeon'") || content.includes('"use aeon"');
+      const isAeon =
+        content.includes("'use aeon'") || content.includes('"use aeon"');
 
       // Convert file path to route pattern
       const pattern = prefix || '/';
@@ -149,11 +157,12 @@ export class AeonRouter {
       const sessionId = this.generateSessionId(pattern);
 
       // Component ID from file path
-      const componentId = relative(this.routesDir, filePath)
-        .replace(/\.(tsx?|jsx?)$/, '')
-        .replace(/\//g, '-')
-        .replace(/page$/, '')
-        .replace(/-$/, '') || 'index';
+      const componentId =
+        relative(this.routesDir, filePath)
+          .replace(/\.(tsx?|jsx?)$/, '')
+          .replace(/\//g, '-')
+          .replace(/page$/, '')
+          .replace(/-$/, '') || 'index';
 
       const definition: RouteDefinition = {
         pattern,
@@ -191,7 +200,7 @@ export class AeonRouter {
 
   private matchSegments(
     routeSegments: Segment[],
-    pathSegments: string[]
+    pathSegments: string[],
   ): Record<string, string> | null {
     const params: Record<string, string> = {};
     let pathIdx = 0;
@@ -199,7 +208,10 @@ export class AeonRouter {
     for (const segment of routeSegments) {
       switch (segment.type) {
         case 'static':
-          if (pathIdx >= pathSegments.length || pathSegments[pathIdx] !== segment.value) {
+          if (
+            pathIdx >= pathSegments.length ||
+            pathSegments[pathIdx] !== segment.value
+          ) {
             return null;
           }
           pathIdx++;
@@ -235,15 +247,20 @@ export class AeonRouter {
   }
 
   private generateSessionId(pattern: string): string {
-    return pattern
-      .replace(/^\/|\/$/g, '')
-      .replace(/\[\.\.\.(\w+)\]/g, '$$$1')
-      .replace(/\[\[\.\.\.(\w+)\]\]/g, '$$$1')
-      .replace(/\[(\w+)\]/g, '$$$1')
-      .replace(/\//g, '-') || 'index';
+    return (
+      pattern
+        .replace(/^\/|\/$/g, '')
+        .replace(/\[\.\.\.(\w+)\]/g, '$$$1')
+        .replace(/\[\[\.\.\.(\w+)\]\]/g, '$$$1')
+        .replace(/\[(\w+)\]/g, '$$$1')
+        .replace(/\//g, '-') || 'index'
+    );
   }
 
-  private resolveSessionId(template: string, params: Record<string, string>): string {
+  private resolveSessionId(
+    template: string,
+    params: Record<string, string>,
+  ): string {
     let result = template;
     for (const [key, value] of Object.entries(params)) {
       result = result.replace(`$${key}`, value);

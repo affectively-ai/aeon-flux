@@ -42,7 +42,7 @@ export function generateTranslationCacheKey(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
-  context?: string
+  context?: string,
 ): string {
   // Create a deterministic key from the inputs
   const input = `${text}:${sourceLanguage}:${targetLanguage}:${context || ''}`;
@@ -50,7 +50,7 @@ export function generateTranslationCacheKey(
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return `translate:${Math.abs(hash).toString(36)}`;
@@ -77,7 +77,7 @@ export function getCachedTranslation(key: string): TranslationResult | null {
 export function setCachedTranslation(
   key: string,
   result: TranslationResult,
-  ttl: number
+  ttl: number,
 ): void {
   if (ttl <= 0) return;
 
@@ -133,7 +133,7 @@ export function esiTranslate(
     context?: string;
     cacheTtl?: number;
     temperature?: number;
-  } = {}
+  } = {},
 ): ESIDirective {
   const {
     sourceLanguage = 'auto',
@@ -148,9 +148,10 @@ export function esiTranslate(
     prompt = `[Context: ${context}]\n\n${text}`;
   }
 
-  const systemPrompt = sourceLanguage === 'auto'
-    ? `${TRANSLATION_SYSTEM_PROMPT}\n\nTarget language: ${targetLanguage}`
-    : `${TRANSLATION_SYSTEM_PROMPT}\n\nSource language: ${sourceLanguage}\nTarget language: ${targetLanguage}`;
+  const systemPrompt =
+    sourceLanguage === 'auto'
+      ? `${TRANSLATION_SYSTEM_PROMPT}\n\nTarget language: ${targetLanguage}`
+      : `${TRANSLATION_SYSTEM_PROMPT}\n\nSource language: ${sourceLanguage}\nTarget language: ${targetLanguage}`;
 
   return {
     id: `esi-translate-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -194,13 +195,17 @@ export function readHeadTranslationConfig(): Partial<TranslationProviderConfig> 
     if (content) config.defaultLanguage = content;
   }
 
-  const sourceLangMeta = document.querySelector('meta[name="aeon-language-source"]');
+  const sourceLangMeta = document.querySelector(
+    'meta[name="aeon-language-source"]',
+  );
   if (sourceLangMeta) {
     // Source language hint (used if autoDetectSource is false)
     // Store in config for reference
   }
 
-  const endpointMeta = document.querySelector('meta[name="aeon-translation-endpoint"]');
+  const endpointMeta = document.querySelector(
+    'meta[name="aeon-translation-endpoint"]',
+  );
   if (endpointMeta) {
     const content = endpointMeta.getAttribute('content');
     if (content) config.endpoint = content;
@@ -307,11 +312,16 @@ const LANGUAGE_CODE_TO_NAME: Record<SupportedLanguageCode, string> = {
  * Normalize language input to ISO 639-1 code
  * Accepts language names (e.g., "Spanish") or codes (e.g., "es")
  */
-export function normalizeLanguageCode(input: string): SupportedLanguageCode | string {
+export function normalizeLanguageCode(
+  input: string,
+): SupportedLanguageCode | string {
   const lower = input.toLowerCase().trim();
 
   // Check if it's already a valid code
-  if (lower.length === 2 && LANGUAGE_CODE_TO_NAME[lower as SupportedLanguageCode]) {
+  if (
+    lower.length === 2 &&
+    LANGUAGE_CODE_TO_NAME[lower as SupportedLanguageCode]
+  ) {
     return lower as SupportedLanguageCode;
   }
 
@@ -354,7 +364,7 @@ export function getSupportedLanguages(): SupportedLanguageCode[] {
  */
 export function detectTargetLanguage(
   explicitLanguage?: string,
-  globalState?: { preferences?: { language?: string } }
+  globalState?: { preferences?: { language?: string } },
 ): string {
   // 1. Explicit prop
   if (explicitLanguage) {
@@ -405,19 +415,25 @@ export async function translateWithAIGateway(
     context?: string;
     endpoint?: string;
     timeout?: number;
-  } = {}
+  } = {},
 ): Promise<TranslationResult> {
   const {
     sourceLanguage = 'auto',
     context,
-    endpoint = process.env.AI_GATEWAY_URL || 'https://ai-gateway.taylorbuley.workers.dev',
+    endpoint = process.env.AI_GATEWAY_URL ||
+      'https://ai-gateway.taylorbuley.workers.dev',
     timeout = 10000,
   } = options;
 
   const startTime = Date.now();
 
   // Check cache first
-  const cacheKey = generateTranslationCacheKey(text, sourceLanguage, targetLanguage, context);
+  const cacheKey = generateTranslationCacheKey(
+    text,
+    sourceLanguage,
+    targetLanguage,
+    context,
+  );
   const cached = getCachedTranslation(cacheKey);
   if (cached) {
     return cached;
@@ -437,10 +453,12 @@ export async function translateWithAIGateway(
     });
 
     if (!response.ok) {
-      throw new Error(`Translation failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Translation failed: ${response.status} ${response.statusText}`,
+      );
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       translatedText: string;
       detectedSourceLanguage?: string;
       confidence?: number;

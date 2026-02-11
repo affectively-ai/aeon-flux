@@ -58,7 +58,9 @@ async function getDirectorySize(dir: string): Promise<number> {
 }
 
 // Helper to simulate cold start
-async function simulateColdStart(setupFn: () => Promise<void>): Promise<number> {
+async function simulateColdStart(
+  setupFn: () => Promise<void>,
+): Promise<number> {
   const start = performance.now();
   await setupFn();
   return performance.now() - start;
@@ -67,7 +69,7 @@ async function simulateColdStart(setupFn: () => Promise<void>): Promise<number> 
 // Helper to measure request throughput
 async function measureThroughput(
   handler: (req: Request) => Promise<Response>,
-  durationMs: number = 1000
+  durationMs: number = 1000,
 ): Promise<number> {
   let requestCount = 0;
   const start = performance.now();
@@ -95,9 +97,15 @@ describe('Aeon Flux vs Next.js Benchmarks', () => {
 
     // Print benchmark results
     console.log('\n');
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('                    BENCHMARK RESULTS                           ');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
+    console.log(
+      '                    BENCHMARK RESULTS                           ',
+    );
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
     console.log('');
 
     const headers = ['Metric', 'Aeon Flux', 'Next.js (est.)', 'Improvement'];
@@ -141,22 +149,22 @@ describe('Aeon Flux vs Next.js Benchmarks', () => {
 
     // Print table
     const colWidths = headers.map((h, i) =>
-      Math.max(h.length, ...rows.map((r) => r[i]?.length || 0))
+      Math.max(h.length, ...rows.map((r) => r[i]?.length || 0)),
     );
 
     console.log(
-      '│ ' + headers.map((h, i) => h.padEnd(colWidths[i])).join(' │ ') + ' │'
+      '│ ' + headers.map((h, i) => h.padEnd(colWidths[i])).join(' │ ') + ' │',
     );
-    console.log(
-      '├─' + colWidths.map((w) => '─'.repeat(w)).join('─┼─') + '─┤'
-    );
+    console.log('├─' + colWidths.map((w) => '─'.repeat(w)).join('─┼─') + '─┤');
     for (const row of rows) {
       console.log(
-        '│ ' + row.map((c, i) => c.padEnd(colWidths[i])).join(' │ ') + ' │'
+        '│ ' + row.map((c, i) => c.padEnd(colWidths[i])).join(' │ ') + ' │',
       );
     }
     console.log('');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
   });
 
   describe('Aeon Flux', () => {
@@ -185,7 +193,7 @@ export default function Home() {
       </nav>
     </div>
   );
-}`
+}`,
       );
 
       // About page
@@ -206,7 +214,7 @@ export default function About() {
       </ul>
     </div>
   );
-}`
+}`,
       );
 
       // Dynamic blog page
@@ -225,7 +233,7 @@ export default function BlogPost({ params }) {
       </div>
     </article>
   );
-}`
+}`,
       );
 
       // Config
@@ -235,7 +243,7 @@ export default function BlogPost({ params }) {
   pagesDir: './pages',
   runtime: 'cloudflare',
   output: { dir: '.aeon' },
-};`
+};`,
       );
     });
 
@@ -313,7 +321,7 @@ export default function BlogPost({ params }) {
         // Simulate minimal response
         return new Response(
           `<html><body><div>Page: ${match.route.pattern}</div></body></html>`,
-          { headers: { 'Content-Type': 'text/html' } }
+          { headers: { 'Content-Type': 'text/html' } },
         );
       };
 
@@ -398,7 +406,9 @@ export default function BlogPost({ params }) {
 
       console.log(`  Next.js bundle size (est.): ${estimatedSizeKb}KB`);
 
-      const existingResult = results.find((r) => r.name === 'Next.js (estimated)');
+      const existingResult = results.find(
+        (r) => r.name === 'Next.js (estimated)',
+      );
       if (existingResult) {
         existingResult.bundleSizeKb = estimatedSizeKb;
       }
@@ -413,7 +423,9 @@ export default function BlogPost({ params }) {
 
       console.log(`  Next.js cold start (est.): ${estimatedColdStart}ms`);
 
-      const existingResult = results.find((r) => r.name === 'Next.js (estimated)');
+      const existingResult = results.find(
+        (r) => r.name === 'Next.js (estimated)',
+      );
       if (existingResult) {
         existingResult.coldStartMs = estimatedColdStart;
       }
@@ -428,7 +440,9 @@ export default function BlogPost({ params }) {
 
       console.log(`  Next.js requests/sec (est.): ${estimatedRps}`);
 
-      const existingResult = results.find((r) => r.name === 'Next.js (estimated)');
+      const existingResult = results.find(
+        (r) => r.name === 'Next.js (estimated)',
+      );
       if (existingResult) {
         existingResult.requestsPerSecond = estimatedRps;
       }
@@ -443,7 +457,9 @@ export default function BlogPost({ params }) {
 
       console.log(`  Next.js memory usage (est.): ${estimatedMemoryMb}MB`);
 
-      const existingResult = results.find((r) => r.name === 'Next.js (estimated)');
+      const existingResult = results.find(
+        (r) => r.name === 'Next.js (estimated)',
+      );
       if (existingResult) {
         existingResult.memoryUsageMb = estimatedMemoryMb;
       }
@@ -516,14 +532,45 @@ describe('Micro-benchmarks', () => {
     const router = new AeonRouter({ routesDir: './pages' });
 
     // Add various route patterns
-    router.addRoute({ pattern: '/', sessionId: 'index', componentId: 'index', isAeon: true });
-    router.addRoute({ pattern: '/about', sessionId: 'about', componentId: 'about', isAeon: true });
-    router.addRoute({ pattern: '/blog/[slug]', sessionId: 'blog-$slug', componentId: 'blog-slug', isAeon: true });
-    router.addRoute({ pattern: '/docs/[[...path]]', sessionId: 'docs-$path', componentId: 'docs', isAeon: true });
-    router.addRoute({ pattern: '/api/[...rest]', sessionId: 'api-$rest', componentId: 'api', isAeon: false });
+    router.addRoute({
+      pattern: '/',
+      sessionId: 'index',
+      componentId: 'index',
+      isAeon: true,
+    });
+    router.addRoute({
+      pattern: '/about',
+      sessionId: 'about',
+      componentId: 'about',
+      isAeon: true,
+    });
+    router.addRoute({
+      pattern: '/blog/[slug]',
+      sessionId: 'blog-$slug',
+      componentId: 'blog-slug',
+      isAeon: true,
+    });
+    router.addRoute({
+      pattern: '/docs/[[...path]]',
+      sessionId: 'docs-$path',
+      componentId: 'docs',
+      isAeon: true,
+    });
+    router.addRoute({
+      pattern: '/api/[...rest]',
+      sessionId: 'api-$rest',
+      componentId: 'api',
+      isAeon: false,
+    });
 
     const iterations = 100000;
-    const paths = ['/', '/about', '/blog/hello-world', '/docs/getting-started/installation', '/api/users/123'];
+    const paths = [
+      '/',
+      '/about',
+      '/blog/hello-world',
+      '/docs/getting-started/installation',
+      '/api/users/123',
+    ];
 
     const start = performance.now();
     for (let i = 0; i < iterations; i++) {

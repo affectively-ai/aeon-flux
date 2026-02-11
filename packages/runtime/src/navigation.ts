@@ -11,7 +11,11 @@
 
 import { AeonRouter } from './router.js';
 import type { RouteMatch } from './types';
-import { NavigationCache, type CachedSession, getNavigationCache } from './cache';
+import {
+  NavigationCache,
+  type CachedSession,
+  getNavigationCache,
+} from './cache';
 
 export interface NavigationOptions {
   transition?: 'slide' | 'fade' | 'morph' | 'none';
@@ -61,13 +65,15 @@ export class AeonNavigationEngine {
   private sessionFetcher?: (sessionId: string) => Promise<CachedSession>;
   private presenceFetcher?: (route: string) => Promise<PresenceInfo>;
 
-  constructor(options: {
-    router?: AeonRouter;
-    cache?: NavigationCache;
-    initialRoute?: string;
-    sessionFetcher?: (sessionId: string) => Promise<CachedSession>;
-    presenceFetcher?: (route: string) => Promise<PresenceInfo>;
-  } = {}) {
+  constructor(
+    options: {
+      router?: AeonRouter;
+      cache?: NavigationCache;
+      initialRoute?: string;
+      sessionFetcher?: (sessionId: string) => Promise<CachedSession>;
+      presenceFetcher?: (route: string) => Promise<PresenceInfo>;
+    } = {},
+  ) {
     this.router = options.router ?? new AeonRouter({ routesDir: './pages' });
     this.cache = options.cache ?? getNavigationCache();
     this.sessionFetcher = options.sessionFetcher;
@@ -103,7 +109,11 @@ export class AeonNavigationEngine {
       const session = await this.getSession(match.sessionId);
 
       // Perform navigation with view transition
-      if (transition !== 'none' && typeof document !== 'undefined' && 'startViewTransition' in document) {
+      if (
+        transition !== 'none' &&
+        typeof document !== 'undefined' &&
+        'startViewTransition' in document
+      ) {
         await (document as any).startViewTransition(() => {
           this.updateDOM(session, match);
         }).finished;
@@ -167,8 +177,8 @@ export class AeonNavigationEngine {
       if (data && this.sessionFetcher) {
         promises.push(
           this.cache.prefetch(match.sessionId, () =>
-            this.sessionFetcher!(match.sessionId)
-          )
+            this.sessionFetcher!(match.sessionId),
+          ),
         );
       }
 
@@ -242,7 +252,7 @@ export class AeonNavigationEngine {
           }
         }
       },
-      { rootMargin: '100px' }
+      { rootMargin: '100px' },
     );
 
     const links = container.querySelectorAll('a[href^="/"]');
@@ -318,7 +328,7 @@ export class AeonNavigationEngine {
    * Preload all routes (total preload strategy)
    */
   async preloadAll(
-    onProgress?: (loaded: number, total: number) => void
+    onProgress?: (loaded: number, total: number) => void,
   ): Promise<void> {
     if (!this.sessionFetcher) {
       throw new Error('sessionFetcher required for preloadAll');

@@ -215,12 +215,17 @@ export async function init(targetDir?: string): Promise<void> {
     const entries = await readdir(projectDir);
     if (entries.length > 0) {
       // Check if it's a Next.js project
-      const hasNextConfig = entries.some((e) =>
-        e === 'next.config.js' || e === 'next.config.ts' || e === 'next.config.mjs'
+      const hasNextConfig = entries.some(
+        (e) =>
+          e === 'next.config.js' ||
+          e === 'next.config.ts' ||
+          e === 'next.config.mjs',
       );
 
       if (hasNextConfig) {
-        console.log('📦 Detected Next.js project. Converting to Aeon Pages...\n');
+        console.log(
+          '📦 Detected Next.js project. Converting to Aeon Pages...\n',
+        );
         await convertNextProject(projectDir);
         return;
       }
@@ -310,11 +315,13 @@ async function convertNextProject(projectDir: string): Promise<void> {
 
   console.log('\n✨ Conversion complete!\n');
   console.log('Next steps:');
-  console.log('  1. Add \'use aeon\'; to pages you want to make collaborative');
+  console.log("  1. Add 'use aeon'; to pages you want to make collaborative");
   console.log('  2. bun install');
   console.log('  3. bun run dev');
   console.log('\nNote: Your existing Next.js code will work with Aeon Pages.');
-  console.log('      Just add \'use aeon\'; at the top of any page to enable collaboration.\n');
+  console.log(
+    "      Just add 'use aeon'; at the top of any page to enable collaboration.\n",
+  );
 }
 
 interface PageInfo {
@@ -323,7 +330,10 @@ interface PageInfo {
   hasAeonDirective: boolean;
 }
 
-async function scanPages(dir: string, isAppRouter: boolean): Promise<PageInfo[]> {
+async function scanPages(
+  dir: string,
+  isAppRouter: boolean,
+): Promise<PageInfo[]> {
   const pages: PageInfo[] = [];
 
   async function scan(currentDir: string, routePath: string): Promise<void> {
@@ -341,12 +351,16 @@ async function scanPages(dir: string, isAppRouter: boolean): Promise<PageInfo[]>
         await scan(fullPath, `${routePath}/${segment}`);
       } else if (entry.isFile()) {
         const isPage = isAppRouter
-          ? entry.name === 'page.tsx' || entry.name === 'page.ts' || entry.name === 'page.jsx' || entry.name === 'page.js'
+          ? entry.name === 'page.tsx' ||
+            entry.name === 'page.ts' ||
+            entry.name === 'page.jsx' ||
+            entry.name === 'page.js'
           : entry.name.endsWith('.tsx') || entry.name.endsWith('.jsx');
 
         if (isPage) {
           const content = await readFile(fullPath, 'utf-8');
-          const hasAeon = content.includes("'use aeon'") || content.includes('"use aeon"');
+          const hasAeon =
+            content.includes("'use aeon'") || content.includes('"use aeon"');
 
           let route = routePath;
           if (!isAppRouter) {

@@ -39,7 +39,9 @@ export interface PushHandlerConfig {
   defaultIcon?: string;
   defaultBadge?: string;
   defaultVibrate?: number[];
-  onNotificationClick?: (data: PushNotificationData['data']) => string | undefined;
+  onNotificationClick?: (
+    data: PushNotificationData['data'],
+  ) => string | undefined;
 }
 
 // ============================================================================
@@ -51,7 +53,7 @@ export interface PushHandlerConfig {
  */
 export function handlePush(
   event: PushEvent,
-  config: PushHandlerConfig = {}
+  config: PushHandlerConfig = {},
 ): void {
   if (!event.data) {
     console.warn('[AeonSW] Push event received with no data');
@@ -83,7 +85,7 @@ export function handlePush(
   } as NotificationOptions;
 
   event.waitUntil(
-    self.registration.showNotification(data.title, notificationOptions)
+    self.registration.showNotification(data.title, notificationOptions),
   );
 }
 
@@ -92,7 +94,7 @@ export function handlePush(
  */
 export function handleNotificationClick(
   event: NotificationEvent,
-  config: PushHandlerConfig = {}
+  config: PushHandlerConfig = {},
 ): void {
   event.notification.close();
 
@@ -113,23 +115,27 @@ export function handleNotificationClick(
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open
-      for (const client of clientList) {
-        if ('focus' in client && client.url.includes(self.location.origin)) {
-          return client.focus().then((focusedClient) => {
-            if ('navigate' in focusedClient) {
-              return (focusedClient as WindowClient).navigate(targetUrl);
-            }
-          });
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if ('focus' in client && client.url.includes(self.location.origin)) {
+            return client.focus().then((focusedClient) => {
+              if ('navigate' in focusedClient) {
+                return (focusedClient as WindowClient).navigate(targetUrl);
+              }
+              return Promise.resolve(); // Ensure a return even if navigate is not available
+            });
+          }
         }
-      }
 
-      // Open a new window if no existing window found
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
+        // Open a new window if no existing window found
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+        return Promise.resolve(); // Ensure a return if openWindow is not available
+      }),
   );
 }
 
@@ -184,7 +190,7 @@ export interface ServiceWorkerMessage {
  */
 export function handleMessage(
   event: ExtendableMessageEvent,
-  handlers: Record<string, (payload: unknown) => Promise<unknown> | unknown>
+  handlers: Record<string, (payload: unknown) => Promise<unknown> | unknown>,
 ): void {
   const message = event.data as ServiceWorkerMessage;
 
@@ -206,7 +212,7 @@ export function handleMessage(
               payload: response,
             });
           }
-        })
+        }),
       );
     }
   }
@@ -221,7 +227,7 @@ export function handleMessage(
  */
 export function registerPushHandlers(
   sw: ServiceWorkerGlobalScope,
-  config: PushHandlerConfig = {}
+  config: PushHandlerConfig = {},
 ): void {
   sw.addEventListener('push', (event) => {
     handlePush(event, config);
@@ -251,7 +257,7 @@ export function registerSyncHandlers(sw: ServiceWorkerGlobalScope): void {
  */
 export function registerMessageHandlers(
   sw: ServiceWorkerGlobalScope,
-  handlers: Record<string, (payload: unknown) => Promise<unknown> | unknown>
+  handlers: Record<string, (payload: unknown) => Promise<unknown> | unknown>,
 ): void {
   sw.addEventListener('message', (event) => {
     handleMessage(event, handlers);
@@ -281,9 +287,7 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 /**
  * Serialize push subscription for sending to server
  */
-export function serializePushSubscription(
-  subscription: PushSubscription
-): {
+export function serializePushSubscription(subscription: PushSubscription): {
   endpoint: string;
   keys: { p256dh: string; auth: string };
 } {
@@ -294,10 +298,14 @@ export function serializePushSubscription(
     endpoint: subscription.endpoint,
     keys: {
       p256dh: p256dh
-        ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dh))))
+        ? btoa(
+            String.fromCharCode.apply(null, Array.from(new Uint8Array(p256dh))),
+          )
         : '',
       auth: auth
-        ? btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(auth))))
+        ? btoa(
+            String.fromCharCode.apply(null, Array.from(new Uint8Array(auth))),
+          )
         : '',
     },
   };

@@ -1,6 +1,10 @@
 'use aeon';
 
-import { usePresence, useAeonData, useCursorTracking } from '@affectively/aeon-pages/react';
+import {
+  usePresence,
+  useAeonData,
+  useCursorTracking,
+} from '@affectively/aeon-pages/react';
 import { Cursor } from '../components/Cursor';
 import { PresenceBar } from '../components/PresenceBar';
 import { OfflineIndicator } from '../components/OfflineIndicator';
@@ -57,7 +61,10 @@ export default function HomePage() {
 
         <div className="mt-8 text-sm text-gray-500">
           {otherUsers.length > 0 ? (
-            <p>{otherUsers.length} other {otherUsers.length === 1 ? 'person' : 'people'} viewing this page</p>
+            <p>
+              {otherUsers.length} other{' '}
+              {otherUsers.length === 1 ? 'person' : 'people'} viewing this page
+            </p>
           ) : (
             <p>You're the only one here</p>
           )}

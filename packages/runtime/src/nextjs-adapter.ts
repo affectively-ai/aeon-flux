@@ -19,11 +19,7 @@
  * ```
  */
 
-import type {
-  AeonEnv,
-  AeonContext,
-  ExecutionContext,
-} from './types';
+import type { AeonEnv, AeonContext, ExecutionContext } from './types';
 
 // =============================================================================
 // TYPES
@@ -44,7 +40,11 @@ export interface NextRequest extends Request {
 /** Next.js style response */
 export interface NextResponse extends Response {
   cookies: {
-    set(name: string, value: string, options?: { path?: string; maxAge?: number; httpOnly?: boolean }): void;
+    set(
+      name: string,
+      value: string,
+      options?: { path?: string; maxAge?: number; httpOnly?: boolean },
+    ): void;
     delete(name: string): void;
   };
 }
@@ -52,7 +52,7 @@ export interface NextResponse extends Response {
 /** Next.js route handler signature */
 export type NextRouteHandler = (
   request: NextRequest,
-  context?: { params: Record<string, string | string[]> }
+  context?: { params: Record<string, string | string[]> },
 ) => Response | Promise<Response>;
 
 /** Next.js route module */
@@ -73,7 +73,10 @@ export interface NextRouteModule {
 /**
  * Adapt a standard Request to Next.js style NextRequest
  */
-export function adaptRequest(request: Request, params: Record<string, string>): NextRequest {
+export function adaptRequest(
+  request: Request,
+  params: Record<string, string>,
+): NextRequest {
   const url = new URL(request.url);
 
   // Create cookies accessor
@@ -96,7 +99,10 @@ export function adaptRequest(request: Request, params: Record<string, string>): 
         return value ? { value } : undefined;
       },
       getAll() {
-        return Object.entries(cookies).map(([name, value]) => ({ name, value }));
+        return Object.entries(cookies).map(([name, value]) => ({
+          name,
+          value,
+        }));
       },
     },
     writable: false,
@@ -144,7 +150,7 @@ function parseCookies(cookieHeader: string): Record<string, string> {
  * Wrap a Next.js route handler to work with Aeon context
  */
 export function adaptHandler<E extends AeonEnv = AeonEnv>(
-  handler: NextRouteHandler
+  handler: NextRouteHandler,
 ): (ctx: AeonContext<E>) => Promise<Response> {
   return async (ctx: AeonContext<E>): Promise<Response> => {
     const nextRequest = adaptRequest(ctx.request, ctx.params);
@@ -170,7 +176,7 @@ export function adaptHandler<E extends AeonEnv = AeonEnv>(
           error: 'Internal server error',
           message: error instanceof Error ? error.message : 'Unknown error',
         }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
       );
     }
   };
@@ -180,11 +186,20 @@ export function adaptHandler<E extends AeonEnv = AeonEnv>(
  * Adapt an entire Next.js route module
  */
 export function adaptRouteModule<E extends AeonEnv = AeonEnv>(
-  module: NextRouteModule
+  module: NextRouteModule,
 ): Record<string, (ctx: AeonContext<E>) => Promise<Response>> {
-  const adapted: Record<string, (ctx: AeonContext<E>) => Promise<Response>> = {};
+  const adapted: Record<string, (ctx: AeonContext<E>) => Promise<Response>> =
+    {};
 
-  const methods: (keyof NextRouteModule)[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+  const methods: (keyof NextRouteModule)[] = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'HEAD',
+    'OPTIONS',
+  ];
 
   for (const method of methods) {
     const handler = module[method];
@@ -216,7 +231,10 @@ export function json<T>(data: T, init?: ResponseInit): Response {
 /**
  * Create a NextResponse.redirect() compatible response
  */
-export function redirect(url: string | URL, status: 301 | 302 | 303 | 307 | 308 = 307): Response {
+export function redirect(
+  url: string | URL,
+  status: 301 | 302 | 303 | 307 | 308 = 307,
+): Response {
   return new Response(null, {
     status,
     headers: { Location: url.toString() },

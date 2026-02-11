@@ -32,15 +32,13 @@ const esiCache = new Map<string, CacheEntry>();
 function getCacheKey(directive: ESIDirective, context: UserContext): string {
   // Include context signals in cache key if context-aware
   const contextParts = directive.contextAware
-    ? [
-        context.tier,
-        context.emotionState?.primary,
-        context.localHour,
-      ].join(':')
+    ? [context.tier, context.emotionState?.primary, context.localHour].join(':')
     : '';
 
-  return directive.cacheKey ||
-    `esi:${directive.params.model}:${directive.content.value}:${contextParts}`;
+  return (
+    directive.cacheKey ||
+    `esi:${directive.params.model}:${directive.content.value}:${contextParts}`
+  );
 }
 
 function getCached(key: string): ESIResult | null {
@@ -68,14 +66,17 @@ function setCache(key: string, result: ESIResult, ttl: number): void {
 function interpolatePrompt(
   content: ESIContent,
   context: UserContext,
-  signals: string[] = []
+  signals: string[] = [],
 ): string {
   let prompt = content.value;
 
   // Replace template variables
   if (content.type === 'template' && content.variables) {
     for (const [key, value] of Object.entries(content.variables)) {
-      prompt = prompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
+      prompt = prompt.replace(
+        new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+        String(value),
+      );
     }
   }
 
@@ -86,29 +87,36 @@ function interpolatePrompt(
     if (signals.includes('emotion') && context.emotionState) {
       contextParts.push(
         `User emotion: ${context.emotionState.primary} ` +
-        `(valence: ${context.emotionState.valence.toFixed(2)}, ` +
-        `arousal: ${context.emotionState.arousal.toFixed(2)})`
+          `(valence: ${context.emotionState.valence.toFixed(2)}, ` +
+          `arousal: ${context.emotionState.arousal.toFixed(2)})`,
       );
     }
 
-    if (signals.includes('preferences') && Object.keys(context.preferences).length > 0) {
-      contextParts.push(`User preferences: ${JSON.stringify(context.preferences)}`);
+    if (
+      signals.includes('preferences') &&
+      Object.keys(context.preferences).length > 0
+    ) {
+      contextParts.push(
+        `User preferences: ${JSON.stringify(context.preferences)}`,
+      );
     }
 
     if (signals.includes('history') && context.recentPages.length > 0) {
-      contextParts.push(`Recent pages: ${context.recentPages.slice(-5).join(', ')}`);
+      contextParts.push(
+        `Recent pages: ${context.recentPages.slice(-5).join(', ')}`,
+      );
     }
 
     if (signals.includes('time')) {
       contextParts.push(
-        `Local time: ${context.localHour}:00, Timezone: ${context.timezone}`
+        `Local time: ${context.localHour}:00, Timezone: ${context.timezone}`,
       );
     }
 
     if (signals.includes('device')) {
       contextParts.push(
         `Device: ${context.viewport.width}x${context.viewport.height}, ` +
-        `Connection: ${context.connection}`
+          `Connection: ${context.connection}`,
       );
     }
 
@@ -127,7 +135,7 @@ function interpolatePrompt(
 function checkTierAccess(
   directive: ESIDirective,
   context: UserContext,
-  config: ESIConfig
+  config: ESIConfig,
 ): { allowed: boolean; reason?: string } {
   const tierLimits = config.tierLimits?.[context.tier];
   if (!tierLimits) {
@@ -143,7 +151,10 @@ function checkTierAccess(
   }
 
   // Check token limit
-  if (directive.params.maxTokens && directive.params.maxTokens > tierLimits.maxTokens) {
+  if (
+    directive.params.maxTokens &&
+    directive.params.maxTokens > tierLimits.maxTokens
+  ) {
     return {
       allowed: false,
       reason: `Token limit ${directive.params.maxTokens} exceeds ${context.tier} tier max of ${tierLimits.maxTokens}`,
@@ -182,13 +193,14 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
 
       // Ping the endpoint to warm up models
       await Promise.all(
-        this.config.warmupModels.map(model =>
-          fetch(`${this.config.endpoint}/api/warmup`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model }),
-          }).catch(() => {}) // Ignore warmup failures
-        )
+        this.config.warmupModels.map(
+          (model) =>
+            fetch(`${this.config.endpoint}/api/warmup`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model }),
+            }).catch(() => {}), // Ignore warmup failures
+        ),
       );
     })();
 
@@ -197,12 +209,21 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
 
   isModelAvailable(model: ESIModel): boolean {
     // All models available through edge-workers
-    return ['llm', 'embed', 'vision', 'tts', 'stt', 'emotion', 'classify', 'custom'].includes(model);
+    return [
+      'llm',
+      'embed',
+      'vision',
+      'tts',
+      'stt',
+      'emotion',
+      'classify',
+      'custom',
+    ].includes(model);
   }
 
   async process(
     directive: ESIDirective,
-    context: UserContext
+    context: UserContext,
   ): Promise<ESIResult> {
     const startTime = Date.now();
 
@@ -268,7 +289,7 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
 
   async processBatch(
     directives: ESIDirective[],
-    context: UserContext
+    context: UserContext,
   ): Promise<ESIResult[]> {
     // Process with controlled concurrency
     const semaphore = new Semaphore(this.config.maxConcurrent);
@@ -281,14 +302,14 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
         } finally {
           semaphore.release();
         }
-      })
+      }),
     );
   }
 
   async stream(
     directive: ESIDirective,
     context: UserContext,
-    onChunk: (chunk: string) => void
+    onChunk: (chunk: string) => void,
   ): Promise<ESIResult> {
     const startTime = Date.now();
 
@@ -324,7 +345,9 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
             system: directive.params.system,
           },
         }),
-        signal: AbortSignal.timeout(directive.params.timeout ?? this.config.timeout),
+        signal: AbortSignal.timeout(
+          directive.params.timeout ?? this.config.timeout,
+        ),
       });
 
       if (!response.ok) {
@@ -382,7 +405,7 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
 
   private async callEdgeWorkers(
     directive: ESIDirective,
-    prompt: string
+    prompt: string,
   ): Promise<ESIResult> {
     const endpoint = this.getEndpointForModel(directive.params.model);
 
@@ -390,7 +413,9 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(this.buildRequestBody(directive, prompt)),
-      signal: AbortSignal.timeout(directive.params.timeout ?? this.config.timeout),
+      signal: AbortSignal.timeout(
+        directive.params.timeout ?? this.config.timeout,
+      ),
     });
 
     if (!response.ok) {
@@ -398,25 +423,37 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
       throw new Error(`ESI inference failed: ${response.status} - ${error}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     return this.parseResponse(directive, data);
   }
 
   private getEndpointForModel(model: ESIModel): string {
     switch (model) {
-      case 'llm': return '/api/llm/infer';
-      case 'embed': return '/api/embed';
-      case 'vision': return '/api/vision';
-      case 'tts': return '/api/tts';
-      case 'stt': return '/api/stt';
-      case 'emotion': return '/api/emotion';
-      case 'classify': return '/api/classify';
-      case 'custom': return '/api/custom';
-      default: return '/api/llm/infer';
+      case 'llm':
+        return '/api/llm/infer';
+      case 'embed':
+        return '/api/embed';
+      case 'vision':
+        return '/api/vision';
+      case 'tts':
+        return '/api/tts';
+      case 'stt':
+        return '/api/stt';
+      case 'emotion':
+        return '/api/emotion';
+      case 'classify':
+        return '/api/classify';
+      case 'custom':
+        return '/api/custom';
+      default:
+        return '/api/llm/infer';
     }
   }
 
-  private buildRequestBody(directive: ESIDirective, prompt: string): Record<string, unknown> {
+  private buildRequestBody(
+    directive: ESIDirective,
+    prompt: string,
+  ): Record<string, unknown> {
     const { params, content } = directive;
 
     const body: Record<string, unknown> = {
@@ -443,7 +480,10 @@ export class EdgeWorkersESIProcessor implements ESIProcessor {
     return body;
   }
 
-  private parseResponse(directive: ESIDirective, data: Record<string, unknown>): ESIResult {
+  private parseResponse(
+    directive: ESIDirective,
+    data: Record<string, unknown>,
+  ): ESIResult {
     const base: ESIResult = {
       id: directive.id,
       success: true,
@@ -508,7 +548,7 @@ class Semaphore {
  */
 export function esiInfer(
   prompt: string,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIDirective {
   return {
     id: `esi-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -554,7 +594,7 @@ export function esiEmotion(text: string, contextAware = true): ESIDirective {
 export function esiVision(
   base64Image: string,
   prompt: string,
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIDirective {
   return {
     id: `esi-vision-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -574,7 +614,7 @@ export function esiVision(
 export function esiWithContext(
   prompt: string,
   signals: ESIDirective['signals'] = ['emotion', 'preferences', 'time'],
-  options: Partial<ESIParams> = {}
+  options: Partial<ESIParams> = {},
 ): ESIDirective {
   return {
     id: `esi-ctx-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,

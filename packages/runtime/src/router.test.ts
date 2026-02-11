@@ -110,7 +110,9 @@ describe('AeonRouter', () => {
       // With segments
       const matchWithSlug = router.match('/docs/getting-started/installation');
       expect(matchWithSlug).not.toBeNull();
-      expect(matchWithSlug!.params).toEqual({ slug: 'getting-started/installation' });
+      expect(matchWithSlug!.params).toEqual({
+        slug: 'getting-started/installation',
+      });
 
       // Without segments (optional)
       const matchWithoutSlug = router.match('/docs');
@@ -215,9 +217,9 @@ describe('AeonRouter', () => {
       const routes = router.getRoutes();
 
       expect(routes).toHaveLength(3);
-      expect(routes.map(r => r.pattern)).toContain('/');
-      expect(routes.map(r => r.pattern)).toContain('/about');
-      expect(routes.map(r => r.pattern)).toContain('/blog/[slug]');
+      expect(routes.map((r) => r.pattern)).toContain('/');
+      expect(routes.map((r) => r.pattern)).toContain('/about');
+      expect(routes.map((r) => r.pattern)).toContain('/blog/[slug]');
     });
   });
 
@@ -360,24 +362,26 @@ describe('AeonRouter file scanning', () => {
     // Create test pages directory structure
     await mkdir(join(testPagesDir, 'blog', '[slug]'), { recursive: true });
     await mkdir(join(testPagesDir, 'about'), { recursive: true });
-    await mkdir(join(testPagesDir, '(marketing)', 'landing'), { recursive: true });
+    await mkdir(join(testPagesDir, '(marketing)', 'landing'), {
+      recursive: true,
+    });
 
     // Create page files
     await writeFile(
       join(testPagesDir, 'page.tsx'),
-      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`
+      `'use aeon';\nexport default function Home() { return <div>Home</div>; }`,
     );
     await writeFile(
       join(testPagesDir, 'about', 'page.tsx'),
-      `export default function About() { return <div>About</div>; }`
+      `export default function About() { return <div>About</div>; }`,
     );
     await writeFile(
       join(testPagesDir, 'blog', '[slug]', 'page.tsx'),
-      `'use aeon';\nexport default function BlogPost() { return <div>Blog</div>; }`
+      `'use aeon';\nexport default function BlogPost() { return <div>Blog</div>; }`,
     );
     await writeFile(
       join(testPagesDir, '(marketing)', 'landing', 'page.tsx'),
-      `"use aeon";\nexport default function Landing() { return <div>Landing</div>; }`
+      `"use aeon";\nexport default function Landing() { return <div>Landing</div>; }`,
     );
 
     router = new AeonRouter({ routesDir: testPagesDir });
@@ -447,7 +451,7 @@ describe('AeonRouter file scanning', () => {
     await mkdir(join(testPagesDir, 'contact'), { recursive: true });
     await writeFile(
       join(testPagesDir, 'contact', 'page.tsx'),
-      `export default function Contact() { return <div>Contact</div>; }`
+      `export default function Contact() { return <div>Contact</div>; }`,
     );
 
     await router.reload();

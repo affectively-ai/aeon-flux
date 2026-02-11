@@ -20,13 +20,16 @@ import type {
 function parseCookies(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) return {};
 
-  return cookieHeader.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    if (key && value) {
-      acc[key] = decodeURIComponent(value);
-    }
-    return acc;
-  }, {} as Record<string, string>);
+  return cookieHeader.split(';').reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      if (key && value) {
+        acc[key] = decodeURIComponent(value);
+      }
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 }
 
 function parseJSON<T>(value: string | undefined, fallback: T): T {
@@ -86,10 +89,14 @@ function extractConnection(request: Request): ConnectionType {
   // ECT header (if available)
   if (ect) {
     switch (ect) {
-      case '4g': return 'fast';
-      case '3g': return '3g';
-      case '2g': return '2g';
-      case 'slow-2g': return 'slow-2g';
+      case '4g':
+        return 'fast';
+      case '3g':
+        return '3g';
+      case '2g':
+        return '2g';
+      case 'slow-2g':
+        return 'slow-2g';
     }
   }
 
@@ -121,14 +128,19 @@ function extractConnection(request: Request): ConnectionType {
  * Extract reduced motion preference
  */
 function extractReducedMotion(request: Request): boolean {
-  const prefersReducedMotion = request.headers.get('sec-ch-prefers-reduced-motion');
+  const prefersReducedMotion = request.headers.get(
+    'sec-ch-prefers-reduced-motion',
+  );
   return prefersReducedMotion === 'reduce';
 }
 
 /**
  * Extract timezone and local hour
  */
-function extractTimeContext(request: Request): { timezone: string; localHour: number } {
+function extractTimeContext(request: Request): {
+  timezone: string;
+  localHour: number;
+} {
   const headers = request.headers;
 
   // Custom header from client
@@ -136,10 +148,13 @@ function extractTimeContext(request: Request): { timezone: string; localHour: nu
   const xLocalHour = headers.get('x-local-hour');
 
   // Cloudflare provides timezone in cf object
-  const cfTimezone = (request as Request & { cf?: { timezone?: string } }).cf?.timezone;
+  const cfTimezone = (request as Request & { cf?: { timezone?: string } }).cf
+    ?.timezone;
 
   const timezone = xTimezone || cfTimezone || 'UTC';
-  const localHour = xLocalHour ? parseInt(xLocalHour, 10) : new Date().getUTCHours();
+  const localHour = xLocalHour
+    ? parseInt(xLocalHour, 10)
+    : new Date().getUTCHours();
 
   return { timezone, localHour };
 }
@@ -160,10 +175,11 @@ export type AdminVerifier = (token: string) => Promise<boolean>;
  */
 function extractIdentity(
   cookies: Record<string, string>,
-  request: Request
+  request: Request,
 ): { userId?: string; tier: UserTier; authToken?: string } {
   // User ID from cookie or header
-  const userId = cookies['user_id'] || request.headers.get('x-user-id') || undefined;
+  const userId =
+    cookies['user_id'] || request.headers.get('x-user-id') || undefined;
 
   // Tier from cookie, header, or default
   const tierCookie = cookies['user_tier'] as UserTier | undefined;
@@ -171,9 +187,10 @@ function extractIdentity(
   const tier = tierCookie || tierHeader || 'free';
 
   // Auth token for admin verification (DO NOT trust cookies for admin status!)
-  const authToken = cookies['auth_token'] ||
-                    request.headers.get('authorization')?.replace('Bearer ', '') ||
-                    undefined;
+  const authToken =
+    cookies['auth_token'] ||
+    request.headers.get('authorization')?.replace('Bearer ', '') ||
+    undefined;
 
   return { userId, tier, authToken };
 }
@@ -187,7 +204,10 @@ function extractNavigationHistory(cookies: Record<string, string>): {
   clickPatterns: string[];
 } {
   const recentPages = parseJSON<string[]>(cookies['recent_pages'], []);
-  const dwellTimesObj = parseJSON<Record<string, number>>(cookies['dwell_times'], {});
+  const dwellTimesObj = parseJSON<Record<string, number>>(
+    cookies['dwell_times'],
+    {},
+  );
   const clickPatterns = parseJSON<string[]>(cookies['click_patterns'], []);
 
   return {
@@ -202,7 +222,7 @@ function extractNavigationHistory(cookies: Record<string, string>): {
  */
 function extractEmotionState(
   cookies: Record<string, string>,
-  request: Request
+  request: Request,
 ): EmotionState | undefined {
   // Check custom header first (set by edge-workers inference)
   const xEmotion = request.headers.get('x-emotion-state');
@@ -222,7 +242,9 @@ function extractEmotionState(
 /**
  * Extract user preferences from cookies
  */
-function extractPreferences(cookies: Record<string, string>): Record<string, unknown> {
+function extractPreferences(
+  cookies: Record<string, string>,
+): Record<string, unknown> {
   return parseJSON<Record<string, unknown>>(cookies['user_preferences'], {});
 }
 
@@ -271,7 +293,7 @@ export interface ContextExtractorOptions {
  */
 export async function extractUserContext(
   request: Request,
-  options: ContextExtractorOptions = {}
+  options: ContextExtractorOptions = {},
 ): Promise<UserContext> {
   const cookies = parseCookies(request.headers.get('cookie'));
 
@@ -280,10 +302,16 @@ export async function extractUserContext(
   const connection = extractConnection(request);
   const reducedMotion = extractReducedMotion(request);
   const { timezone, localHour } = extractTimeContext(request);
-  const { userId, tier: initialTier, authToken } = extractIdentity(cookies, request);
-  const { recentPages, dwellTimes, clickPatterns } = extractNavigationHistory(cookies);
+  const {
+    userId,
+    tier: initialTier,
+    authToken,
+  } = extractIdentity(cookies, request);
+  const { recentPages, dwellTimes, clickPatterns } =
+    extractNavigationHistory(cookies);
   const preferences = extractPreferences(cookies);
-  const { sessionId, isNewSession, sessionStartedAt } = extractSessionInfo(cookies);
+  const { sessionId, isNewSession, sessionStartedAt } =
+    extractSessionInfo(cookies);
 
   // Resolve user tier if we have a resolver and userId
   let tier = initialTier;
@@ -364,7 +392,7 @@ export function createContextMiddleware(options: ContextExtractorOptions = {}) {
 export function setContextCookies(
   response: Response,
   context: UserContext,
-  currentPath: string
+  currentPath: string,
 ): Response {
   const headers = new Headers(response.headers);
 
@@ -372,7 +400,7 @@ export function setContextCookies(
   const recentPages = [...context.recentPages.slice(-9), currentPath];
   headers.append(
     'Set-Cookie',
-    `recent_pages=${encodeURIComponent(JSON.stringify(recentPages))}; Path=/; Max-Age=604800; SameSite=Lax`
+    `recent_pages=${encodeURIComponent(JSON.stringify(recentPages))}; Path=/; Max-Age=604800; SameSite=Lax`,
   );
 
   // Set session cookie if new session
@@ -380,11 +408,11 @@ export function setContextCookies(
     const sessionId = `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
     headers.append(
       'Set-Cookie',
-      `session_id=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax`
+      `session_id=${sessionId}; Path=/; Max-Age=86400; SameSite=Lax`,
     );
     headers.append(
       'Set-Cookie',
-      `session_started=${new Date().toISOString()}; Path=/; Max-Age=86400; SameSite=Lax`
+      `session_started=${new Date().toISOString()}; Path=/; Max-Age=86400; SameSite=Lax`,
     );
   }
 
@@ -401,7 +429,7 @@ export function setContextCookies(
 export function addSpeculationHeaders(
   response: Response,
   prefetch: string[],
-  prerender: string[]
+  prerender: string[],
 ): Response {
   const headers = new Headers(response.headers);
 
@@ -542,12 +570,14 @@ export function serializeToESIState(context: UserContext): ESIState {
   return {
     userTier: context.tier,
     isAdmin: context.isAdmin,
-    emotionState: context.emotionState ? {
-      primary: context.emotionState.primary,
-      valence: context.emotionState.valence,
-      arousal: context.emotionState.arousal,
-      confidence: context.emotionState.confidence,
-    } : undefined,
+    emotionState: context.emotionState
+      ? {
+          primary: context.emotionState.primary,
+          valence: context.emotionState.valence,
+          arousal: context.emotionState.arousal,
+          confidence: context.emotionState.confidence,
+        }
+      : undefined,
     preferences: {
       theme: context.preferences.theme as 'light' | 'dark' | 'auto' | undefined,
       reducedMotion: context.reducedMotion,
@@ -580,7 +610,9 @@ export function generateESIStateScript(esiState: ESIState): string {
 /**
  * Generate ESI state script from UserContext
  */
-export function generateESIStateScriptFromContext(context: UserContext): string {
+export function generateESIStateScriptFromContext(
+  context: UserContext,
+): string {
   const esiState = serializeToESIState(context);
   return generateESIStateScript(esiState);
 }
@@ -613,7 +645,7 @@ export function createAdminVerifier<T>(
     }) => Promise<boolean>;
   },
   adminCapability: T = 'admin' as T,
-  adminResource: string = '*'
+  adminResource: string = '*',
 ): AdminVerifier {
   return async (token: string): Promise<boolean> => {
     try {

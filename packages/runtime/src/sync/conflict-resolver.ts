@@ -48,16 +48,16 @@ export interface ConflictStats {
   resolvedConflicts: number;
   unresolvedConflicts: number;
   conflictsByType: {
-    'update_update': number;
-    'delete_update': number;
-    'update_delete': number;
-    'concurrent': number;
+    update_update: number;
+    delete_update: number;
+    update_delete: number;
+    concurrent: number;
   };
   resolutionsByStrategy: {
     'local-wins': number;
     'remote-wins': number;
-    'merge': number;
-    'manual': number;
+    merge: number;
+    manual: number;
     'last-modified': number;
   };
   averageResolutionTimeMs: number;
@@ -69,7 +69,9 @@ export interface ConflictStats {
 
 type EventHandler<T> = (data: T) => void;
 
-class EventEmitter<Events extends Record<string, unknown> = Record<string, unknown>> {
+class EventEmitter<
+  Events extends Record<string, unknown> = Record<string, unknown>,
+> {
   private handlers = new Map<string, Set<EventHandler<unknown>>>();
 
   on<K extends keyof Events>(event: K, handler: EventHandler<Events[K]>): void {
@@ -80,8 +82,13 @@ class EventEmitter<Events extends Record<string, unknown> = Record<string, unkno
     this.handlers.get(key)!.add(handler as EventHandler<unknown>);
   }
 
-  off<K extends keyof Events>(event: K, handler: EventHandler<Events[K]>): void {
-    this.handlers.get(event as string)?.delete(handler as EventHandler<unknown>);
+  off<K extends keyof Events>(
+    event: K,
+    handler: EventHandler<Events[K]>,
+  ): void {
+    this.handlers
+      .get(event as string)
+      ?.delete(handler as EventHandler<unknown>);
   }
 
   emit<K extends keyof Events>(event: K, data?: Events[K]): void {
@@ -108,7 +115,10 @@ const DEFAULT_CONFIG: ConflictResolverConfig = {
 
 export class ConflictResolver extends EventEmitter<{
   'conflict:detected': StoredConflict;
-  'conflict:resolved': { conflict: StoredConflict; strategy: ResolutionStrategy };
+  'conflict:resolved': {
+    conflict: StoredConflict;
+    strategy: ResolutionStrategy;
+  };
   'config:updated': ConflictResolverConfig;
 }> {
   private conflicts: Map<string, StoredConflict> = new Map();
@@ -121,16 +131,16 @@ export class ConflictResolver extends EventEmitter<{
     resolvedConflicts: 0,
     unresolvedConflicts: 0,
     conflictsByType: {
-      'update_update': 0,
-      'delete_update': 0,
-      'update_delete': 0,
-      'concurrent': 0,
+      update_update: 0,
+      delete_update: 0,
+      update_delete: 0,
+      concurrent: 0,
     },
     resolutionsByStrategy: {
       'local-wins': 0,
       'remote-wins': 0,
-      'merge': 0,
-      'manual': 0,
+      merge: 0,
+      manual: 0,
       'last-modified': 0,
     },
     averageResolutionTimeMs: 0,
@@ -146,7 +156,7 @@ export class ConflictResolver extends EventEmitter<{
    */
   detectConflict(
     localOp: OfflineOperation,
-    remoteOp: OfflineOperation
+    remoteOp: OfflineOperation,
   ): StoredConflict | null {
     // Same session, same or overlapping data = potential conflict
     if (localOp.sessionId !== remoteOp.sessionId) {
@@ -177,7 +187,10 @@ export class ConflictResolver extends EventEmitter<{
     const severity = this.calculateSeverity(conflictType, localOp, remoteOp);
 
     // Find conflicting fields
-    const conflictingFields = this.findConflictingFields(localOp.data, remoteOp.data);
+    const conflictingFields = this.findConflictingFields(
+      localOp.data,
+      remoteOp.data,
+    );
 
     const conflict: StoredConflict = {
       id: `conflict-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -222,7 +235,7 @@ export class ConflictResolver extends EventEmitter<{
   private calculateSeverity(
     conflictType: ConflictDetectionResult['type'],
     localOp: OfflineOperation,
-    remoteOp: OfflineOperation
+    remoteOp: OfflineOperation,
   ): 'low' | 'medium' | 'high' {
     // Delete conflicts are high severity
     if (conflictType === 'delete_update' || conflictType === 'update_delete') {
@@ -231,7 +244,10 @@ export class ConflictResolver extends EventEmitter<{
 
     // Update-update conflicts with significant data differences are high severity
     if (conflictType === 'update_update') {
-      const similarity = this.calculateDataSimilarity(localOp.data, remoteOp.data);
+      const similarity = this.calculateDataSimilarity(
+        localOp.data,
+        remoteOp.data,
+      );
       if (similarity < 30) {
         return 'high';
       } else if (similarity < 60) {
@@ -255,10 +271,10 @@ export class ConflictResolver extends EventEmitter<{
 
       // Simple character overlap calculation
       const commonChars = Array.from(str1).filter((char) =>
-        str2.includes(char)
+        str2.includes(char),
       ).length;
       return Math.round(
-        (commonChars / Math.max(str1.length, str2.length)) * 100
+        (commonChars / Math.max(str1.length, str2.length)) * 100,
       );
     } catch {
       return 0;
@@ -270,7 +286,7 @@ export class ConflictResolver extends EventEmitter<{
    */
   private findConflictingFields(
     data1: Record<string, unknown>,
-    data2: Record<string, unknown>
+    data2: Record<string, unknown>,
   ): string[] {
     const conflicts: string[] = [];
     const allKeys = new Set([...Object.keys(data1), ...Object.keys(data2)]);
@@ -300,7 +316,7 @@ export class ConflictResolver extends EventEmitter<{
     if (conflict.type === 'update_update') {
       const similarity = this.calculateDataSimilarity(
         conflict.localData,
-        conflict.remoteData
+        conflict.remoteData,
       );
       return similarity > this.config.mergeThreshold;
     }
@@ -313,7 +329,7 @@ export class ConflictResolver extends EventEmitter<{
    */
   resolveConflict(
     conflictId: string,
-    strategy?: ResolutionStrategy
+    strategy?: ResolutionStrategy,
   ): StoredConflict['resolution'] | null {
     const conflict = this.conflicts.get(conflictId);
     if (!conflict) {
@@ -344,7 +360,10 @@ export class ConflictResolver extends EventEmitter<{
 
       case 'merge':
         if (this.config.enableAutoMerge && conflict.type === 'update_update') {
-          resolvedData = this.attemptMerge(conflict.localData, conflict.remoteData);
+          resolvedData = this.attemptMerge(
+            conflict.localData,
+            conflict.remoteData,
+          );
           winner = 'merged';
         } else {
           // Fall back to local-wins
@@ -393,7 +412,7 @@ export class ConflictResolver extends EventEmitter<{
    */
   private attemptMerge(
     data1: Record<string, unknown>,
-    data2: Record<string, unknown>
+    data2: Record<string, unknown>,
   ): Record<string, unknown> {
     const merged: Record<string, unknown> = { ...data1 };
 
@@ -410,7 +429,7 @@ export class ConflictResolver extends EventEmitter<{
         // Recursive merge for nested objects
         merged[key] = this.attemptMerge(
           merged[key] as Record<string, unknown>,
-          data2[key] as Record<string, unknown>
+          data2[key] as Record<string, unknown>,
         );
       }
       // For conflicting primitive values, keep local (data1)
@@ -448,7 +467,7 @@ export class ConflictResolver extends EventEmitter<{
    */
   getHighSeverityConflicts(): StoredConflict[] {
     return Array.from(this.conflicts.values()).filter(
-      (c) => !c.resolution && c.severity === 'high'
+      (c) => !c.resolution && c.severity === 'high',
     );
   }
 
@@ -493,16 +512,16 @@ export class ConflictResolver extends EventEmitter<{
       resolvedConflicts: 0,
       unresolvedConflicts: 0,
       conflictsByType: {
-        'update_update': 0,
-        'delete_update': 0,
-        'update_delete': 0,
-        'concurrent': 0,
+        update_update: 0,
+        delete_update: 0,
+        update_delete: 0,
+        concurrent: 0,
       },
       resolutionsByStrategy: {
         'local-wins': 0,
         'remote-wins': 0,
-        'merge': 0,
-        'manual': 0,
+        merge: 0,
+        manual: 0,
         'last-modified': 0,
       },
       averageResolutionTimeMs: 0,
@@ -530,7 +549,7 @@ export function getConflictResolver(): ConflictResolver {
  * Create a new conflict resolver with custom configuration
  */
 export function createConflictResolver(
-  config?: Partial<ConflictResolverConfig>
+  config?: Partial<ConflictResolverConfig>,
 ): ConflictResolver {
   return new ConflictResolver(config);
 }

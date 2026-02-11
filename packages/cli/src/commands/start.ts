@@ -97,7 +97,9 @@ export async function start(options: StartOptions): Promise<void> {
   });
 
   console.log(`✨ Ready at http://localhost:${port}\n`);
-  console.log('   This is a local preview. In production, deploy to Cloudflare Workers.');
+  console.log(
+    '   This is a local preview. In production, deploy to Cloudflare Workers.',
+  );
   console.log('   Press Ctrl+C to stop\n');
 
   // Handle graceful shutdown
@@ -141,13 +143,13 @@ async function loadSeedData(outputDir: string): Promise<Map<string, Session>> {
 
     // Parse INSERT statements (simplified)
     const sessionInserts = content.match(
-      /INSERT OR REPLACE INTO sessions \(session_id, route, tree, data, schema_version\) VALUES \('([^']+)', '([^']+)', '(.+?)', '\{\}', '([^']+)'\);/g
+      /INSERT OR REPLACE INTO sessions \(session_id, route, tree, data, schema_version\) VALUES \('([^']+)', '([^']+)', '(.+?)', '\{\}', '([^']+)'\);/g,
     );
 
     if (sessionInserts) {
       for (const insert of sessionInserts) {
         const match = insert.match(
-          /VALUES \('([^']+)', '([^']+)', '(.+?)', '\{\}', '([^']+)'\)/
+          /VALUES \('([^']+)', '([^']+)', '(.+?)', '\{\}', '([^']+)'\)/,
         );
         if (match) {
           const [, sessionId, route, treeStr, version] = match;
@@ -177,7 +179,7 @@ interface RouteMatch {
 
 function matchRoute(
   path: string,
-  routes: RouteManifest['routes']
+  routes: RouteManifest['routes'],
 ): RouteMatch | null {
   const pathParts = path.split('/').filter(Boolean);
 
@@ -192,7 +194,7 @@ function matchRoute(
 
 function matchPattern(
   pathParts: string[],
-  pattern: string
+  pattern: string,
 ): Record<string, string> | null {
   const patternParts = pattern.split('/').filter(Boolean);
   const params: Record<string, string> = {};
@@ -233,7 +235,9 @@ function matchPattern(
     }
   }
 
-  return pi === pathParts.length && pati === patternParts.length ? params : null;
+  return pi === pathParts.length && pati === patternParts.length
+    ? params
+    : null;
 }
 
 function renderPage(session: Session, match: RouteMatch): string {
@@ -249,7 +253,9 @@ function renderPage(session: Session, match: RouteMatch): string {
 </head>
 <body>
   <div id="root">${html}</div>
-  ${match.isAeon ? `
+  ${
+    match.isAeon
+      ? `
   <script>
     window.__AEON_FLUX__ = {
       route: "${match.pattern}",
@@ -257,7 +263,9 @@ function renderPage(session: Session, match: RouteMatch): string {
       params: ${JSON.stringify(match.params)},
     };
   </script>
-  ` : ''}
+  `
+      : ''
+  }
 </body>
 </html>`;
 }

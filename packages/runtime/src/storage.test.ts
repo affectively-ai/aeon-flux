@@ -7,7 +7,11 @@ import {
   DashStorageAdapter,
   createStorageAdapter,
 } from './storage';
-import type { RouteDefinition, PageSession, SerializedComponent } from './types';
+import type {
+  RouteDefinition,
+  PageSession,
+  SerializedComponent,
+} from './types';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 
@@ -50,9 +54,24 @@ describe('FileStorageAdapter', () => {
 
     test('gets all routes', async () => {
       const routes: RouteDefinition[] = [
-        { pattern: '/', sessionId: 'index', componentId: 'index', isAeon: true },
-        { pattern: '/about', sessionId: 'about', componentId: 'about', isAeon: true },
-        { pattern: '/contact', sessionId: 'contact', componentId: 'contact', isAeon: false },
+        {
+          pattern: '/',
+          sessionId: 'index',
+          componentId: 'index',
+          isAeon: true,
+        },
+        {
+          pattern: '/about',
+          sessionId: 'about',
+          componentId: 'about',
+          isAeon: true,
+        },
+        {
+          pattern: '/contact',
+          sessionId: 'contact',
+          componentId: 'contact',
+          isAeon: false,
+        },
       ];
 
       for (const route of routes) {
@@ -62,7 +81,11 @@ describe('FileStorageAdapter', () => {
       const allRoutes = await adapter.getAllRoutes();
 
       expect(allRoutes).toHaveLength(3);
-      expect(allRoutes.map(r => r.pattern).sort()).toEqual(['/', '/about', '/contact']);
+      expect(allRoutes.map((r) => r.pattern).sort()).toEqual([
+        '/',
+        '/about',
+        '/contact',
+      ]);
     });
 
     test('deletes a route', async () => {
@@ -102,9 +125,7 @@ describe('FileStorageAdapter', () => {
         tree: {
           type: 'div',
           props: { className: 'container' },
-          children: [
-            { type: 'h1', props: {}, children: ['Hello World'] },
-          ],
+          children: [{ type: 'h1', props: {}, children: ['Hello World'] }],
         },
         data: { title: 'Test Page' },
         schema: { version: '1.0.0' },
@@ -144,9 +165,7 @@ describe('FileStorageAdapter', () => {
       const newTree: SerializedComponent = {
         type: 'div',
         props: { className: 'updated' },
-        children: [
-          { type: 'p', props: {}, children: ['Updated content'] },
-        ],
+        children: [{ type: 'p', props: {}, children: ['Updated content'] }],
       };
 
       await adapter.saveTree('tree-test', newTree);
@@ -179,31 +198,31 @@ describe('createStorageAdapter', () => {
 
   test('throws for d1 without database', () => {
     expect(() => createStorageAdapter({ type: 'd1' })).toThrow(
-      'D1 database required'
+      'D1 database required',
     );
   });
 
   test('throws for durable-object without namespace', () => {
     expect(() => createStorageAdapter({ type: 'durable-object' })).toThrow(
-      'Durable Object namespace required'
+      'Durable Object namespace required',
     );
   });
 
   test('throws for hybrid without both deps', () => {
     expect(() => createStorageAdapter({ type: 'hybrid' })).toThrow(
-      'Both Durable Object namespace and D1 database required'
+      'Both Durable Object namespace and D1 database required',
     );
   });
 
   test('throws for dash without client', () => {
     expect(() => createStorageAdapter({ type: 'dash' })).toThrow(
-      'Dash client required'
+      'Dash client required',
     );
   });
 
   test('throws for custom without adapter', () => {
     expect(() => createStorageAdapter({ type: 'custom' })).toThrow(
-      'Custom adapter required'
+      'Custom adapter required',
     );
   });
 
@@ -305,7 +324,7 @@ function createMockD1() {
               const sessionId = bindValues[0] as string;
               return {
                 results: Object.values(store.presence).filter(
-                  (p: any) => p.session_id === sessionId
+                  (p: any) => p.session_id === sessionId,
                 ),
               };
             }
@@ -314,7 +333,8 @@ function createMockD1() {
 
           async function run() {
             if (query.includes('INSERT OR REPLACE INTO routes')) {
-              const [path, pattern, session_id, component_id, layout, is_aeon] = bindValues;
+              const [path, pattern, session_id, component_id, layout, is_aeon] =
+                bindValues;
               store.routes[path as string] = {
                 path,
                 pattern,
@@ -325,7 +345,8 @@ function createMockD1() {
               };
             }
             if (query.includes('INSERT OR REPLACE INTO sessions')) {
-              const [session_id, route, tree, data, schema_version] = bindValues;
+              const [session_id, route, tree, data, schema_version] =
+                bindValues;
               store.sessions[session_id as string] = {
                 session_id,
                 route,
@@ -458,13 +479,23 @@ function createMockDONamespace() {
   const objects: Record<string, Record<string, unknown>> = {};
 
   return {
-    idFromName: (name: string) => ({ toString: () => name, equals: (o: any) => o.toString() === name }),
-    idFromString: (id: string) => ({ toString: () => id, equals: (o: any) => o.toString() === id }),
-    newUniqueId: () => ({ toString: () => `unique-${Date.now()}`, equals: () => false }),
+    idFromName: (name: string) => ({
+      toString: () => name,
+      equals: (o: any) => o.toString() === name,
+    }),
+    idFromString: (id: string) => ({
+      toString: () => id,
+      equals: (o: any) => o.toString() === id,
+    }),
+    newUniqueId: () => ({
+      toString: () => `unique-${Date.now()}`,
+      equals: () => false,
+    }),
     get: (id: { toString: () => string }) => ({
       id,
       fetch: async (input: RequestInfo, init?: RequestInit) => {
-        const request = typeof input === 'string' ? new Request(input, init) : input;
+        const request =
+          typeof input === 'string' ? new Request(input, init) : input;
         const url = new URL(request.url);
         const objectId = id.toString();
 
@@ -473,7 +504,10 @@ function createMockDONamespace() {
         }
 
         if (url.pathname === '/route' && request.method === 'POST') {
-          const body = await request.json() as { action: string; path: string };
+          const body = (await request.json()) as {
+            action: string;
+            path: string;
+          };
           if (body.action === 'get') {
             const route = objects['__routes__']?.[body.path];
             return new Response(route ? JSON.stringify(route) : 'null', {
@@ -490,7 +524,7 @@ function createMockDONamespace() {
         }
 
         if (url.pathname === '/route' && request.method === 'DELETE') {
-          const body = await request.json() as { path: string };
+          const body = (await request.json()) as { path: string };
           if (objects['__routes__']) {
             delete objects['__routes__'][body.path];
           }
@@ -498,7 +532,9 @@ function createMockDONamespace() {
         }
 
         if (url.pathname === '/routes' && request.method === 'GET') {
-          const routes = objects['__routes__'] ? Object.values(objects['__routes__']) : [];
+          const routes = objects['__routes__']
+            ? Object.values(objects['__routes__'])
+            : [];
           return new Response(JSON.stringify(routes));
         }
 
@@ -663,7 +699,7 @@ describe('HybridStorageAdapter', () => {
 
     await adapter.deleteRoute('/hybrid-delete');
     // Wait for async propagation
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     // Should complete without error
   });
 
@@ -693,7 +729,10 @@ describe('HybridStorageAdapter', () => {
     };
 
     await adapter.saveSession(session);
-    await adapter.saveTree('hybrid-tree-test', { type: 'span', children: ['new'] });
+    await adapter.saveTree('hybrid-tree-test', {
+      type: 'span',
+      children: ['new'],
+    });
 
     const tree = await adapter.getTree('hybrid-tree-test');
     expect(tree).not.toBeNull();
@@ -716,8 +755,12 @@ function createMockDashClient() {
   let connected = false;
 
   return {
-    connect: async () => { connected = true; },
-    disconnect: async () => { connected = false; },
+    connect: async () => {
+      connected = true;
+    },
+    disconnect: async () => {
+      connected = false;
+    },
     isConnected: () => connected,
     get: async <T>(collection: string, id: string): Promise<T | null> => {
       return (collections[collection]?.[id] as T) ?? null;
@@ -854,11 +897,14 @@ describe('DashStorageAdapter', () => {
       },
     };
 
-    const adapterWithPresence = new DashStorageAdapter(mockWithPresence as any, {
-      routesCollection: 'test-routes',
-      sessionsCollection: 'test-sessions',
-      presenceCollection: 'test-presence',
-    });
+    const adapterWithPresence = new DashStorageAdapter(
+      mockWithPresence as any,
+      {
+        routesCollection: 'test-routes',
+        sessionsCollection: 'test-sessions',
+        presenceCollection: 'test-presence',
+      },
+    );
     await adapterWithPresence.init();
 
     const session = await adapterWithPresence.getSession('with-presence');
@@ -940,8 +986,20 @@ describe('D1StorageAdapter - advanced', () => {
   test('getAllRoutes returns properly mapped routes', async () => {
     // Create a more complete mock that returns actual data
     const routes = [
-      { pattern: '/a', session_id: 'a', component_id: 'a', layout: null, is_aeon: 1 },
-      { pattern: '/b', session_id: 'b', component_id: 'b', layout: 'main', is_aeon: 0 },
+      {
+        pattern: '/a',
+        session_id: 'a',
+        component_id: 'a',
+        layout: null,
+        is_aeon: 1,
+      },
+      {
+        pattern: '/b',
+        session_id: 'b',
+        component_id: 'b',
+        layout: 'main',
+        is_aeon: 0,
+      },
     ];
 
     const mockDb = {
@@ -1002,12 +1060,16 @@ describe('D1StorageAdapter - advanced', () => {
       exec: async () => {},
       prepare: (query: string) => ({
         bind: () => ({
-          first: async () => query.includes('sessions') ? sessionData : null,
-          all: async () => ({ results: query.includes('presence') ? presenceData : [] }),
+          first: async () => (query.includes('sessions') ? sessionData : null),
+          all: async () => ({
+            results: query.includes('presence') ? presenceData : [],
+          }),
           run: async () => {},
         }),
-        first: async () => query.includes('sessions') ? sessionData : null,
-        all: async () => ({ results: query.includes('presence') ? presenceData : [] }),
+        first: async () => (query.includes('sessions') ? sessionData : null),
+        all: async () => ({
+          results: query.includes('presence') ? presenceData : [],
+        }),
         run: async () => {},
       }),
     };
@@ -1033,11 +1095,15 @@ describe('HybridStorageAdapter - propagation', () => {
         bind: () => ({
           first: async () => null,
           all: async () => ({ results: [] }),
-          run: async () => { throw new Error('D1 error'); },
+          run: async () => {
+            throw new Error('D1 error');
+          },
         }),
         first: async () => null,
         all: async () => ({ results: [] }),
-        run: async () => { throw new Error('D1 error'); },
+        run: async () => {
+          throw new Error('D1 error');
+        },
       }),
     };
 
@@ -1069,7 +1135,7 @@ describe('HybridStorageAdapter - propagation', () => {
     await adapter.saveTree('test', { type: 'span', children: [] });
 
     // Give time for async operations to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     // If we got here without throwing, the test passes
   });
 
@@ -1079,11 +1145,29 @@ describe('HybridStorageAdapter - propagation', () => {
       prepare: () => ({
         bind: () => ({
           first: async () => null,
-          all: async () => ({ results: [{ pattern: '/from-d1', session_id: 'd1', component_id: 'd1', is_aeon: 1 }] }),
+          all: async () => ({
+            results: [
+              {
+                pattern: '/from-d1',
+                session_id: 'd1',
+                component_id: 'd1',
+                is_aeon: 1,
+              },
+            ],
+          }),
           run: async () => {},
         }),
         first: async () => null,
-        all: async () => ({ results: [{ pattern: '/from-d1', session_id: 'd1', component_id: 'd1', is_aeon: 1 }] }),
+        all: async () => ({
+          results: [
+            {
+              pattern: '/from-d1',
+              session_id: 'd1',
+              component_id: 'd1',
+              is_aeon: 1,
+            },
+          ],
+        }),
         run: async () => {},
       }),
     };
@@ -1108,11 +1192,15 @@ describe('HybridStorageAdapter - propagation', () => {
         bind: () => ({
           first: async () => null,
           all: async () => ({ results: [] }),
-          run: async () => { d1Called = true; },
+          run: async () => {
+            d1Called = true;
+          },
         }),
         first: async () => null,
         all: async () => ({ results: [] }),
-        run: async () => { d1Called = true; },
+        run: async () => {
+          d1Called = true;
+        },
       }),
     };
 
@@ -1131,7 +1219,7 @@ describe('HybridStorageAdapter - propagation', () => {
     });
 
     // Wait a bit for async propagation
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(d1Called).toBe(true);
   });
 
@@ -1143,11 +1231,15 @@ describe('HybridStorageAdapter - propagation', () => {
         bind: () => ({
           first: async () => null,
           all: async () => ({ results: [] }),
-          run: async () => { d1Called = true; },
+          run: async () => {
+            d1Called = true;
+          },
         }),
         first: async () => null,
         all: async () => ({ results: [] }),
-        run: async () => { d1Called = true; },
+        run: async () => {
+          d1Called = true;
+        },
       }),
     };
 
@@ -1166,7 +1258,7 @@ describe('HybridStorageAdapter - propagation', () => {
       presence: [],
     });
 
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(d1Called).toBe(true);
   });
 
@@ -1178,11 +1270,15 @@ describe('HybridStorageAdapter - propagation', () => {
         bind: () => ({
           first: async () => null,
           all: async () => ({ results: [] }),
-          run: async () => { d1Called = true; },
+          run: async () => {
+            d1Called = true;
+          },
         }),
         first: async () => null,
         all: async () => ({ results: [] }),
-        run: async () => { d1Called = true; },
+        run: async () => {
+          d1Called = true;
+        },
       }),
     };
 
@@ -1195,7 +1291,7 @@ describe('HybridStorageAdapter - propagation', () => {
 
     await adapter.saveTree('hybrid-tree', { type: 'span', children: ['test'] });
 
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     // D1 propagation attempted (may fail silently which is expected)
   });
 });
