@@ -32,8 +32,11 @@ export interface PresenceScrollBarProps {
     localUserId?: string;
     height?: number;
     className?: string;
+    accentColor?: string;
+    markerLimit?: number;
+    showLegend?: boolean;
 }
-export declare function PresenceScrollBar({ presence, localUserId, height, className, }: PresenceScrollBarProps): import("react/jsx-runtime").JSX.Element;
+export declare function PresenceScrollBar({ presence, localUserId, height, className, accentColor, markerLimit, showLegend, }: PresenceScrollBarProps): import("react/jsx-runtime").JSX.Element;
 export interface PresenceViewportListProps {
     presence: PresenceUser[];
     localUserId?: string;
@@ -70,8 +73,11 @@ export interface PresenceElementsPanelProps {
     className?: string;
     showCursorLayer?: boolean;
     cursorLayerHeight?: number | string;
+    scrollBarAccentColor?: string;
+    scrollBarMarkerLimit?: number;
+    showScrollLegend?: boolean;
 }
-export declare function PresenceElementsPanel({ presence, localUserId, className, showCursorLayer, cursorLayerHeight, }: PresenceElementsPanelProps): import("react/jsx-runtime").JSX.Element;
+export declare function PresenceElementsPanel({ presence, localUserId, className, showCursorLayer, cursorLayerHeight, scrollBarAccentColor, scrollBarMarkerLimit, showScrollLegend, }: PresenceElementsPanelProps): import("react/jsx-runtime").JSX.Element;
 export interface CollaborativePresenceScrollContainerProps {
     children: ReactNode;
     presence: PresenceUser[];
@@ -79,6 +85,8 @@ export interface CollaborativePresenceScrollContainerProps {
     height?: number | string;
     className?: string;
     style?: CSSProperties;
+    accentColor?: string;
+    markerLimit?: number;
     onScrollStateChange?: (scroll: PresenceScroll) => void;
 }
-export declare function CollaborativePresenceScrollContainer({ children, presence, localUserId, height, className, style, onScrollStateChange, }: CollaborativePresenceScrollContainerProps): import("react/jsx-runtime").JSX.Element;
+export declare function CollaborativePresenceScrollContainer({ children, presence, localUserId, height, className, style, accentColor, markerLimit, onScrollStateChange, }: CollaborativePresenceScrollContainerProps): import("react/jsx-runtime").JSX.Element;

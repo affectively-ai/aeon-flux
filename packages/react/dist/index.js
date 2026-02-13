@@ -2980,6 +2980,7 @@ function OfflineDiagnostics({
 }
 // src/components/PresenceKit.tsx
 import {
+  useCallback as useCallback12,
   useEffect as useEffect11,
   useMemo as useMemo3,
   useRef as useRef5,
@@ -3040,6 +3041,127 @@ function panelStyle(base) {
     background: "#ffffff",
     ...base
   };
+}
+var DEFAULT_SCROLL_ACCENT = "#3b82f6";
+var DEFAULT_SCROLL_MARKER_LIMIT = 32;
+var SCROLL_DENSITY_BUCKETS = 16;
+var SCROLL_ACTIVITY_WINDOW_MS = 120000;
+var LOCAL_SCROLL_DEPTH_EPSILON = 0.0025;
+function hashLaneOffset(userId, laneSpacingPx = 4, laneCount = 5) {
+  if (laneCount <= 1) {
+    return 0;
+  }
+  let hash = 0;
+  for (let index = 0;index < userId.length; index += 1) {
+    hash = (hash << 5) - hash + userId.charCodeAt(index);
+    hash |= 0;
+  }
+  const lane = Math.abs(hash) % laneCount;
+  const centeredLane = lane - (laneCount - 1) / 2;
+  return Math.round(centeredLane * laneSpacingPx);
+}
+function computeScrollActivity(user, now) {
+  let activity = 0.15;
+  if (user.status === "online")
+    activity += 0.2;
+  if (user.status === "away")
+    activity += 0.06;
+  if (user.typing?.isTyping)
+    activity += 0.22;
+  if (user.focusNode)
+    activity += 0.12;
+  if (user.selection)
+    activity += 0.08;
+  if (user.inputState?.hasFocus)
+    activity += 0.1;
+  if (user.editing)
+    activity += 0.08;
+  if (user.emotion) {
+    const emotionIntensity = clampDepth(user.emotion.intensity ?? user.emotion.confidence ?? 0.3);
+    activity += 0.08 + emotionIntensity * 0.12;
+  }
+  const lastActivityAt = Date.parse(user.lastActivity);
+  if (!Number.isNaN(lastActivityAt)) {
+    const ageMs = Math.max(0, now - lastActivityAt);
+    const freshness = 1 - Math.min(1, ageMs / SCROLL_ACTIVITY_WINDOW_MS);
+    activity *= 0.35 + freshness * 0.65;
+  }
+  return clampDepth(activity);
+}
+function summarizeScrollSignal(user) {
+  const signals = [];
+  if (user.typing?.isTyping) {
+    signals.push("typing");
+  }
+  if (user.focusNode) {
+    signals.push("focused");
+  }
+  if (user.selection) {
+    signals.push("selecting");
+  }
+  if (user.inputState?.hasFocus) {
+    signals.push("editing");
+  }
+  if (user.emotion?.primary) {
+    signals.push(user.emotion.primary);
+  }
+  if (signals.length === 0) {
+    signals.push(user.status);
+  }
+  return signals.join(" · ");
+}
+function buildScrollSignals(presence, localUserId, markerLimit = DEFAULT_SCROLL_MARKER_LIMIT) {
+  const now = Date.now();
+  const normalizedLimit = Math.max(0, Math.trunc(markerLimit));
+  if (normalizedLimit === 0) {
+    return [];
+  }
+  const signals = presence.filter((user) => Boolean(user.scroll)).map((user) => {
+    const shortLabel = displayUser(user.userId);
+    return {
+      user,
+      userId: user.userId,
+      label: shortLabel,
+      shortLabel,
+      depth: clampDepth(user.scroll.depth),
+      color: hashColor(user.userId),
+      isLocal: user.userId === localUserId,
+      activity: computeScrollActivity(user, now),
+      laneOffsetPx: 0,
+      socialSignal: summarizeScrollSignal(user)
+    };
+  }).sort((left, right) => {
+    if (left.isLocal !== right.isLocal) {
+      return left.isLocal ? -1 : 1;
+    }
+    if (right.activity !== left.activity) {
+      return right.activity - left.activity;
+    }
+    return left.userId.localeCompare(right.userId);
+  }).slice(0, normalizedLimit);
+  return signals.map((signal, index) => ({
+    ...signal,
+    laneOffsetPx: signal.isLocal ? 0 : hashLaneOffset(signal.userId, 4, 5) + (index % 3 - 1)
+  }));
+}
+function buildScrollDensityMap(signals, bucketCount = SCROLL_DENSITY_BUCKETS) {
+  const buckets = Array.from({ length: bucketCount }, () => 0);
+  if (signals.length === 0) {
+    return buckets;
+  }
+  for (const signal of signals) {
+    const bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.round(signal.depth * (bucketCount - 1))));
+    const weight = 0.2 + signal.activity * 0.8;
+    buckets[bucketIndex] += weight;
+    if (bucketIndex > 0) {
+      buckets[bucketIndex - 1] += weight * 0.28;
+    }
+    if (bucketIndex < bucketCount - 1) {
+      buckets[bucketIndex + 1] += weight * 0.28;
+    }
+  }
+  const peak = Math.max(1, ...buckets);
+  return buckets.map((value) => clampDepth(value / peak));
 }
 function PresenceCursorLayer({
   presence,
@@ -3260,9 +3382,20 @@ function PresenceScrollBar({
   presence,
   localUserId,
   height = 220,
-  className
+  className,
+  accentColor = DEFAULT_SCROLL_ACCENT,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  showLegend = true
 }) {
-  const users = presence.filter((user) => user.scroll);
+  const signals = useMemo3(() => buildScrollSignals(presence, localUserId, markerLimit), [localUserId, markerLimit, presence]);
+  const trackSignals = useMemo3(() => [...signals].sort((left, right) => left.depth - right.depth), [signals]);
+  const density = useMemo3(() => buildScrollDensityMap(trackSignals), [trackSignals]);
+  const legendSignals = useMemo3(() => [...signals].sort((left, right) => {
+    if (right.activity !== left.activity) {
+      return right.activity - left.activity;
+    }
+    return left.depth - right.depth;
+  }).slice(0, 8), [signals]);
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
     style: panelStyle(),
@@ -3272,60 +3405,157 @@ function PresenceScrollBar({
         children: "Scroll Presence"
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6("div", {
-        style: { display: "flex", gap: 12 },
+        style: {
+          display: "grid",
+          gridTemplateColumns: showLegend ? "24px minmax(0, 1fr)" : "24px",
+          gap: 12,
+          alignItems: "start"
+        },
         children: [
           /* @__PURE__ */ jsxDEV6("div", {
             style: {
               position: "relative",
-              width: 12,
+              width: 24,
               height,
               borderRadius: 999,
-              background: "#e5e7eb",
+              background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, #f8fafc), #e5e7eb)`,
+              boxShadow: "inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 12px 20px rgba(15, 23, 42, 0.08)",
               overflow: "hidden"
             },
-            children: users.map((user) => {
-              const depth = clampDepth(user.scroll?.depth ?? 0);
-              const color = hashColor(user.userId);
-              const isLocal = user.userId === localUserId;
-              return /* @__PURE__ */ jsxDEV6("div", {
-                title: `${displayUser(user.userId)}: ${Math.round(depth * 100)}%`,
-                style: {
-                  position: "absolute",
-                  left: isLocal ? 0 : 1,
-                  right: isLocal ? 0 : 1,
-                  height: isLocal ? 4 : 3,
-                  top: `calc(${depth * 100}% - ${isLocal ? 2 : 1.5}px)`,
-                  borderRadius: 999,
-                  background: color
-                }
-              }, user.userId, false, undefined, this);
-            })
-          }, undefined, false, undefined, this),
-          /* @__PURE__ */ jsxDEV6("div", {
-            style: { display: "grid", gap: 6, fontSize: 12, flex: 1 },
-            children: users.length === 0 ? /* @__PURE__ */ jsxDEV6("div", {
+            children: [
+              density.map((value, index) => {
+                const top = index / density.length * 100;
+                const segmentHeight = 100 / density.length + 0.8;
+                return /* @__PURE__ */ jsxDEV6("span", {
+                  style: {
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: `${top.toFixed(3)}%`,
+                    height: `${segmentHeight.toFixed(3)}%`,
+                    background: `color-mix(in srgb, ${accentColor} ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
+                    opacity: (0.12 + value * 0.62).toFixed(3),
+                    pointerEvents: "none"
+                  }
+                }, `density-${index}`, false, undefined, this);
+              }),
+              trackSignals.map((signal) => {
+                const markerSize = 6 + signal.activity * (signal.isLocal ? 4 : 3.5);
+                const markerScale = 0.84 + signal.activity * 0.36;
+                const markerColor = signal.color;
+                const glowColor = `color-mix(in srgb, ${markerColor} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
+                return /* @__PURE__ */ jsxDEV6("span", {
+                  title: `${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`,
+                  style: {
+                    position: "absolute",
+                    left: `calc(50% + ${signal.laneOffsetPx}px)`,
+                    top: `${(signal.depth * 100).toFixed(3)}%`,
+                    width: markerSize,
+                    height: markerSize,
+                    transform: `translate(-50%, -50%) scale(${markerScale.toFixed(3)})`,
+                    borderRadius: 999,
+                    border: signal.isLocal ? `1px solid color-mix(in srgb, ${accentColor} 72%, #ffffff)` : "1px solid rgba(255,255,255,0.72)",
+                    background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${markerColor} 38%, #ffffff), ${markerColor})`,
+                    boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`
+                  }
+                }, signal.userId, false, undefined, this);
+              })
+            ]
+          }, undefined, true, undefined, this),
+          showLegend ? /* @__PURE__ */ jsxDEV6("div", {
+            style: { display: "grid", gap: 7, fontSize: 12, minWidth: 0 },
+            children: legendSignals.length === 0 ? /* @__PURE__ */ jsxDEV6("div", {
               style: { color: "#6b7280" },
               children: "No scroll telemetry yet"
-            }, undefined, false, undefined, this) : users.map((user) => {
-              const depth = clampDepth(user.scroll?.depth ?? 0);
+            }, undefined, false, undefined, this) : legendSignals.map((signal) => {
+              const depthPct = Math.round(signal.depth * 100);
+              const activityPct = Math.round(signal.activity * 100);
               return /* @__PURE__ */ jsxDEV6("div", {
-                style: { display: "flex", gap: 8 },
+                style: {
+                  display: "grid",
+                  gap: 3
+                },
                 children: [
-                  /* @__PURE__ */ jsxDEV6("span", {
-                    style: { fontWeight: 600, minWidth: 68 },
-                    children: displayUser(user.userId)
-                  }, undefined, false, undefined, this),
-                  /* @__PURE__ */ jsxDEV6("span", {
-                    style: { color: "#6b7280" },
+                  /* @__PURE__ */ jsxDEV6("div", {
+                    style: {
+                      display: "grid",
+                      gridTemplateColumns: "minmax(64px, auto) minmax(0, 1fr) auto",
+                      gap: 8,
+                      alignItems: "center",
+                      minWidth: 0
+                    },
                     children: [
-                      Math.round(depth * 100),
-                      "%"
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        style: {
+                          fontWeight: signal.isLocal ? 700 : 600,
+                          color: signal.isLocal ? "#111827" : "#1f2937",
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        },
+                        children: signal.shortLabel
+                      }, undefined, false, undefined, this),
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        style: {
+                          position: "relative",
+                          height: 5,
+                          borderRadius: 999,
+                          background: "#e5e7eb",
+                          overflow: "hidden"
+                        },
+                        children: /* @__PURE__ */ jsxDEV6("span", {
+                          style: {
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: `${Math.max(6, depthPct)}%`,
+                            borderRadius: 999,
+                            background: signal.color
+                          }
+                        }, undefined, false, undefined, this)
+                      }, undefined, false, undefined, this),
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        style: {
+                          color: "#6b7280",
+                          fontVariantNumeric: "tabular-nums"
+                        },
+                        children: [
+                          depthPct,
+                          "%"
+                        ]
+                      }, undefined, true, undefined, this)
+                    ]
+                  }, undefined, true, undefined, this),
+                  /* @__PURE__ */ jsxDEV6("div", {
+                    style: {
+                      color: "#9ca3af",
+                      fontSize: 11,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6
+                    },
+                    children: [
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        children: signal.socialSignal
+                      }, undefined, false, undefined, this),
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        style: { color: "#cbd5e1" },
+                        children: "·"
+                      }, undefined, false, undefined, this),
+                      /* @__PURE__ */ jsxDEV6("span", {
+                        children: [
+                          activityPct,
+                          "% active"
+                        ]
+                      }, undefined, true, undefined, this)
                     ]
                   }, undefined, true, undefined, this)
                 ]
-              }, user.userId, true, undefined, this);
+              }, `legend-${signal.userId}`, true, undefined, this);
             })
-          }, undefined, false, undefined, this)
+          }, undefined, false, undefined, this) : null
         ]
       }, undefined, true, undefined, this)
     ]
@@ -3637,7 +3867,10 @@ function PresenceElementsPanel({
   localUserId,
   className,
   showCursorLayer = true,
-  cursorLayerHeight = 220
+  cursorLayerHeight = 220,
+  scrollBarAccentColor = DEFAULT_SCROLL_ACCENT,
+  scrollBarMarkerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  showScrollLegend = true
 }) {
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
@@ -3670,7 +3903,10 @@ function PresenceElementsPanel({
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6(PresenceScrollBar, {
         presence,
-        localUserId
+        localUserId,
+        accentColor: scrollBarAccentColor,
+        markerLimit: scrollBarMarkerLimit,
+        showLegend: showScrollLegend
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6(PresenceViewportList, {
         presence,
@@ -3694,32 +3930,70 @@ function CollaborativePresenceScrollContainer({
   height = 320,
   className,
   style,
+  accentColor = DEFAULT_SCROLL_ACCENT,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
   onScrollStateChange
 }) {
   const containerRef = useRef5(null);
   const [localDepth, setLocalDepth] = useState11(0);
-  const markers = useMemo3(() => presence.filter((user) => user.scroll), [presence]);
+  const localDepthRef = useRef5(0);
+  const frameRef = useRef5(null);
+  const markers = useMemo3(() => buildScrollSignals(presence, localUserId, markerLimit).filter((signal) => !signal.isLocal), [localUserId, markerLimit, presence]);
+  const density = useMemo3(() => buildScrollDensityMap(markers), [markers]);
+  const publishScrollState = useCallback12((element) => {
+    const denominator = Math.max(1, element.scrollHeight - element.clientHeight);
+    const depth = clampDepth(element.scrollTop / denominator);
+    const depthDelta = Math.abs(depth - localDepthRef.current);
+    const shouldCommitDepth = depthDelta >= LOCAL_SCROLL_DEPTH_EPSILON || depth === 0 || depth === 1;
+    if (shouldCommitDepth) {
+      localDepthRef.current = depth;
+      setLocalDepth(depth);
+    }
+    onScrollStateChange?.({
+      depth,
+      y: element.scrollTop,
+      viewportHeight: element.clientHeight,
+      documentHeight: element.scrollHeight
+    });
+  }, [onScrollStateChange]);
   useEffect11(() => {
     const element = containerRef.current;
     if (!element)
       return;
-    const update = () => {
-      const denominator = Math.max(1, element.scrollHeight - element.clientHeight);
-      const depth = clampDepth(element.scrollTop / denominator);
-      setLocalDepth(depth);
-      onScrollStateChange?.({
-        depth,
-        y: element.scrollTop,
-        viewportHeight: element.clientHeight,
-        documentHeight: element.scrollHeight
+    const scheduleUpdate = () => {
+      if (typeof window === "undefined") {
+        publishScrollState(element);
+        return;
+      }
+      if (frameRef.current !== null) {
+        return;
+      }
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null;
+        publishScrollState(element);
       });
     };
-    update();
-    element.addEventListener("scroll", update, { passive: true });
+    scheduleUpdate();
+    element.addEventListener("scroll", scheduleUpdate, { passive: true });
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
+      scheduleUpdate();
+    }) : null;
+    resizeObserver?.observe(element);
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", scheduleUpdate, { passive: true });
+    }
     return () => {
-      element.removeEventListener("scroll", update);
+      element.removeEventListener("scroll", scheduleUpdate);
+      resizeObserver?.disconnect();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", scheduleUpdate);
+        if (frameRef.current !== null) {
+          window.cancelAnimationFrame(frameRef.current);
+          frameRef.current = null;
+        }
+      }
     };
-  }, [onScrollStateChange]);
+  }, [publishScrollState]);
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
     style: {
@@ -3727,7 +4001,9 @@ function CollaborativePresenceScrollContainer({
         position: "relative",
         height,
         overflow: "hidden",
-        padding: 0
+        padding: 0,
+        border: `1px solid color-mix(in srgb, ${accentColor} 24%, #d1d5db)`,
+        background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 5%, #ffffff), #ffffff)`
       }),
       ...style
     },
@@ -3739,8 +4015,8 @@ function CollaborativePresenceScrollContainer({
           overflowY: "auto",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
-          paddingRight: 22,
-          padding: 12
+          padding: 12,
+          paddingRight: 30
         },
         children
       }, undefined, false, undefined, this),
@@ -3749,38 +4025,61 @@ function CollaborativePresenceScrollContainer({
           position: "absolute",
           top: 10,
           bottom: 10,
-          right: 6,
-          width: 10,
+          right: 7,
+          width: 16,
           borderRadius: 999,
-          background: "#e5e7eb"
+          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 6%, #f8fafc), #e5e7eb)`,
+          boxShadow: "inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 8px 16px rgba(15, 23, 42, 0.08)"
         },
         children: [
+          density.map((value, index) => {
+            const top = index / density.length * 100;
+            const segmentHeight = 100 / density.length + 0.8;
+            return /* @__PURE__ */ jsxDEV6("span", {
+              style: {
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: `${top.toFixed(3)}%`,
+                height: `${segmentHeight.toFixed(3)}%`,
+                background: `color-mix(in srgb, ${accentColor} ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
+                opacity: (0.12 + value * 0.62).toFixed(3),
+                pointerEvents: "none"
+              }
+            }, `density-${index}`, false, undefined, this);
+          }),
           /* @__PURE__ */ jsxDEV6("div", {
             style: {
               position: "absolute",
-              left: 0,
-              right: 0,
-              height: 4,
-              top: `calc(${localDepth * 100}% - 2px)`,
+              left: "50%",
+              width: 11,
+              height: 5,
+              top: `${(localDepth * 100).toFixed(3)}%`,
+              transform: "translate(-50%, -50%)",
               borderRadius: 999,
-              background: "#111827"
+              background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 62%, #ffffff), ${accentColor})`,
+              boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px rgba(59, 130, 246, 0.35)"
             },
             title: localUserId ? `${displayUser(localUserId)} (you)` : "you"
           }, undefined, false, undefined, this),
-          markers.map((user) => {
-            const depth = clampDepth(user.scroll?.depth ?? 0);
-            return /* @__PURE__ */ jsxDEV6("div", {
-              title: `${displayUser(user.userId)}: ${Math.round(depth * 100)}%`,
+          markers.map((signal) => {
+            const markerSize = 5 + signal.activity * 3.8;
+            const glowColor = `color-mix(in srgb, ${signal.color} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
+            return /* @__PURE__ */ jsxDEV6("span", {
+              title: `${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`,
               style: {
                 position: "absolute",
-                left: 1,
-                right: 1,
-                height: 3,
+                left: `calc(50% + ${signal.laneOffsetPx}px)`,
+                top: `${(signal.depth * 100).toFixed(3)}%`,
+                width: markerSize,
+                height: markerSize,
+                transform: "translate(-50%, -50%)",
                 borderRadius: 999,
-                top: `calc(${depth * 100}% - 1.5px)`,
-                background: hashColor(user.userId)
+                border: "1px solid rgba(255,255,255,0.7)",
+                background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${signal.color} 38%, #ffffff), ${signal.color})`,
+                boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`
               }
-            }, user.userId, false, undefined, this);
+            }, signal.userId, false, undefined, this);
           })
         ]
       }, undefined, true, undefined, this)

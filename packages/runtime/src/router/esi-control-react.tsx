@@ -40,6 +40,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  Fragment,
   type ReactNode,
   type FC,
   Children,
@@ -1766,7 +1767,9 @@ export function ESIForEach<T>({
         if (data.length === 0) return <>{empty}</>;
         return (
           <Wrapper className={className}>
-            {data.map((item, i) => render(item, i))}
+            {data.map((item, i) => (
+              <Fragment key={`esi-item:${i}`}>{render(item, i)}</Fragment>
+            ))}
           </Wrapper>
         );
       }}

@@ -2224,7 +2224,9 @@ Respond with a JSON array of items (max ${maxItems}).`,
         }, undefined, false, undefined, this);
       return /* @__PURE__ */ jsxDEV(Wrapper, {
         className,
-        children: data.map((item, i) => render(item, i))
+        children: data.map((item, i) => /* @__PURE__ */ jsxDEV(Fragment, {
+          children: render(item, i)
+        }, `esi-item:${i}`, false, undefined, this))
       }, undefined, false, undefined, this);
     }
   }, undefined, false, undefined, this);

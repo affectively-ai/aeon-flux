@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -62,6 +63,183 @@ function panelStyle(base?: CSSProperties): CSSProperties {
     background: '#ffffff',
     ...base,
   };
+}
+
+const DEFAULT_SCROLL_ACCENT = '#3b82f6';
+const DEFAULT_SCROLL_MARKER_LIMIT = 32;
+const SCROLL_DENSITY_BUCKETS = 16;
+const SCROLL_ACTIVITY_WINDOW_MS = 120000;
+const LOCAL_SCROLL_DEPTH_EPSILON = 0.0025;
+
+interface PresenceScrollSignal {
+  user: PresenceUser;
+  userId: string;
+  label: string;
+  shortLabel: string;
+  depth: number;
+  color: string;
+  isLocal: boolean;
+  activity: number;
+  laneOffsetPx: number;
+  socialSignal: string;
+}
+
+function hashLaneOffset(
+  userId: string,
+  laneSpacingPx = 4,
+  laneCount = 5,
+): number {
+  if (laneCount <= 1) {
+    return 0;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < userId.length; index += 1) {
+    hash = (hash << 5) - hash + userId.charCodeAt(index);
+    hash |= 0;
+  }
+
+  const lane = Math.abs(hash) % laneCount;
+  const centeredLane = lane - (laneCount - 1) / 2;
+  return Math.round(centeredLane * laneSpacingPx);
+}
+
+function computeScrollActivity(user: PresenceUser, now: number): number {
+  let activity = 0.15;
+
+  if (user.status === 'online') activity += 0.2;
+  if (user.status === 'away') activity += 0.06;
+  if (user.typing?.isTyping) activity += 0.22;
+  if (user.focusNode) activity += 0.12;
+  if (user.selection) activity += 0.08;
+  if (user.inputState?.hasFocus) activity += 0.1;
+  if (user.editing) activity += 0.08;
+
+  if (user.emotion) {
+    const emotionIntensity = clampDepth(
+      user.emotion.intensity ?? user.emotion.confidence ?? 0.3,
+    );
+    activity += 0.08 + emotionIntensity * 0.12;
+  }
+
+  const lastActivityAt = Date.parse(user.lastActivity);
+  if (!Number.isNaN(lastActivityAt)) {
+    const ageMs = Math.max(0, now - lastActivityAt);
+    const freshness = 1 - Math.min(1, ageMs / SCROLL_ACTIVITY_WINDOW_MS);
+    activity *= 0.35 + freshness * 0.65;
+  }
+
+  return clampDepth(activity);
+}
+
+function summarizeScrollSignal(user: PresenceUser): string {
+  const signals: string[] = [];
+
+  if (user.typing?.isTyping) {
+    signals.push('typing');
+  }
+  if (user.focusNode) {
+    signals.push('focused');
+  }
+  if (user.selection) {
+    signals.push('selecting');
+  }
+  if (user.inputState?.hasFocus) {
+    signals.push('editing');
+  }
+  if (user.emotion?.primary) {
+    signals.push(user.emotion.primary);
+  }
+
+  if (signals.length === 0) {
+    signals.push(user.status);
+  }
+
+  return signals.join(' · ');
+}
+
+function buildScrollSignals(
+  presence: PresenceUser[],
+  localUserId?: string,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+): PresenceScrollSignal[] {
+  const now = Date.now();
+  const normalizedLimit = Math.max(0, Math.trunc(markerLimit));
+
+  if (normalizedLimit === 0) {
+    return [];
+  }
+
+  const signals = presence
+    .filter(
+      (
+        user,
+      ): user is PresenceUser & {
+        scroll: NonNullable<PresenceUser['scroll']>;
+      } => Boolean(user.scroll),
+    )
+    .map((user) => {
+      const shortLabel = displayUser(user.userId);
+      return {
+        user,
+        userId: user.userId,
+        label: shortLabel,
+        shortLabel,
+        depth: clampDepth(user.scroll.depth),
+        color: hashColor(user.userId),
+        isLocal: user.userId === localUserId,
+        activity: computeScrollActivity(user, now),
+        laneOffsetPx: 0,
+        socialSignal: summarizeScrollSignal(user),
+      };
+    })
+    .sort((left, right) => {
+      if (left.isLocal !== right.isLocal) {
+        return left.isLocal ? -1 : 1;
+      }
+      if (right.activity !== left.activity) {
+        return right.activity - left.activity;
+      }
+      return left.userId.localeCompare(right.userId);
+    })
+    .slice(0, normalizedLimit);
+
+  return signals.map((signal, index) => ({
+    ...signal,
+    laneOffsetPx: signal.isLocal
+      ? 0
+      : hashLaneOffset(signal.userId, 4, 5) + ((index % 3) - 1),
+  }));
+}
+
+function buildScrollDensityMap(
+  signals: PresenceScrollSignal[],
+  bucketCount = SCROLL_DENSITY_BUCKETS,
+): number[] {
+  const buckets = Array.from({ length: bucketCount }, () => 0);
+
+  if (signals.length === 0) {
+    return buckets;
+  }
+
+  for (const signal of signals) {
+    const bucketIndex = Math.min(
+      bucketCount - 1,
+      Math.max(0, Math.round(signal.depth * (bucketCount - 1))),
+    );
+    const weight = 0.2 + signal.activity * 0.8;
+    buckets[bucketIndex] += weight;
+
+    if (bucketIndex > 0) {
+      buckets[bucketIndex - 1] += weight * 0.28;
+    }
+    if (bucketIndex < bucketCount - 1) {
+      buckets[bucketIndex + 1] += weight * 0.28;
+    }
+  }
+
+  const peak = Math.max(1, ...buckets);
+  return buckets.map((value) => clampDepth(value / peak));
 }
 
 export interface PresenceCursorLayerProps {
@@ -299,6 +477,9 @@ export interface PresenceScrollBarProps {
   localUserId?: string;
   height?: number;
   className?: string;
+  accentColor?: string;
+  markerLimit?: number;
+  showLegend?: boolean;
 }
 
 export function PresenceScrollBar({
@@ -306,65 +487,189 @@ export function PresenceScrollBar({
   localUserId,
   height = 220,
   className,
+  accentColor = DEFAULT_SCROLL_ACCENT,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  showLegend = true,
 }: PresenceScrollBarProps) {
-  const users = presence.filter((user) => user.scroll);
+  const signals = useMemo(
+    () => buildScrollSignals(presence, localUserId, markerLimit),
+    [localUserId, markerLimit, presence],
+  );
+  const trackSignals = useMemo(
+    () => [...signals].sort((left, right) => left.depth - right.depth),
+    [signals],
+  );
+  const density = useMemo(() => buildScrollDensityMap(trackSignals), [trackSignals]);
+  const legendSignals = useMemo(
+    () =>
+      [...signals]
+        .sort((left, right) => {
+          if (right.activity !== left.activity) {
+            return right.activity - left.activity;
+          }
+          return left.depth - right.depth;
+        })
+        .slice(0, 8),
+    [signals],
+  );
 
   return (
     <div className={className} style={panelStyle()}>
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
         Scroll Presence
       </div>
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: showLegend ? '24px minmax(0, 1fr)' : '24px',
+          gap: 12,
+          alignItems: 'start',
+        }}
+      >
         <div
           style={{
             position: 'relative',
-            width: 12,
+            width: 24,
             height,
             borderRadius: 999,
-            background: '#e5e7eb',
+            background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, #f8fafc), #e5e7eb)`,
+            boxShadow:
+              'inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 12px 20px rgba(15, 23, 42, 0.08)',
             overflow: 'hidden',
           }}
         >
-          {users.map((user) => {
-            const depth = clampDepth(user.scroll?.depth ?? 0);
-            const color = hashColor(user.userId);
-            const isLocal = user.userId === localUserId;
+          {density.map((value, index) => {
+            const top = (index / density.length) * 100;
+            const segmentHeight = 100 / density.length + 0.8;
             return (
-              <div
-                key={user.userId}
-                title={`${displayUser(user.userId)}: ${Math.round(depth * 100)}%`}
+              <span
+                key={`density-${index}`}
                 style={{
                   position: 'absolute',
-                  left: isLocal ? 0 : 1,
-                  right: isLocal ? 0 : 1,
-                  height: isLocal ? 4 : 3,
-                  top: `calc(${depth * 100}% - ${isLocal ? 2 : 1.5}px)`,
+                  left: 0,
+                  right: 0,
+                  top: `${top.toFixed(3)}%`,
+                  height: `${segmentHeight.toFixed(3)}%`,
+                  background: `color-mix(in srgb, ${accentColor} ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
+                  opacity: (0.12 + value * 0.62).toFixed(3),
+                  pointerEvents: 'none',
+                }}
+              />
+            );
+          })}
+          {trackSignals.map((signal) => {
+            const markerSize = 6 + signal.activity * (signal.isLocal ? 4 : 3.5);
+            const markerScale = 0.84 + signal.activity * 0.36;
+            const markerColor = signal.color;
+            const glowColor = `color-mix(in srgb, ${markerColor} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
+            return (
+              <span
+                key={signal.userId}
+                title={`${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`}
+                style={{
+                  position: 'absolute',
+                  left: `calc(50% + ${signal.laneOffsetPx}px)`,
+                  top: `${(signal.depth * 100).toFixed(3)}%`,
+                  width: markerSize,
+                  height: markerSize,
+                  transform: `translate(-50%, -50%) scale(${markerScale.toFixed(3)})`,
                   borderRadius: 999,
-                  background: color,
+                  border: signal.isLocal
+                    ? `1px solid color-mix(in srgb, ${accentColor} 72%, #ffffff)`
+                    : '1px solid rgba(255,255,255,0.72)',
+                  background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${markerColor} 38%, #ffffff), ${markerColor})`,
+                  boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`,
                 }}
               />
             );
           })}
         </div>
-        <div style={{ display: 'grid', gap: 6, fontSize: 12, flex: 1 }}>
-          {users.length === 0 ? (
-            <div style={{ color: '#6b7280' }}>No scroll telemetry yet</div>
-          ) : (
-            users.map((user) => {
-              const depth = clampDepth(user.scroll?.depth ?? 0);
-              return (
-                <div key={user.userId} style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontWeight: 600, minWidth: 68 }}>
-                    {displayUser(user.userId)}
-                  </span>
-                  <span style={{ color: '#6b7280' }}>
-                    {Math.round(depth * 100)}%
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
+        {showLegend ? (
+          <div style={{ display: 'grid', gap: 7, fontSize: 12, minWidth: 0 }}>
+            {legendSignals.length === 0 ? (
+              <div style={{ color: '#6b7280' }}>No scroll telemetry yet</div>
+            ) : (
+              legendSignals.map((signal) => {
+                const depthPct = Math.round(signal.depth * 100);
+                const activityPct = Math.round(signal.activity * 100);
+                return (
+                  <div
+                    key={`legend-${signal.userId}`}
+                    style={{
+                      display: 'grid',
+                      gap: 3,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(64px, auto) minmax(0, 1fr) auto',
+                        gap: 8,
+                        alignItems: 'center',
+                        minWidth: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight: signal.isLocal ? 700 : 600,
+                          color: signal.isLocal ? '#111827' : '#1f2937',
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {signal.shortLabel}
+                      </span>
+                      <span
+                        style={{
+                          position: 'relative',
+                          height: 5,
+                          borderRadius: 999,
+                          background: '#e5e7eb',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: `${Math.max(6, depthPct)}%`,
+                            borderRadius: 999,
+                            background: signal.color,
+                          }}
+                        />
+                      </span>
+                      <span
+                        style={{
+                          color: '#6b7280',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {depthPct}%
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        color: '#9ca3af',
+                        fontSize: 11,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <span>{signal.socialSignal}</span>
+                      <span style={{ color: '#cbd5e1' }}>·</span>
+                      <span>{activityPct}% active</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -668,6 +973,9 @@ export interface PresenceElementsPanelProps {
   className?: string;
   showCursorLayer?: boolean;
   cursorLayerHeight?: number | string;
+  scrollBarAccentColor?: string;
+  scrollBarMarkerLimit?: number;
+  showScrollLegend?: boolean;
 }
 
 export function PresenceElementsPanel({
@@ -676,6 +984,9 @@ export function PresenceElementsPanel({
   className,
   showCursorLayer = true,
   cursorLayerHeight = 220,
+  scrollBarAccentColor = DEFAULT_SCROLL_ACCENT,
+  scrollBarMarkerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  showScrollLegend = true,
 }: PresenceElementsPanelProps) {
   return (
     <div className={className} style={{ display: 'grid', gap: 10 }}>
@@ -691,7 +1002,13 @@ export function PresenceElementsPanel({
       <PresenceTypingList presence={presence} localUserId={localUserId} />
       <PresenceFocusList presence={presence} localUserId={localUserId} />
       <PresenceSelectionList presence={presence} localUserId={localUserId} />
-      <PresenceScrollBar presence={presence} localUserId={localUserId} />
+      <PresenceScrollBar
+        presence={presence}
+        localUserId={localUserId}
+        accentColor={scrollBarAccentColor}
+        markerLimit={scrollBarMarkerLimit}
+        showLegend={showScrollLegend}
+      />
       <PresenceViewportList presence={presence} localUserId={localUserId} />
       <PresenceInputStateList presence={presence} localUserId={localUserId} />
       <PresenceEmotionList presence={presence} localUserId={localUserId} />
@@ -706,6 +1023,8 @@ export interface CollaborativePresenceScrollContainerProps {
   height?: number | string;
   className?: string;
   style?: CSSProperties;
+  accentColor?: string;
+  markerLimit?: number;
   onScrollStateChange?: (scroll: PresenceScroll) => void;
 }
 
@@ -716,38 +1035,95 @@ export function CollaborativePresenceScrollContainer({
   height = 320,
   className,
   style,
+  accentColor = DEFAULT_SCROLL_ACCENT,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
   onScrollStateChange,
 }: CollaborativePresenceScrollContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [localDepth, setLocalDepth] = useState(0);
+  const localDepthRef = useRef(0);
+  const frameRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
 
   const markers = useMemo(
-    () => presence.filter((user) => user.scroll),
-    [presence],
+    () =>
+      buildScrollSignals(presence, localUserId, markerLimit).filter(
+        (signal) => !signal.isLocal,
+      ),
+    [localUserId, markerLimit, presence],
   );
+  const density = useMemo(() => buildScrollDensityMap(markers), [markers]);
 
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-
-    const update = () => {
+  const publishScrollState = useCallback(
+    (element: HTMLDivElement) => {
       const denominator = Math.max(1, element.scrollHeight - element.clientHeight);
       const depth = clampDepth(element.scrollTop / denominator);
-      setLocalDepth(depth);
+      const depthDelta = Math.abs(depth - localDepthRef.current);
+      const shouldCommitDepth =
+        depthDelta >= LOCAL_SCROLL_DEPTH_EPSILON || depth === 0 || depth === 1;
+
+      if (shouldCommitDepth) {
+        localDepthRef.current = depth;
+        setLocalDepth(depth);
+      }
+
       onScrollStateChange?.({
         depth,
         y: element.scrollTop,
         viewportHeight: element.clientHeight,
         documentHeight: element.scrollHeight,
       });
+    },
+    [onScrollStateChange],
+  );
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const scheduleUpdate = () => {
+      if (typeof window === 'undefined') {
+        publishScrollState(element);
+        return;
+      }
+
+      if (frameRef.current !== null) {
+        return;
+      }
+
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null;
+        publishScrollState(element);
+      });
     };
 
-    update();
-    element.addEventListener('scroll', update, { passive: true });
+    scheduleUpdate();
+    element.addEventListener('scroll', scheduleUpdate, { passive: true });
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            scheduleUpdate();
+          })
+        : null;
+    resizeObserver?.observe(element);
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', scheduleUpdate, { passive: true });
+    }
+
     return () => {
-      element.removeEventListener('scroll', update);
+      element.removeEventListener('scroll', scheduleUpdate);
+      resizeObserver?.disconnect();
+
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', scheduleUpdate);
+        if (frameRef.current !== null) {
+          window.cancelAnimationFrame(frameRef.current);
+          frameRef.current = null;
+        }
+      }
     };
-  }, [onScrollStateChange]);
+  }, [publishScrollState]);
 
   return (
     <div
@@ -758,6 +1134,8 @@ export function CollaborativePresenceScrollContainer({
           height,
           overflow: 'hidden',
           padding: 0,
+          border: `1px solid color-mix(in srgb, ${accentColor} 24%, #d1d5db)`,
+          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 5%, #ffffff), #ffffff)`,
         }),
         ...style,
       }}
@@ -769,8 +1147,8 @@ export function CollaborativePresenceScrollContainer({
           overflowY: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          paddingRight: 22,
           padding: 12,
+          paddingRight: 30,
         }}
       >
         {children}
@@ -781,39 +1159,67 @@ export function CollaborativePresenceScrollContainer({
           position: 'absolute',
           top: 10,
           bottom: 10,
-          right: 6,
-          width: 10,
+          right: 7,
+          width: 16,
           borderRadius: 999,
-          background: '#e5e7eb',
+          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 6%, #f8fafc), #e5e7eb)`,
+          boxShadow:
+            'inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 8px 16px rgba(15, 23, 42, 0.08)',
         }}
       >
+        {density.map((value, index) => {
+          const top = (index / density.length) * 100;
+          const segmentHeight = 100 / density.length + 0.8;
+          return (
+            <span
+              key={`density-${index}`}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: `${top.toFixed(3)}%`,
+                height: `${segmentHeight.toFixed(3)}%`,
+                background: `color-mix(in srgb, ${accentColor} ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
+                opacity: (0.12 + value * 0.62).toFixed(3),
+                pointerEvents: 'none',
+              }}
+            />
+          );
+        })}
         <div
           style={{
             position: 'absolute',
-            left: 0,
-            right: 0,
-            height: 4,
-            top: `calc(${localDepth * 100}% - 2px)`,
+            left: '50%',
+            width: 11,
+            height: 5,
+            top: `${(localDepth * 100).toFixed(3)}%`,
+            transform: 'translate(-50%, -50%)',
             borderRadius: 999,
-            background: '#111827',
+            background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 62%, #ffffff), ${accentColor})`,
+            boxShadow:
+              '0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px rgba(59, 130, 246, 0.35)',
           }}
           title={localUserId ? `${displayUser(localUserId)} (you)` : 'you'}
         />
 
-        {markers.map((user) => {
-          const depth = clampDepth(user.scroll?.depth ?? 0);
+        {markers.map((signal) => {
+          const markerSize = 5 + signal.activity * 3.8;
+          const glowColor = `color-mix(in srgb, ${signal.color} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
           return (
-            <div
-              key={user.userId}
-              title={`${displayUser(user.userId)}: ${Math.round(depth * 100)}%`}
+            <span
+              key={signal.userId}
+              title={`${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`}
               style={{
                 position: 'absolute',
-                left: 1,
-                right: 1,
-                height: 3,
+                left: `calc(50% + ${signal.laneOffsetPx}px)`,
+                top: `${(signal.depth * 100).toFixed(3)}%`,
+                width: markerSize,
+                height: markerSize,
+                transform: 'translate(-50%, -50%)',
                 borderRadius: 999,
-                top: `calc(${depth * 100}% - 1.5px)`,
-                background: hashColor(user.userId),
+                border: '1px solid rgba(255,255,255,0.7)',
+                background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${signal.color} 38%, #ffffff), ${signal.color})`,
+                boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`,
               }}
             />
           );
