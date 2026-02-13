@@ -197,4 +197,27 @@ export {
   type PresenceStatusListProps,
   type PresenceElementsPanelProps,
   type CollaborativePresenceScrollContainerProps,
+  type PresenceScrollThemeTokens,
 } from './components/PresenceKit';
+
+// Presence scroll signal utilities (for custom rails and telemetry UIs)
+export {
+  DEFAULT_SCROLL_ACCENT,
+  DEFAULT_SCROLL_MARKER_LIMIT,
+  DEFAULT_SCROLL_DENSITY_BUCKETS,
+  DEFAULT_SCROLL_ACTIVITY_WINDOW_MS,
+  DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON,
+  clampDepth,
+  hashPresenceColor,
+  displayPresenceUser,
+  hashLaneOffset,
+  summarizeScrollSignal,
+  computeScrollActivity,
+  buildScrollSignals,
+  sortScrollSignalsForRail,
+  sortScrollSignalsForLegend,
+  buildScrollDensityMap,
+  shouldCommitLocalDepthUpdate,
+  type PresenceScrollSignal,
+  type BuildScrollSignalsOptions,
+} from './components/presence-scroll-signals';
