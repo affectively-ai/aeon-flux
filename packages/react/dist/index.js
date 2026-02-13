@@ -2982,12 +2982,18 @@ function OfflineDiagnostics({
 import {
   useCallback as useCallback12,
   useEffect as useEffect11,
+  useId,
   useMemo as useMemo3,
   useRef as useRef5,
   useState as useState11
 } from "react";
-import { jsxDEV as jsxDEV6 } from "react/jsx-dev-runtime";
-"use client";
+
+// src/components/presence-scroll-signals.ts
+var DEFAULT_SCROLL_ACCENT = "#3b82f6";
+var DEFAULT_SCROLL_MARKER_LIMIT = 32;
+var DEFAULT_SCROLL_DENSITY_BUCKETS = 16;
+var DEFAULT_SCROLL_ACTIVITY_WINDOW_MS = 120000;
+var DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON = 0.0025;
 var USER_COLORS = [
   "#ef4444",
   "#3b82f6",
@@ -2998,20 +3004,162 @@ var USER_COLORS = [
   "#ec4899",
   "#84cc16"
 ];
-function hashColor(userId) {
+function clampDepth(depth) {
+  return Math.max(0, Math.min(1, depth));
+}
+function hashPresenceColor(userId) {
   let hash = 0;
-  for (let i = 0;i < userId.length; i++) {
-    hash = (hash << 5) - hash + userId.charCodeAt(i);
+  for (let index = 0;index < userId.length; index += 1) {
+    hash = (hash << 5) - hash + userId.charCodeAt(index);
     hash |= 0;
   }
   return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
 }
-function displayUser(userId) {
+function displayPresenceUser(userId) {
   return userId.length > 10 ? userId.slice(0, 8) : userId;
 }
-function clampDepth(depth) {
-  return Math.max(0, Math.min(1, depth));
+function hashLaneOffset(userId, laneSpacingPx = 4, laneCount = 5) {
+  if (laneCount <= 1) {
+    return 0;
+  }
+  let hash = 0;
+  for (let index = 0;index < userId.length; index += 1) {
+    hash = (hash << 5) - hash + userId.charCodeAt(index);
+    hash |= 0;
+  }
+  const lane = Math.abs(hash) % laneCount;
+  const centeredLane = lane - (laneCount - 1) / 2;
+  return Math.round(centeredLane * laneSpacingPx);
 }
+function summarizeScrollSignal(user) {
+  const signals = [];
+  if (user.typing?.isTyping) {
+    signals.push("typing");
+  }
+  if (user.focusNode) {
+    signals.push("focused");
+  }
+  if (user.selection) {
+    signals.push("selecting");
+  }
+  if (user.inputState?.hasFocus) {
+    signals.push("editing");
+  }
+  if (user.emotion?.primary) {
+    signals.push(user.emotion.primary);
+  }
+  if (signals.length === 0) {
+    signals.push(user.status);
+  }
+  return signals.join(" · ");
+}
+function computeScrollActivity(user, now, activityWindowMs = DEFAULT_SCROLL_ACTIVITY_WINDOW_MS) {
+  let activity = 0.15;
+  if (user.status === "online")
+    activity += 0.2;
+  if (user.status === "away")
+    activity += 0.06;
+  if (user.typing?.isTyping)
+    activity += 0.22;
+  if (user.focusNode)
+    activity += 0.12;
+  if (user.selection)
+    activity += 0.08;
+  if (user.inputState?.hasFocus)
+    activity += 0.1;
+  if (user.editing)
+    activity += 0.08;
+  if (user.emotion) {
+    const emotionIntensity = clampDepth(user.emotion.intensity ?? user.emotion.confidence ?? 0.3);
+    activity += 0.08 + emotionIntensity * 0.12;
+  }
+  const lastActivityAt = Date.parse(user.lastActivity);
+  if (!Number.isNaN(lastActivityAt)) {
+    const ageMs = Math.max(0, now - lastActivityAt);
+    const freshness = 1 - Math.min(1, ageMs / activityWindowMs);
+    activity *= 0.35 + freshness * 0.65;
+  }
+  return clampDepth(activity);
+}
+function buildScrollSignals(presence, {
+  localUserId,
+  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  now = Date.now(),
+  laneSpacingPx = 4,
+  laneCount = 5,
+  activityWindowMs = DEFAULT_SCROLL_ACTIVITY_WINDOW_MS
+} = {}) {
+  const normalizedLimit = Math.max(0, Math.trunc(markerLimit));
+  if (normalizedLimit === 0) {
+    return [];
+  }
+  const signals = presence.filter((user) => Boolean(user.scroll)).map((user) => {
+    const shortLabel = displayPresenceUser(user.userId);
+    return {
+      user,
+      userId: user.userId,
+      label: shortLabel,
+      shortLabel,
+      depth: clampDepth(user.scroll.depth),
+      color: hashPresenceColor(user.userId),
+      isLocal: user.userId === localUserId,
+      activity: computeScrollActivity(user, now, activityWindowMs),
+      laneOffsetPx: 0,
+      socialSignal: summarizeScrollSignal(user)
+    };
+  }).sort((left, right) => {
+    if (left.isLocal !== right.isLocal) {
+      return left.isLocal ? -1 : 1;
+    }
+    if (right.activity !== left.activity) {
+      return right.activity - left.activity;
+    }
+    return left.userId.localeCompare(right.userId);
+  }).slice(0, normalizedLimit);
+  return signals.map((signal, index) => ({
+    ...signal,
+    laneOffsetPx: signal.isLocal ? 0 : hashLaneOffset(signal.userId, laneSpacingPx, laneCount) + (index % 3 - 1)
+  }));
+}
+function sortScrollSignalsForRail(signals) {
+  return [...signals].sort((left, right) => left.depth - right.depth);
+}
+function sortScrollSignalsForLegend(signals, limit = 8) {
+  return [...signals].sort((left, right) => {
+    if (right.activity !== left.activity) {
+      return right.activity - left.activity;
+    }
+    return left.depth - right.depth;
+  }).slice(0, Math.max(0, Math.trunc(limit)));
+}
+function buildScrollDensityMap(signals, bucketCount = DEFAULT_SCROLL_DENSITY_BUCKETS) {
+  const buckets = Array.from({ length: Math.max(1, Math.trunc(bucketCount)) }, () => 0);
+  if (signals.length === 0) {
+    return buckets;
+  }
+  const normalizedBucketCount = buckets.length;
+  for (const signal of signals) {
+    const bucketIndex = Math.min(normalizedBucketCount - 1, Math.max(0, Math.round(signal.depth * (normalizedBucketCount - 1))));
+    const weight = 0.2 + signal.activity * 0.8;
+    buckets[bucketIndex] += weight;
+    if (bucketIndex > 0) {
+      buckets[bucketIndex - 1] += weight * 0.28;
+    }
+    if (bucketIndex < normalizedBucketCount - 1) {
+      buckets[bucketIndex + 1] += weight * 0.28;
+    }
+  }
+  const peak = Math.max(1, ...buckets);
+  return buckets.map((value) => clampDepth(value / peak));
+}
+function shouldCommitLocalDepthUpdate(previousDepth, nextDepth, epsilon = DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON) {
+  const delta = Math.abs(nextDepth - previousDepth);
+  return delta >= epsilon || nextDepth === 0 || nextDepth === 1;
+}
+
+// src/components/PresenceKit.tsx
+import { jsxDEV as jsxDEV6 } from "react/jsx-dev-runtime";
+"use client";
 function formatLastActivity(lastActivity) {
   if (!lastActivity)
     return "unknown activity";
@@ -3042,126 +3190,44 @@ function panelStyle(base) {
     ...base
   };
 }
-var DEFAULT_SCROLL_ACCENT = "#3b82f6";
-var DEFAULT_SCROLL_MARKER_LIMIT = 32;
-var SCROLL_DENSITY_BUCKETS = 16;
-var SCROLL_ACTIVITY_WINDOW_MS = 120000;
-var LOCAL_SCROLL_DEPTH_EPSILON = 0.0025;
-function hashLaneOffset(userId, laneSpacingPx = 4, laneCount = 5) {
-  if (laneCount <= 1) {
-    return 0;
-  }
-  let hash = 0;
-  for (let index = 0;index < userId.length; index += 1) {
-    hash = (hash << 5) - hash + userId.charCodeAt(index);
-    hash |= 0;
-  }
-  const lane = Math.abs(hash) % laneCount;
-  const centeredLane = lane - (laneCount - 1) / 2;
-  return Math.round(centeredLane * laneSpacingPx);
+var SR_ONLY_STYLE = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0
+};
+function resolvePresenceScrollRailVars(accentColor, theme) {
+  const accent = theme?.accentColor ?? accentColor;
+  return {
+    "--aeon-presence-rail-accent": accent,
+    "--aeon-presence-rail-surface": theme?.railSurfaceColor ?? `color-mix(in srgb, ${accent} 8%, #f8fafc)`,
+    "--aeon-presence-rail-border": theme?.railBorderColor ?? `color-mix(in srgb, ${accent} 24%, #d1d5db)`,
+    "--aeon-presence-rail-text": theme?.textColor ?? "#111827",
+    "--aeon-presence-rail-muted": theme?.mutedTextColor ?? "#6b7280"
+  };
 }
-function computeScrollActivity(user, now) {
-  let activity = 0.15;
-  if (user.status === "online")
-    activity += 0.2;
-  if (user.status === "away")
-    activity += 0.06;
-  if (user.typing?.isTyping)
-    activity += 0.22;
-  if (user.focusNode)
-    activity += 0.12;
-  if (user.selection)
-    activity += 0.08;
-  if (user.inputState?.hasFocus)
-    activity += 0.1;
-  if (user.editing)
-    activity += 0.08;
-  if (user.emotion) {
-    const emotionIntensity = clampDepth(user.emotion.intensity ?? user.emotion.confidence ?? 0.3);
-    activity += 0.08 + emotionIntensity * 0.12;
-  }
-  const lastActivityAt = Date.parse(user.lastActivity);
-  if (!Number.isNaN(lastActivityAt)) {
-    const ageMs = Math.max(0, now - lastActivityAt);
-    const freshness = 1 - Math.min(1, ageMs / SCROLL_ACTIVITY_WINDOW_MS);
-    activity *= 0.35 + freshness * 0.65;
-  }
-  return clampDepth(activity);
-}
-function summarizeScrollSignal(user) {
-  const signals = [];
-  if (user.typing?.isTyping) {
-    signals.push("typing");
-  }
-  if (user.focusNode) {
-    signals.push("focused");
-  }
-  if (user.selection) {
-    signals.push("selecting");
-  }
-  if (user.inputState?.hasFocus) {
-    signals.push("editing");
-  }
-  if (user.emotion?.primary) {
-    signals.push(user.emotion.primary);
-  }
-  if (signals.length === 0) {
-    signals.push(user.status);
-  }
-  return signals.join(" · ");
-}
-function buildScrollSignals(presence, localUserId, markerLimit = DEFAULT_SCROLL_MARKER_LIMIT) {
-  const now = Date.now();
-  const normalizedLimit = Math.max(0, Math.trunc(markerLimit));
-  if (normalizedLimit === 0) {
-    return [];
-  }
-  const signals = presence.filter((user) => Boolean(user.scroll)).map((user) => {
-    const shortLabel = displayUser(user.userId);
-    return {
-      user,
-      userId: user.userId,
-      label: shortLabel,
-      shortLabel,
-      depth: clampDepth(user.scroll.depth),
-      color: hashColor(user.userId),
-      isLocal: user.userId === localUserId,
-      activity: computeScrollActivity(user, now),
-      laneOffsetPx: 0,
-      socialSignal: summarizeScrollSignal(user)
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState11(false);
+  useEffect11(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
     };
-  }).sort((left, right) => {
-    if (left.isLocal !== right.isLocal) {
-      return left.isLocal ? -1 : 1;
-    }
-    if (right.activity !== left.activity) {
-      return right.activity - left.activity;
-    }
-    return left.userId.localeCompare(right.userId);
-  }).slice(0, normalizedLimit);
-  return signals.map((signal, index) => ({
-    ...signal,
-    laneOffsetPx: signal.isLocal ? 0 : hashLaneOffset(signal.userId, 4, 5) + (index % 3 - 1)
-  }));
-}
-function buildScrollDensityMap(signals, bucketCount = SCROLL_DENSITY_BUCKETS) {
-  const buckets = Array.from({ length: bucketCount }, () => 0);
-  if (signals.length === 0) {
-    return buckets;
-  }
-  for (const signal of signals) {
-    const bucketIndex = Math.min(bucketCount - 1, Math.max(0, Math.round(signal.depth * (bucketCount - 1))));
-    const weight = 0.2 + signal.activity * 0.8;
-    buckets[bucketIndex] += weight;
-    if (bucketIndex > 0) {
-      buckets[bucketIndex - 1] += weight * 0.28;
-    }
-    if (bucketIndex < bucketCount - 1) {
-      buckets[bucketIndex + 1] += weight * 0.28;
-    }
-  }
-  const peak = Math.max(1, ...buckets);
-  return buckets.map((value) => clampDepth(value / peak));
+    syncPreference();
+    mediaQuery.addEventListener("change", syncPreference);
+    return () => {
+      mediaQuery.removeEventListener("change", syncPreference);
+    };
+  }, []);
+  return prefersReducedMotion;
 }
 function PresenceCursorLayer({
   presence,
@@ -3183,7 +3249,7 @@ function PresenceCursorLayer({
       users.map((user) => {
         if (!user.cursor)
           return null;
-        const color = hashColor(user.userId);
+        const color = hashPresenceColor(user.userId);
         return /* @__PURE__ */ jsxDEV6("div", {
           style: {
             position: "absolute",
@@ -3215,7 +3281,7 @@ function PresenceCursorLayer({
                 border: `1px solid ${color}`,
                 whiteSpace: "nowrap"
               },
-              children: displayUser(user.userId)
+              children: displayPresenceUser(user.userId)
             }, undefined, false, undefined, this)
           ]
         }, user.userId, true, undefined, this);
@@ -3249,7 +3315,7 @@ function PresenceFocusList({
         style: { display: "grid", gap: 6 },
         children: focused.map((user) => /* @__PURE__ */ jsxDEV6("div", {
           style: {
-            border: `1px solid ${hashColor(user.userId)}44`,
+            border: `1px solid ${hashPresenceColor(user.userId)}44`,
             borderRadius: 8,
             padding: "6px 8px",
             fontSize: 12
@@ -3257,7 +3323,7 @@ function PresenceFocusList({
           children: [
             /* @__PURE__ */ jsxDEV6("span", {
               style: { fontWeight: 600 },
-              children: displayUser(user.userId)
+              children: displayPresenceUser(user.userId)
             }, undefined, false, undefined, this),
             " ",
             /* @__PURE__ */ jsxDEV6("span", {
@@ -3310,12 +3376,12 @@ function PresenceTypingList({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: hashColor(user.userId)
+                background: hashPresenceColor(user.userId)
               }
             }, undefined, false, undefined, this),
             /* @__PURE__ */ jsxDEV6("span", {
               style: { fontWeight: 600 },
-              children: displayUser(user.userId)
+              children: displayPresenceUser(user.userId)
             }, undefined, false, undefined, this),
             /* @__PURE__ */ jsxDEV6("span", {
               style: { color: "#6b7280" },
@@ -3352,14 +3418,14 @@ function PresenceSelectionList({
         style: { display: "grid", gap: 6 },
         children: selections.map((user) => /* @__PURE__ */ jsxDEV6("div", {
           style: {
-            borderLeft: `4px solid ${hashColor(user.userId)}`,
+            borderLeft: `4px solid ${hashPresenceColor(user.userId)}`,
             paddingLeft: 8,
             fontSize: 12
           },
           children: [
             /* @__PURE__ */ jsxDEV6("div", {
               style: { fontWeight: 600 },
-              children: displayUser(user.userId)
+              children: displayPresenceUser(user.userId)
             }, undefined, false, undefined, this),
             /* @__PURE__ */ jsxDEV6("div", {
               style: { color: "#6b7280" },
@@ -3385,26 +3451,35 @@ function PresenceScrollBar({
   className,
   accentColor = DEFAULT_SCROLL_ACCENT,
   markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
-  showLegend = true
+  showLegend = true,
+  theme
 }) {
-  const signals = useMemo3(() => buildScrollSignals(presence, localUserId, markerLimit), [localUserId, markerLimit, presence]);
-  const trackSignals = useMemo3(() => [...signals].sort((left, right) => left.depth - right.depth), [signals]);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const signals = useMemo3(() => buildScrollSignals(presence, { localUserId, markerLimit }), [localUserId, markerLimit, presence]);
+  const trackSignals = useMemo3(() => sortScrollSignalsForRail(signals), [signals]);
   const density = useMemo3(() => buildScrollDensityMap(trackSignals), [trackSignals]);
-  const legendSignals = useMemo3(() => [...signals].sort((left, right) => {
-    if (right.activity !== left.activity) {
-      return right.activity - left.activity;
-    }
-    return left.depth - right.depth;
-  }).slice(0, 8), [signals]);
+  const legendSignals = useMemo3(() => sortScrollSignalsForLegend(signals, 8), [signals]);
+  const railVars = useMemo3(() => resolvePresenceScrollRailVars(accentColor, theme), [accentColor, theme]);
+  const collaboratorCountLabel = signals.length === 1 ? "1 collaborator shares scroll telemetry." : `${signals.length} collaborators share scroll telemetry.`;
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
-    style: panelStyle(),
+    style: {
+      ...panelStyle(),
+      ...railVars
+    },
+    role: "group",
+    "aria-label": "Scroll presence telemetry",
     children: [
+      /* @__PURE__ */ jsxDEV6("span", {
+        style: SR_ONLY_STYLE,
+        children: collaboratorCountLabel
+      }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6("div", {
         style: { fontWeight: 600, fontSize: 14, marginBottom: 8 },
         children: "Scroll Presence"
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6("div", {
+        className: "aeon-presence-scrollbar",
         style: {
           display: "grid",
           gridTemplateColumns: showLegend ? "24px minmax(0, 1fr)" : "24px",
@@ -3413,15 +3488,17 @@ function PresenceScrollBar({
         },
         children: [
           /* @__PURE__ */ jsxDEV6("div", {
+            className: "aeon-presence-scrollbar-rail",
             style: {
               position: "relative",
               width: 24,
               height,
               borderRadius: 999,
-              background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, #f8fafc), #e5e7eb)`,
-              boxShadow: "inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 12px 20px rgba(15, 23, 42, 0.08)",
+              background: "linear-gradient(180deg, var(--aeon-presence-rail-surface), #e5e7eb)",
+              boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--aeon-presence-rail-border) 45%, rgba(148, 163, 184, 0.24)), inset 0 12px 20px rgba(15, 23, 42, 0.08)",
               overflow: "hidden"
             },
+            "aria-hidden": "true",
             children: [
               density.map((value, index) => {
                 const top = index / density.length * 100;
@@ -3433,7 +3510,7 @@ function PresenceScrollBar({
                     right: 0,
                     top: `${top.toFixed(3)}%`,
                     height: `${segmentHeight.toFixed(3)}%`,
-                    background: `color-mix(in srgb, ${accentColor} ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
+                    background: `color-mix(in srgb, var(--aeon-presence-rail-accent) ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
                     opacity: (0.12 + value * 0.62).toFixed(3),
                     pointerEvents: "none"
                   }
@@ -3445,6 +3522,7 @@ function PresenceScrollBar({
                 const markerColor = signal.color;
                 const glowColor = `color-mix(in srgb, ${markerColor} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
                 return /* @__PURE__ */ jsxDEV6("span", {
+                  className: "aeon-presence-scrollbar-marker",
                   title: `${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`,
                   style: {
                     position: "absolute",
@@ -3454,23 +3532,33 @@ function PresenceScrollBar({
                     height: markerSize,
                     transform: `translate(-50%, -50%) scale(${markerScale.toFixed(3)})`,
                     borderRadius: 999,
-                    border: signal.isLocal ? `1px solid color-mix(in srgb, ${accentColor} 72%, #ffffff)` : "1px solid rgba(255,255,255,0.72)",
+                    border: signal.isLocal ? "1px solid color-mix(in srgb, var(--aeon-presence-rail-accent) 72%, #ffffff)" : "1px solid rgba(255,255,255,0.72)",
                     background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${markerColor} 38%, #ffffff), ${markerColor})`,
-                    boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`
-                  }
+                    boxShadow: prefersReducedMotion ? "0 0 0 1px rgba(15,23,42,0.32)" : `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`
+                  },
+                  "aria-hidden": "true"
                 }, signal.userId, false, undefined, this);
               })
             ]
           }, undefined, true, undefined, this),
-          showLegend ? /* @__PURE__ */ jsxDEV6("div", {
-            style: { display: "grid", gap: 7, fontSize: 12, minWidth: 0 },
-            children: legendSignals.length === 0 ? /* @__PURE__ */ jsxDEV6("div", {
-              style: { color: "#6b7280" },
+          showLegend ? /* @__PURE__ */ jsxDEV6("ul", {
+            className: "aeon-presence-scrollbar-legend",
+            style: {
+              display: "grid",
+              gap: 7,
+              fontSize: 12,
+              minWidth: 0,
+              listStyle: "none",
+              padding: 0,
+              margin: 0
+            },
+            children: legendSignals.length === 0 ? /* @__PURE__ */ jsxDEV6("li", {
+              style: { color: "var(--aeon-presence-rail-muted)" },
               children: "No scroll telemetry yet"
             }, undefined, false, undefined, this) : legendSignals.map((signal) => {
               const depthPct = Math.round(signal.depth * 100);
               const activityPct = Math.round(signal.activity * 100);
-              return /* @__PURE__ */ jsxDEV6("div", {
+              return /* @__PURE__ */ jsxDEV6("li", {
                 style: {
                   display: "grid",
                   gap: 3
@@ -3488,7 +3576,7 @@ function PresenceScrollBar({
                       /* @__PURE__ */ jsxDEV6("span", {
                         style: {
                           fontWeight: signal.isLocal ? 700 : 600,
-                          color: signal.isLocal ? "#111827" : "#1f2937",
+                          color: "var(--aeon-presence-rail-text)",
                           minWidth: 0,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -3501,7 +3589,7 @@ function PresenceScrollBar({
                           position: "relative",
                           height: 5,
                           borderRadius: 999,
-                          background: "#e5e7eb",
+                          background: "color-mix(in srgb, var(--aeon-presence-rail-accent) 10%, #e5e7eb)",
                           overflow: "hidden"
                         },
                         children: /* @__PURE__ */ jsxDEV6("span", {
@@ -3518,7 +3606,7 @@ function PresenceScrollBar({
                       }, undefined, false, undefined, this),
                       /* @__PURE__ */ jsxDEV6("span", {
                         style: {
-                          color: "#6b7280",
+                          color: "var(--aeon-presence-rail-muted)",
                           fontVariantNumeric: "tabular-nums"
                         },
                         children: [
@@ -3530,7 +3618,7 @@ function PresenceScrollBar({
                   }, undefined, true, undefined, this),
                   /* @__PURE__ */ jsxDEV6("div", {
                     style: {
-                      color: "#9ca3af",
+                      color: "var(--aeon-presence-rail-muted)",
                       fontSize: 11,
                       display: "flex",
                       alignItems: "center",
@@ -3593,7 +3681,7 @@ function PresenceViewportList({
                 children: [
                   /* @__PURE__ */ jsxDEV6("span", {
                     style: { fontWeight: 600 },
-                    children: displayUser(user.userId)
+                    children: displayPresenceUser(user.userId)
                   }, undefined, false, undefined, this),
                   " ",
                   /* @__PURE__ */ jsxDEV6("span", {
@@ -3618,7 +3706,7 @@ function PresenceViewportList({
                     width: `${Math.min(100, Math.max(10, ratio * 40))}%`,
                     height: "100%",
                     borderRadius: 999,
-                    background: hashColor(user.userId)
+                    background: hashPresenceColor(user.userId)
                   }
                 }, undefined, false, undefined, this)
               }, undefined, false, undefined, this)
@@ -3665,7 +3753,7 @@ function PresenceInputStateList({
             children: [
               /* @__PURE__ */ jsxDEV6("span", {
                 style: { fontWeight: 600 },
-                children: displayUser(user.userId)
+                children: displayPresenceUser(user.userId)
               }, undefined, false, undefined, this),
               /* @__PURE__ */ jsxDEV6("span", {
                 style: { color: "#6b7280" },
@@ -3729,7 +3817,7 @@ function PresenceEmotionList({
                 children: [
                   /* @__PURE__ */ jsxDEV6("span", {
                     style: { fontWeight: 600 },
-                    children: displayUser(user.userId)
+                    children: displayPresenceUser(user.userId)
                   }, undefined, false, undefined, this),
                   " ",
                   /* @__PURE__ */ jsxDEV6("span", {
@@ -3750,7 +3838,7 @@ function PresenceEmotionList({
                     width: `${Math.round(intensity * 100)}%`,
                     height: "100%",
                     borderRadius: 999,
-                    background: hashColor(user.userId)
+                    background: hashPresenceColor(user.userId)
                   }
                 }, undefined, false, undefined, this)
               }, undefined, false, undefined, this)
@@ -3790,7 +3878,7 @@ function PresenceEditingList({
           children: [
             /* @__PURE__ */ jsxDEV6("span", {
               style: { fontWeight: 600 },
-              children: displayUser(user.userId)
+              children: displayPresenceUser(user.userId)
             }, undefined, false, undefined, this),
             /* @__PURE__ */ jsxDEV6("code", {
               style: { color: "#6b7280" },
@@ -3841,7 +3929,7 @@ function PresenceStatusList({
               }, undefined, false, undefined, this),
               /* @__PURE__ */ jsxDEV6("span", {
                 style: { fontWeight: 600 },
-                children: displayUser(user.userId)
+                children: displayPresenceUser(user.userId)
               }, undefined, false, undefined, this),
               /* @__PURE__ */ jsxDEV6("span", {
                 style: { color: "#6b7280" },
@@ -3870,7 +3958,8 @@ function PresenceElementsPanel({
   cursorLayerHeight = 220,
   scrollBarAccentColor = DEFAULT_SCROLL_ACCENT,
   scrollBarMarkerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
-  showScrollLegend = true
+  showScrollLegend = true,
+  scrollTheme
 }) {
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
@@ -3906,7 +3995,8 @@ function PresenceElementsPanel({
         localUserId,
         accentColor: scrollBarAccentColor,
         markerLimit: scrollBarMarkerLimit,
-        showLegend: showScrollLegend
+        showLegend: showScrollLegend,
+        theme: scrollTheme
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6(PresenceViewportList, {
         presence,
@@ -3932,20 +4022,22 @@ function CollaborativePresenceScrollContainer({
   style,
   accentColor = DEFAULT_SCROLL_ACCENT,
   markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  theme,
   onScrollStateChange
 }) {
   const containerRef = useRef5(null);
   const [localDepth, setLocalDepth] = useState11(0);
   const localDepthRef = useRef5(0);
   const frameRef = useRef5(null);
-  const markers = useMemo3(() => buildScrollSignals(presence, localUserId, markerLimit).filter((signal) => !signal.isLocal), [localUserId, markerLimit, presence]);
+  const contentId = useId();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const railVars = useMemo3(() => resolvePresenceScrollRailVars(accentColor, theme), [accentColor, theme]);
+  const markers = useMemo3(() => sortScrollSignalsForRail(buildScrollSignals(presence, { localUserId, markerLimit }).filter((signal) => !signal.isLocal)), [localUserId, markerLimit, presence]);
   const density = useMemo3(() => buildScrollDensityMap(markers), [markers]);
   const publishScrollState = useCallback12((element) => {
     const denominator = Math.max(1, element.scrollHeight - element.clientHeight);
     const depth = clampDepth(element.scrollTop / denominator);
-    const depthDelta = Math.abs(depth - localDepthRef.current);
-    const shouldCommitDepth = depthDelta >= LOCAL_SCROLL_DEPTH_EPSILON || depth === 0 || depth === 1;
-    if (shouldCommitDepth) {
+    if (shouldCommitLocalDepthUpdate(localDepthRef.current, depth, DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON)) {
       localDepthRef.current = depth;
       setLocalDepth(depth);
     }
@@ -3956,23 +4048,68 @@ function CollaborativePresenceScrollContainer({
       documentHeight: element.scrollHeight
     });
   }, [onScrollStateChange]);
+  const scheduleUpdate = useCallback12(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      publishScrollState(element);
+      return;
+    }
+    if (frameRef.current !== null) {
+      return;
+    }
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = null;
+      publishScrollState(element);
+    });
+  }, [publishScrollState]);
+  const handleRailKeyDown = useCallback12((event) => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+    const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
+    if (maxScroll <= 0) {
+      return;
+    }
+    const lineStep = Math.max(24, element.clientHeight * 0.08);
+    const pageStep = Math.max(80, element.clientHeight * 0.85);
+    let nextTop = element.scrollTop;
+    switch (event.key) {
+      case "ArrowDown":
+        nextTop += lineStep;
+        break;
+      case "ArrowUp":
+        nextTop -= lineStep;
+        break;
+      case "PageDown":
+        nextTop += pageStep;
+        break;
+      case "PageUp":
+        nextTop -= pageStep;
+        break;
+      case "Home":
+        nextTop = 0;
+        break;
+      case "End":
+        nextTop = maxScroll;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const boundedTop = Math.min(maxScroll, Math.max(0, nextTop));
+    if (boundedTop !== element.scrollTop) {
+      element.scrollTop = boundedTop;
+    }
+    scheduleUpdate();
+  }, [scheduleUpdate]);
   useEffect11(() => {
     const element = containerRef.current;
     if (!element)
       return;
-    const scheduleUpdate = () => {
-      if (typeof window === "undefined") {
-        publishScrollState(element);
-        return;
-      }
-      if (frameRef.current !== null) {
-        return;
-      }
-      frameRef.current = window.requestAnimationFrame(() => {
-        frameRef.current = null;
-        publishScrollState(element);
-      });
-    };
     scheduleUpdate();
     element.addEventListener("scroll", scheduleUpdate, { passive: true });
     const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
@@ -3993,7 +4130,14 @@ function CollaborativePresenceScrollContainer({
         }
       }
     };
-  }, [publishScrollState]);
+  }, [scheduleUpdate]);
+  const keyboardAriaLabel = useMemo3(() => {
+    const telemetryCount = markers.length;
+    if (telemetryCount === 0) {
+      return "Collaborative scroll rail. No remote telemetry available.";
+    }
+    return `Collaborative scroll rail. ${telemetryCount} remote collaborators are visible. Use Arrow keys, Page Up, Page Down, Home, or End to scroll.`;
+  }, [markers.length]);
   return /* @__PURE__ */ jsxDEV6("div", {
     className,
     style: {
@@ -4002,14 +4146,21 @@ function CollaborativePresenceScrollContainer({
         height,
         overflow: "hidden",
         padding: 0,
-        border: `1px solid color-mix(in srgb, ${accentColor} 24%, #d1d5db)`,
-        background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 5%, #ffffff), #ffffff)`
+        border: "1px solid var(--aeon-presence-rail-border)",
+        background: "linear-gradient(180deg, var(--aeon-presence-rail-surface), #ffffff)"
       }),
+      ...railVars,
       ...style
     },
     children: [
+      /* @__PURE__ */ jsxDEV6("span", {
+        style: SR_ONLY_STYLE,
+        children: "Scroll container with collaborative presence rail. Keyboard navigation is available on the rail."
+      }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6("div", {
         ref: containerRef,
+        id: contentId,
+        className: "aeon-collab-scroll-content",
         style: {
           height: "100%",
           overflowY: "auto",
@@ -4021,6 +4172,17 @@ function CollaborativePresenceScrollContainer({
         children
       }, undefined, false, undefined, this),
       /* @__PURE__ */ jsxDEV6("div", {
+        className: "aeon-collab-scroll-rail",
+        tabIndex: 0,
+        role: "scrollbar",
+        "aria-label": keyboardAriaLabel,
+        "aria-controls": contentId,
+        "aria-orientation": "vertical",
+        "aria-valuemin": 0,
+        "aria-valuemax": 100,
+        "aria-valuenow": Math.round(localDepth * 100),
+        "aria-valuetext": `${Math.round(localDepth * 100)} percent`,
+        onKeyDown: handleRailKeyDown,
         style: {
           position: "absolute",
           top: 10,
@@ -4028,8 +4190,8 @@ function CollaborativePresenceScrollContainer({
           right: 7,
           width: 16,
           borderRadius: 999,
-          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 6%, #f8fafc), #e5e7eb)`,
-          boxShadow: "inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 8px 16px rgba(15, 23, 42, 0.08)"
+          background: "linear-gradient(180deg, color-mix(in srgb, var(--aeon-presence-rail-accent) 6%, #f8fafc), #e5e7eb)",
+          boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--aeon-presence-rail-border) 45%, rgba(148, 163, 184, 0.24)), inset 0 8px 16px rgba(15, 23, 42, 0.08)"
         },
         children: [
           density.map((value, index) => {
@@ -4042,7 +4204,7 @@ function CollaborativePresenceScrollContainer({
                 right: 0,
                 top: `${top.toFixed(3)}%`,
                 height: `${segmentHeight.toFixed(3)}%`,
-                background: `color-mix(in srgb, ${accentColor} ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
+                background: `color-mix(in srgb, var(--aeon-presence-rail-accent) ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
                 opacity: (0.12 + value * 0.62).toFixed(3),
                 pointerEvents: "none"
               }
@@ -4057,15 +4219,17 @@ function CollaborativePresenceScrollContainer({
               top: `${(localDepth * 100).toFixed(3)}%`,
               transform: "translate(-50%, -50%)",
               borderRadius: 999,
-              background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 62%, #ffffff), ${accentColor})`,
-              boxShadow: "0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px rgba(59, 130, 246, 0.35)"
+              background: "linear-gradient(180deg, color-mix(in srgb, var(--aeon-presence-rail-accent) 62%, #ffffff), var(--aeon-presence-rail-accent))",
+              boxShadow: prefersReducedMotion ? "0 0 0 1px rgba(15, 23, 42, 0.36)" : "0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px color-mix(in srgb, var(--aeon-presence-rail-accent) 35%, transparent)"
             },
-            title: localUserId ? `${displayUser(localUserId)} (you)` : "you"
+            title: localUserId ? `${displayPresenceUser(localUserId)} (you)` : "you",
+            "aria-hidden": "true"
           }, undefined, false, undefined, this),
           markers.map((signal) => {
             const markerSize = 5 + signal.activity * 3.8;
             const glowColor = `color-mix(in srgb, ${signal.color} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
             return /* @__PURE__ */ jsxDEV6("span", {
+              className: "aeon-collab-scroll-marker",
               title: `${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`,
               style: {
                 position: "absolute",
@@ -4077,8 +4241,9 @@ function CollaborativePresenceScrollContainer({
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.7)",
                 background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${signal.color} 38%, #ffffff), ${signal.color})`,
-                boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`
-              }
+                boxShadow: prefersReducedMotion ? "0 0 0 1px rgba(15,23,42,0.32)" : `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`
+              },
+              "aria-hidden": "true"
             }, signal.userId, false, undefined, this);
           })
         ]

@@ -257,26 +257,54 @@ export async function handleGetSitemap(args) {
         { route: '/breathing', title: 'Breathing Exercises', category: 'tools' },
         { route: '/breathing/4-7-8', title: '4-7-8 Breathing', category: 'tools' },
         { route: '/breathing/box', title: 'Box Breathing', category: 'tools' },
-        { route: '/breathing/coherent', title: 'Coherent Breathing', category: 'tools' },
+        {
+            route: '/breathing/coherent',
+            title: 'Coherent Breathing',
+            category: 'tools',
+        },
         // Tools - Grounding
         { route: '/grounding', title: 'Grounding Exercises', category: 'tools' },
-        { route: '/grounding/5-4-3-2-1', title: '5-4-3-2-1 Grounding', category: 'tools' },
+        {
+            route: '/grounding/5-4-3-2-1',
+            title: '5-4-3-2-1 Grounding',
+            category: 'tools',
+        },
         { route: '/grounding/body-scan', title: 'Body Scan', category: 'tools' },
         // Tools - Journaling
         { route: '/journaling', title: 'Journaling', category: 'tools' },
-        { route: '/journaling/freeform', title: 'Freeform Journaling', category: 'tools' },
-        { route: '/journaling/gratitude', title: 'Gratitude Journal', category: 'tools' },
+        {
+            route: '/journaling/freeform',
+            title: 'Freeform Journaling',
+            category: 'tools',
+        },
+        {
+            route: '/journaling/gratitude',
+            title: 'Gratitude Journal',
+            category: 'tools',
+        },
         // Learning
         { route: '/learning', title: 'Learning', category: 'learning' },
         { route: '/learning/emotions', title: 'Emotions', category: 'learning' },
         { route: '/learning/emotions/joy', title: 'Joy', category: 'learning' },
-        { route: '/learning/emotions/sadness', title: 'Sadness', category: 'learning' },
+        {
+            route: '/learning/emotions/sadness',
+            title: 'Sadness',
+            category: 'learning',
+        },
         { route: '/learning/emotions/anger', title: 'Anger', category: 'learning' },
         { route: '/learning/emotions/fear', title: 'Fear', category: 'learning' },
         // Settings
         { route: '/settings', title: 'Settings', category: 'settings' },
-        { route: '/settings/privacy', title: 'Privacy Settings', category: 'settings' },
-        { route: '/settings/notifications', title: 'Notification Settings', category: 'settings' },
+        {
+            route: '/settings/privacy',
+            title: 'Privacy Settings',
+            category: 'settings',
+        },
+        {
+            route: '/settings/notifications',
+            title: 'Notification Settings',
+            category: 'settings',
+        },
         // Account
         { route: '/account', title: 'Account', category: 'account' },
         { route: '/account/profile', title: 'Profile', category: 'account' },
@@ -308,8 +336,11 @@ export async function handleSpeculate(args) {
         '/learning': ['/learning/emotions', '/dashboard', '/insights'],
         '/settings': ['/settings/privacy', '/account', '/dashboard'],
     };
-    const likelyRoutes = speculations[state.currentRoute] ||
-        ['/dashboard', '/insights', '/breathing'];
+    const likelyRoutes = speculations[state.currentRoute] || [
+        '/dashboard',
+        '/insights',
+        '/breathing',
+    ];
     return {
         content: [
             {

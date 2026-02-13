@@ -76,11 +76,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // ============================================================================
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
-        resources: [
-            sitemapResource,
-            sessionResource,
-            consciousnessResource,
-        ],
+        resources: [sitemapResource, sessionResource, consciousnessResource],
     };
 });
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {

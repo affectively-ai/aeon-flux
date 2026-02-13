@@ -60974,7 +60974,14 @@ var exports_build = {};
 __export(exports_build, {
   build: () => build
 });
-import { readFile as readFile5, readdir as readdir4, writeFile as writeFile2, mkdir as mkdir2, copyFile, stat as stat5 } from "fs/promises";
+import {
+  readFile as readFile5,
+  readdir as readdir4,
+  writeFile as writeFile2,
+  mkdir as mkdir2,
+  copyFile,
+  stat as stat5
+} from "fs/promises";
 import { join as join5, resolve as resolve3, relative as relative3 } from "path";
 async function build(options) {
   const cwd = process.cwd();
@@ -61857,7 +61864,10 @@ async function main() {
       await Promise.resolve().then(() => (init_build(), exports_build)).then((m) => m.build({ config: values.config }));
       break;
     case "start":
-      await Promise.resolve().then(() => (init_start(), exports_start)).then((m) => m.start({ port: parseInt(values.port || "3000"), config: values.config }));
+      await Promise.resolve().then(() => (init_start(), exports_start)).then((m) => m.start({
+        port: parseInt(values.port || "3000"),
+        config: values.config
+      }));
       break;
     default:
       console.error(`Unknown command: ${command}`);

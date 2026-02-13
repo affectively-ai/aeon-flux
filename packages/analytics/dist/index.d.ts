@@ -27,7 +27,7 @@
  * ```
  */
 export type { GTMConfig, AnalyticsConfig, ClickTrackingOptions, MerkleNode, MerkleTree, ComponentNode, ComponentTree, SerializedMerkleInfo, UserTier, ConnectionType, EmotionState, ESIState, ESIStateFeatures, AeonEventBase, ElementInfo, PositionInfo, ContextEvent, PageViewEvent, ClickEvent, DataLayerEvent, } from './types';
-export { MERKLE_ATTR, PATH_ATTR, PATH_HASHES_ATTR, TYPE_ATTR, } from './types';
+export { MERKLE_ATTR, PATH_ATTR, PATH_HASHES_ATTR, TYPE_ATTR } from './types';
 export { hashNodeAsync, buildMerkleTree, hashNodeSync, buildMerkleTreeSync, getMerkleAttributes, parseMerkleFromElement, findNearestMerkleElement, verifyMerkleTree, diffMerkleTrees, } from './merkle-tree';
 export { ANALYTICS_VERSION, ensureDataLayer, pushToDataLayer, getDataLayer, clearDataLayer, buildContextEvent, buildPageViewEvent, buildClickEvent, extractElementInfo, extractPositionInfo, pushContextEvent, pushPageViewEvent, pushClickEvent, setDebugMode, } from './data-layer';
 export { injectGTM, injectGTMNoScript, initializeGTM, generateGTMScriptTag, generateGTMNoScriptTag, generateDataLayerScript, isGTMInjected, isGTMReady, waitForGTM, resetGTMState, } from './gtm-loader';

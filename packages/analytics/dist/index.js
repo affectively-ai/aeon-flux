@@ -627,7 +627,13 @@ function meetsTierRequirement(requiredTier) {
   if (state.isAdmin === true || state.userTier === "admin") {
     return true;
   }
-  const tierOrder = ["free", "starter", "pro", "enterprise", "admin"];
+  const tierOrder = [
+    "free",
+    "starter",
+    "pro",
+    "enterprise",
+    "admin"
+  ];
   const userTierIndex = tierOrder.indexOf(state.userTier);
   const requiredTierIndex = tierOrder.indexOf(requiredTier);
   return userTierIndex >= requiredTierIndex;
@@ -1133,4 +1139,4 @@ export {
   ANALYTICS_VERSION
 };
 
-//# debugId=5BD7486F28850EC164756E2164756E21
+//# debugId=9CC90BF3A061B96D64756E2164756E21
