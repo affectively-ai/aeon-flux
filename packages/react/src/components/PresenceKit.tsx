@@ -3,41 +3,29 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from 'react';
 import type { PresenceScroll, PresenceUser } from '../provider';
-
-const USER_COLORS = [
-  '#ef4444',
-  '#3b82f6',
-  '#22c55e',
-  '#f59e0b',
-  '#14b8a6',
-  '#f97316',
-  '#ec4899',
-  '#84cc16',
-];
-
-function hashColor(userId: string): string {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash << 5) - hash + userId.charCodeAt(i);
-    hash |= 0;
-  }
-  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
-}
-
-function displayUser(userId: string): string {
-  return userId.length > 10 ? userId.slice(0, 8) : userId;
-}
-
-function clampDepth(depth: number): number {
-  return Math.max(0, Math.min(1, depth));
-}
+import {
+  buildScrollDensityMap,
+  buildScrollSignals,
+  clampDepth,
+  DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON,
+  DEFAULT_SCROLL_ACCENT,
+  DEFAULT_SCROLL_MARKER_LIMIT,
+  displayPresenceUser,
+  hashPresenceColor,
+  shouldCommitLocalDepthUpdate,
+  sortScrollSignalsForLegend,
+  sortScrollSignalsForRail,
+  type PresenceScrollSignal,
+} from './presence-scroll-signals';
 
 function formatLastActivity(lastActivity?: string): string {
   if (!lastActivity) return 'unknown activity';
@@ -65,181 +53,73 @@ function panelStyle(base?: CSSProperties): CSSProperties {
   };
 }
 
-const DEFAULT_SCROLL_ACCENT = '#3b82f6';
-const DEFAULT_SCROLL_MARKER_LIMIT = 32;
-const SCROLL_DENSITY_BUCKETS = 16;
-const SCROLL_ACTIVITY_WINDOW_MS = 120000;
-const LOCAL_SCROLL_DEPTH_EPSILON = 0.0025;
+const SR_ONLY_STYLE: CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
 
-interface PresenceScrollSignal {
-  user: PresenceUser;
-  userId: string;
-  label: string;
-  shortLabel: string;
-  depth: number;
-  color: string;
-  isLocal: boolean;
-  activity: number;
-  laneOffsetPx: number;
-  socialSignal: string;
+export interface PresenceScrollThemeTokens {
+  accentColor?: string;
+  railSurfaceColor?: string;
+  railBorderColor?: string;
+  textColor?: string;
+  mutedTextColor?: string;
 }
 
-function hashLaneOffset(
-  userId: string,
-  laneSpacingPx = 4,
-  laneCount = 5,
-): number {
-  if (laneCount <= 1) {
-    return 0;
-  }
+type PresenceScrollRailVars = CSSProperties & {
+  '--aeon-presence-rail-accent': string;
+  '--aeon-presence-rail-surface': string;
+  '--aeon-presence-rail-border': string;
+  '--aeon-presence-rail-text': string;
+  '--aeon-presence-rail-muted': string;
+};
 
-  let hash = 0;
-  for (let index = 0; index < userId.length; index += 1) {
-    hash = (hash << 5) - hash + userId.charCodeAt(index);
-    hash |= 0;
-  }
-
-  const lane = Math.abs(hash) % laneCount;
-  const centeredLane = lane - (laneCount - 1) / 2;
-  return Math.round(centeredLane * laneSpacingPx);
+function resolvePresenceScrollRailVars(
+  accentColor: string,
+  theme?: PresenceScrollThemeTokens,
+): PresenceScrollRailVars {
+  const accent = theme?.accentColor ?? accentColor;
+  return {
+    '--aeon-presence-rail-accent': accent,
+    '--aeon-presence-rail-surface':
+      theme?.railSurfaceColor ??
+      `color-mix(in srgb, ${accent} 8%, #f8fafc)`,
+    '--aeon-presence-rail-border':
+      theme?.railBorderColor ??
+      `color-mix(in srgb, ${accent} 24%, #d1d5db)`,
+    '--aeon-presence-rail-text': theme?.textColor ?? '#111827',
+    '--aeon-presence-rail-muted': theme?.mutedTextColor ?? '#6b7280',
+  };
 }
 
-function computeScrollActivity(user: PresenceUser, now: number): number {
-  let activity = 0.15;
+function usePrefersReducedMotion(): boolean {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  if (user.status === 'online') activity += 0.2;
-  if (user.status === 'away') activity += 0.06;
-  if (user.typing?.isTyping) activity += 0.22;
-  if (user.focusNode) activity += 0.12;
-  if (user.selection) activity += 0.08;
-  if (user.inputState?.hasFocus) activity += 0.1;
-  if (user.editing) activity += 0.08;
-
-  if (user.emotion) {
-    const emotionIntensity = clampDepth(
-      user.emotion.intensity ?? user.emotion.confidence ?? 0.3,
-    );
-    activity += 0.08 + emotionIntensity * 0.12;
-  }
-
-  const lastActivityAt = Date.parse(user.lastActivity);
-  if (!Number.isNaN(lastActivityAt)) {
-    const ageMs = Math.max(0, now - lastActivityAt);
-    const freshness = 1 - Math.min(1, ageMs / SCROLL_ACTIVITY_WINDOW_MS);
-    activity *= 0.35 + freshness * 0.65;
-  }
-
-  return clampDepth(activity);
-}
-
-function summarizeScrollSignal(user: PresenceUser): string {
-  const signals: string[] = [];
-
-  if (user.typing?.isTyping) {
-    signals.push('typing');
-  }
-  if (user.focusNode) {
-    signals.push('focused');
-  }
-  if (user.selection) {
-    signals.push('selecting');
-  }
-  if (user.inputState?.hasFocus) {
-    signals.push('editing');
-  }
-  if (user.emotion?.primary) {
-    signals.push(user.emotion.primary);
-  }
-
-  if (signals.length === 0) {
-    signals.push(user.status);
-  }
-
-  return signals.join(' · ');
-}
-
-function buildScrollSignals(
-  presence: PresenceUser[],
-  localUserId?: string,
-  markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
-): PresenceScrollSignal[] {
-  const now = Date.now();
-  const normalizedLimit = Math.max(0, Math.trunc(markerLimit));
-
-  if (normalizedLimit === 0) {
-    return [];
-  }
-
-  const signals = presence
-    .filter(
-      (
-        user,
-      ): user is PresenceUser & {
-        scroll: NonNullable<PresenceUser['scroll']>;
-      } => Boolean(user.scroll),
-    )
-    .map((user) => {
-      const shortLabel = displayUser(user.userId);
-      return {
-        user,
-        userId: user.userId,
-        label: shortLabel,
-        shortLabel,
-        depth: clampDepth(user.scroll.depth),
-        color: hashColor(user.userId),
-        isLocal: user.userId === localUserId,
-        activity: computeScrollActivity(user, now),
-        laneOffsetPx: 0,
-        socialSignal: summarizeScrollSignal(user),
-      };
-    })
-    .sort((left, right) => {
-      if (left.isLocal !== right.isLocal) {
-        return left.isLocal ? -1 : 1;
-      }
-      if (right.activity !== left.activity) {
-        return right.activity - left.activity;
-      }
-      return left.userId.localeCompare(right.userId);
-    })
-    .slice(0, normalizedLimit);
-
-  return signals.map((signal, index) => ({
-    ...signal,
-    laneOffsetPx: signal.isLocal
-      ? 0
-      : hashLaneOffset(signal.userId, 4, 5) + ((index % 3) - 1),
-  }));
-}
-
-function buildScrollDensityMap(
-  signals: PresenceScrollSignal[],
-  bucketCount = SCROLL_DENSITY_BUCKETS,
-): number[] {
-  const buckets = Array.from({ length: bucketCount }, () => 0);
-
-  if (signals.length === 0) {
-    return buckets;
-  }
-
-  for (const signal of signals) {
-    const bucketIndex = Math.min(
-      bucketCount - 1,
-      Math.max(0, Math.round(signal.depth * (bucketCount - 1))),
-    );
-    const weight = 0.2 + signal.activity * 0.8;
-    buckets[bucketIndex] += weight;
-
-    if (bucketIndex > 0) {
-      buckets[bucketIndex - 1] += weight * 0.28;
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
     }
-    if (bucketIndex < bucketCount - 1) {
-      buckets[bucketIndex + 1] += weight * 0.28;
-    }
-  }
 
-  const peak = Math.max(1, ...buckets);
-  return buckets.map((value) => clampDepth(value / peak));
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    syncPreference();
+    mediaQuery.addEventListener('change', syncPreference);
+    return () => {
+      mediaQuery.removeEventListener('change', syncPreference);
+    };
+  }, []);
+
+  return prefersReducedMotion;
 }
 
 export interface PresenceCursorLayerProps {
@@ -271,7 +151,7 @@ export function PresenceCursorLayer({
     >
       {users.map((user) => {
         if (!user.cursor) return null;
-        const color = hashColor(user.userId);
+        const color = hashPresenceColor(user.userId);
 
         return (
           <div
@@ -307,7 +187,7 @@ export function PresenceCursorLayer({
                 whiteSpace: 'nowrap',
               }}
             >
-              {displayUser(user.userId)}
+              {displayPresenceUser(user.userId)}
             </div>
           </div>
         );
@@ -349,13 +229,13 @@ export function PresenceFocusList({
             <div
               key={user.userId}
               style={{
-                border: `1px solid ${hashColor(user.userId)}44`,
+                border: `1px solid ${hashPresenceColor(user.userId)}44`,
                 borderRadius: 8,
                 padding: '6px 8px',
                 fontSize: 12,
               }}
             >
-              <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>{' '}
+              <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>{' '}
               <span style={{ color: '#6b7280' }}>focused</span>{' '}
               <code style={{ color: '#111827' }}>{user.focusNode}</code>
             </div>
@@ -408,10 +288,10 @@ export function PresenceTypingList({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: hashColor(user.userId),
+                  background: hashPresenceColor(user.userId),
                 }}
               />
-              <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>
+              <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>
               <span style={{ color: '#6b7280' }}>
                 {user.typing?.field ? `typing in ${user.typing.field}` : 'typing'}
               </span>
@@ -454,12 +334,12 @@ export function PresenceSelectionList({
             <div
               key={user.userId}
               style={{
-                borderLeft: `4px solid ${hashColor(user.userId)}`,
+                borderLeft: `4px solid ${hashPresenceColor(user.userId)}`,
                 paddingLeft: 8,
                 fontSize: 12,
               }}
             >
-              <div style={{ fontWeight: 600 }}>{displayUser(user.userId)}</div>
+              <div style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</div>
               <div style={{ color: '#6b7280' }}>
                 {user.selection?.path ?? 'document'}: {user.selection?.start} -{' '}
                 {user.selection?.end}
@@ -706,7 +586,7 @@ export function PresenceViewportList({
             return (
               <div key={user.userId} style={{ fontSize: 12 }}>
                 <div style={{ marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>{' '}
+                  <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>{' '}
                   <span style={{ color: '#6b7280' }}>
                     {viewport.width}x{viewport.height}
                   </span>
@@ -724,7 +604,7 @@ export function PresenceViewportList({
                       width: `${Math.min(100, Math.max(10, ratio * 40))}%`,
                       height: '100%',
                       borderRadius: 999,
-                      background: hashColor(user.userId),
+                      background: hashPresenceColor(user.userId),
                     }}
                   />
                 </div>
@@ -777,7 +657,7 @@ export function PresenceInputStateList({
                   background: '#f9fafb',
                 }}
               >
-                <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>
+                <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>
                 <span style={{ color: '#6b7280' }}>{state.field}</span>
                 <span>{state.hasFocus ? 'focused' : 'blurred'}</span>
                 {state.selectionStart !== undefined && state.selectionEnd !== undefined ? (
@@ -831,7 +711,7 @@ export function PresenceEmotionList({
             return (
               <div key={user.userId} style={{ fontSize: 12 }}>
                 <div style={{ marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>{' '}
+                  <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>{' '}
                   <span style={{ color: '#6b7280' }}>
                     {emotion.primary ?? 'unspecified'}
                   </span>
@@ -849,7 +729,7 @@ export function PresenceEmotionList({
                       width: `${Math.round(intensity * 100)}%`,
                       height: '100%',
                       borderRadius: 999,
-                      background: hashColor(user.userId),
+                      background: hashPresenceColor(user.userId),
                     }}
                   />
                 </div>
@@ -894,7 +774,7 @@ export function PresenceEditingList({
                 fontSize: 12,
               }}
             >
-              <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>
+              <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>
               <code style={{ color: '#6b7280' }}>{user.editing}</code>
             </div>
           ))}
@@ -951,7 +831,7 @@ export function PresenceStatusList({
                     background: color,
                   }}
                 />
-                <span style={{ fontWeight: 600 }}>{displayUser(user.userId)}</span>
+                <span style={{ fontWeight: 600 }}>{displayPresenceUser(user.userId)}</span>
                 <span style={{ color: '#6b7280' }}>
                   {user.role} {user.status}
                 </span>
@@ -1199,7 +1079,7 @@ export function CollaborativePresenceScrollContainer({
             boxShadow:
               '0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px rgba(59, 130, 246, 0.35)',
           }}
-          title={localUserId ? `${displayUser(localUserId)} (you)` : 'you'}
+          title={localUserId ? `${displayPresenceUser(localUserId)} (you)` : 'you'}
         />
 
         {markers.map((signal) => {
