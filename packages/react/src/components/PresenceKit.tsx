@@ -360,6 +360,7 @@ export interface PresenceScrollBarProps {
   accentColor?: string;
   markerLimit?: number;
   showLegend?: boolean;
+  theme?: PresenceScrollThemeTokens;
 }
 
 export function PresenceScrollBar({
@@ -370,35 +371,47 @@ export function PresenceScrollBar({
   accentColor = DEFAULT_SCROLL_ACCENT,
   markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
   showLegend = true,
+  theme,
 }: PresenceScrollBarProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const signals = useMemo(
-    () => buildScrollSignals(presence, localUserId, markerLimit),
+    () => buildScrollSignals(presence, { localUserId, markerLimit }),
     [localUserId, markerLimit, presence],
   );
   const trackSignals = useMemo(
-    () => [...signals].sort((left, right) => left.depth - right.depth),
+    () => sortScrollSignalsForRail(signals),
     [signals],
   );
   const density = useMemo(() => buildScrollDensityMap(trackSignals), [trackSignals]);
   const legendSignals = useMemo(
-    () =>
-      [...signals]
-        .sort((left, right) => {
-          if (right.activity !== left.activity) {
-            return right.activity - left.activity;
-          }
-          return left.depth - right.depth;
-        })
-        .slice(0, 8),
+    () => sortScrollSignalsForLegend(signals, 8),
     [signals],
   );
+  const railVars = useMemo(
+    () => resolvePresenceScrollRailVars(accentColor, theme),
+    [accentColor, theme],
+  );
+  const collaboratorCountLabel =
+    signals.length === 1
+      ? '1 collaborator shares scroll telemetry.'
+      : `${signals.length} collaborators share scroll telemetry.`;
 
   return (
-    <div className={className} style={panelStyle()}>
+    <div
+      className={className}
+      style={{
+        ...panelStyle(),
+        ...railVars,
+      }}
+      role="group"
+      aria-label="Scroll presence telemetry"
+    >
+      <span style={SR_ONLY_STYLE}>{collaboratorCountLabel}</span>
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
         Scroll Presence
       </div>
       <div
+        className="aeon-presence-scrollbar"
         style={{
           display: 'grid',
           gridTemplateColumns: showLegend ? '24px minmax(0, 1fr)' : '24px',
@@ -407,16 +420,19 @@ export function PresenceScrollBar({
         }}
       >
         <div
+          className="aeon-presence-scrollbar-rail"
           style={{
             position: 'relative',
             width: 24,
             height,
             borderRadius: 999,
-            background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 8%, #f8fafc), #e5e7eb)`,
+            background:
+              'linear-gradient(180deg, var(--aeon-presence-rail-surface), #e5e7eb)',
             boxShadow:
-              'inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 12px 20px rgba(15, 23, 42, 0.08)',
+              'inset 0 0 0 1px color-mix(in srgb, var(--aeon-presence-rail-border) 45%, rgba(148, 163, 184, 0.24)), inset 0 12px 20px rgba(15, 23, 42, 0.08)',
             overflow: 'hidden',
           }}
+          aria-hidden="true"
         >
           {density.map((value, index) => {
             const top = (index / density.length) * 100;
@@ -430,7 +446,7 @@ export function PresenceScrollBar({
                   right: 0,
                   top: `${top.toFixed(3)}%`,
                   height: `${segmentHeight.toFixed(3)}%`,
-                  background: `color-mix(in srgb, ${accentColor} ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
+                  background: `color-mix(in srgb, var(--aeon-presence-rail-accent) ${(10 + value * 36).toFixed(2)}%, #dbe4f4)`,
                   opacity: (0.12 + value * 0.62).toFixed(3),
                   pointerEvents: 'none',
                 }}
@@ -444,6 +460,7 @@ export function PresenceScrollBar({
             const glowColor = `color-mix(in srgb, ${markerColor} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
             return (
               <span
+                className="aeon-presence-scrollbar-marker"
                 key={signal.userId}
                 title={`${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`}
                 style={{
@@ -455,25 +472,41 @@ export function PresenceScrollBar({
                   transform: `translate(-50%, -50%) scale(${markerScale.toFixed(3)})`,
                   borderRadius: 999,
                   border: signal.isLocal
-                    ? `1px solid color-mix(in srgb, ${accentColor} 72%, #ffffff)`
+                    ? '1px solid color-mix(in srgb, var(--aeon-presence-rail-accent) 72%, #ffffff)'
                     : '1px solid rgba(255,255,255,0.72)',
                   background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${markerColor} 38%, #ffffff), ${markerColor})`,
-                  boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`,
+                  boxShadow: prefersReducedMotion
+                    ? '0 0 0 1px rgba(15,23,42,0.32)'
+                    : `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 14).toFixed(1)}px ${glowColor}`,
                 }}
+                aria-hidden="true"
               />
             );
           })}
         </div>
         {showLegend ? (
-          <div style={{ display: 'grid', gap: 7, fontSize: 12, minWidth: 0 }}>
+          <ul
+            className="aeon-presence-scrollbar-legend"
+            style={{
+              display: 'grid',
+              gap: 7,
+              fontSize: 12,
+              minWidth: 0,
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+            }}
+          >
             {legendSignals.length === 0 ? (
-              <div style={{ color: '#6b7280' }}>No scroll telemetry yet</div>
+              <li style={{ color: 'var(--aeon-presence-rail-muted)' }}>
+                No scroll telemetry yet
+              </li>
             ) : (
               legendSignals.map((signal) => {
                 const depthPct = Math.round(signal.depth * 100);
                 const activityPct = Math.round(signal.activity * 100);
                 return (
-                  <div
+                  <li
                     key={`legend-${signal.userId}`}
                     style={{
                       display: 'grid',
@@ -492,7 +525,7 @@ export function PresenceScrollBar({
                       <span
                         style={{
                           fontWeight: signal.isLocal ? 700 : 600,
-                          color: signal.isLocal ? '#111827' : '#1f2937',
+                          color: 'var(--aeon-presence-rail-text)',
                           minWidth: 0,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -506,7 +539,8 @@ export function PresenceScrollBar({
                           position: 'relative',
                           height: 5,
                           borderRadius: 999,
-                          background: '#e5e7eb',
+                          background:
+                            'color-mix(in srgb, var(--aeon-presence-rail-accent) 10%, #e5e7eb)',
                           overflow: 'hidden',
                         }}
                       >
@@ -524,7 +558,7 @@ export function PresenceScrollBar({
                       </span>
                       <span
                         style={{
-                          color: '#6b7280',
+                          color: 'var(--aeon-presence-rail-muted)',
                           fontVariantNumeric: 'tabular-nums',
                         }}
                       >
@@ -533,7 +567,7 @@ export function PresenceScrollBar({
                     </div>
                     <div
                       style={{
-                        color: '#9ca3af',
+                        color: 'var(--aeon-presence-rail-muted)',
                         fontSize: 11,
                         display: 'flex',
                         alignItems: 'center',
@@ -544,11 +578,11 @@ export function PresenceScrollBar({
                       <span style={{ color: '#cbd5e1' }}>·</span>
                       <span>{activityPct}% active</span>
                     </div>
-                  </div>
+                  </li>
                 );
               })
             )}
-          </div>
+          </ul>
         ) : null}
       </div>
     </div>
@@ -856,6 +890,7 @@ export interface PresenceElementsPanelProps {
   scrollBarAccentColor?: string;
   scrollBarMarkerLimit?: number;
   showScrollLegend?: boolean;
+  scrollTheme?: PresenceScrollThemeTokens;
 }
 
 export function PresenceElementsPanel({
@@ -867,6 +902,7 @@ export function PresenceElementsPanel({
   scrollBarAccentColor = DEFAULT_SCROLL_ACCENT,
   scrollBarMarkerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
   showScrollLegend = true,
+  scrollTheme,
 }: PresenceElementsPanelProps) {
   return (
     <div className={className} style={{ display: 'grid', gap: 10 }}>
@@ -888,6 +924,7 @@ export function PresenceElementsPanel({
         accentColor={scrollBarAccentColor}
         markerLimit={scrollBarMarkerLimit}
         showLegend={showScrollLegend}
+        theme={scrollTheme}
       />
       <PresenceViewportList presence={presence} localUserId={localUserId} />
       <PresenceInputStateList presence={presence} localUserId={localUserId} />
@@ -905,6 +942,7 @@ export interface CollaborativePresenceScrollContainerProps {
   style?: CSSProperties;
   accentColor?: string;
   markerLimit?: number;
+  theme?: PresenceScrollThemeTokens;
   onScrollStateChange?: (scroll: PresenceScroll) => void;
 }
 
@@ -917,17 +955,26 @@ export function CollaborativePresenceScrollContainer({
   style,
   accentColor = DEFAULT_SCROLL_ACCENT,
   markerLimit = DEFAULT_SCROLL_MARKER_LIMIT,
+  theme,
   onScrollStateChange,
 }: CollaborativePresenceScrollContainerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [localDepth, setLocalDepth] = useState(0);
   const localDepthRef = useRef(0);
   const frameRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+  const contentId = useId();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const railVars = useMemo(
+    () => resolvePresenceScrollRailVars(accentColor, theme),
+    [accentColor, theme],
+  );
 
   const markers = useMemo(
     () =>
-      buildScrollSignals(presence, localUserId, markerLimit).filter(
-        (signal) => !signal.isLocal,
+      sortScrollSignalsForRail(
+        buildScrollSignals(presence, { localUserId, markerLimit }).filter(
+          (signal) => !signal.isLocal,
+        ),
       ),
     [localUserId, markerLimit, presence],
   );
@@ -937,11 +984,14 @@ export function CollaborativePresenceScrollContainer({
     (element: HTMLDivElement) => {
       const denominator = Math.max(1, element.scrollHeight - element.clientHeight);
       const depth = clampDepth(element.scrollTop / denominator);
-      const depthDelta = Math.abs(depth - localDepthRef.current);
-      const shouldCommitDepth =
-        depthDelta >= LOCAL_SCROLL_DEPTH_EPSILON || depth === 0 || depth === 1;
 
-      if (shouldCommitDepth) {
+      if (
+        shouldCommitLocalDepthUpdate(
+          localDepthRef.current,
+          depth,
+          DEFAULT_LOCAL_SCROLL_DEPTH_EPSILON,
+        )
+      ) {
         localDepthRef.current = depth;
         setLocalDepth(depth);
       }
@@ -956,25 +1006,79 @@ export function CollaborativePresenceScrollContainer({
     [onScrollStateChange],
   );
 
+  const scheduleUpdate = useCallback(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      publishScrollState(element);
+      return;
+    }
+
+    if (frameRef.current !== null) {
+      return;
+    }
+
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = null;
+      publishScrollState(element);
+    });
+  }, [publishScrollState]);
+
+  const handleRailKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      const element = containerRef.current;
+      if (!element) {
+        return;
+      }
+
+      const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
+      if (maxScroll <= 0) {
+        return;
+      }
+
+      const lineStep = Math.max(24, element.clientHeight * 0.08);
+      const pageStep = Math.max(80, element.clientHeight * 0.85);
+      let nextTop = element.scrollTop;
+
+      switch (event.key) {
+        case 'ArrowDown':
+          nextTop += lineStep;
+          break;
+        case 'ArrowUp':
+          nextTop -= lineStep;
+          break;
+        case 'PageDown':
+          nextTop += pageStep;
+          break;
+        case 'PageUp':
+          nextTop -= pageStep;
+          break;
+        case 'Home':
+          nextTop = 0;
+          break;
+        case 'End':
+          nextTop = maxScroll;
+          break;
+        default:
+          return;
+      }
+
+      event.preventDefault();
+      const boundedTop = Math.min(maxScroll, Math.max(0, nextTop));
+      if (boundedTop !== element.scrollTop) {
+        element.scrollTop = boundedTop;
+      }
+      scheduleUpdate();
+    },
+    [scheduleUpdate],
+  );
+
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
-
-    const scheduleUpdate = () => {
-      if (typeof window === 'undefined') {
-        publishScrollState(element);
-        return;
-      }
-
-      if (frameRef.current !== null) {
-        return;
-      }
-
-      frameRef.current = window.requestAnimationFrame(() => {
-        frameRef.current = null;
-        publishScrollState(element);
-      });
-    };
 
     scheduleUpdate();
     element.addEventListener('scroll', scheduleUpdate, { passive: true });
@@ -1003,7 +1107,15 @@ export function CollaborativePresenceScrollContainer({
         }
       }
     };
-  }, [publishScrollState]);
+  }, [scheduleUpdate]);
+
+  const keyboardAriaLabel = useMemo(() => {
+    const telemetryCount = markers.length;
+    if (telemetryCount === 0) {
+      return 'Collaborative scroll rail. No remote telemetry available.';
+    }
+    return `Collaborative scroll rail. ${telemetryCount} remote collaborators are visible. Use Arrow keys, Page Up, Page Down, Home, or End to scroll.`;
+  }, [markers.length]);
 
   return (
     <div
@@ -1014,14 +1126,22 @@ export function CollaborativePresenceScrollContainer({
           height,
           overflow: 'hidden',
           padding: 0,
-          border: `1px solid color-mix(in srgb, ${accentColor} 24%, #d1d5db)`,
-          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 5%, #ffffff), #ffffff)`,
+          border: '1px solid var(--aeon-presence-rail-border)',
+          background:
+            'linear-gradient(180deg, var(--aeon-presence-rail-surface), #ffffff)',
         }),
+        ...railVars,
         ...style,
       }}
     >
+      <span style={SR_ONLY_STYLE}>
+        Scroll container with collaborative presence rail. Keyboard navigation is
+        available on the rail.
+      </span>
       <div
         ref={containerRef}
+        id={contentId}
+        className="aeon-collab-scroll-content"
         style={{
           height: '100%',
           overflowY: 'auto',
@@ -1035,6 +1155,17 @@ export function CollaborativePresenceScrollContainer({
       </div>
 
       <div
+        className="aeon-collab-scroll-rail"
+        tabIndex={0}
+        role="scrollbar"
+        aria-label={keyboardAriaLabel}
+        aria-controls={contentId}
+        aria-orientation="vertical"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(localDepth * 100)}
+        aria-valuetext={`${Math.round(localDepth * 100)} percent`}
+        onKeyDown={handleRailKeyDown}
         style={{
           position: 'absolute',
           top: 10,
@@ -1042,9 +1173,10 @@ export function CollaborativePresenceScrollContainer({
           right: 7,
           width: 16,
           borderRadius: 999,
-          background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 6%, #f8fafc), #e5e7eb)`,
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--aeon-presence-rail-accent) 6%, #f8fafc), #e5e7eb)',
           boxShadow:
-            'inset 0 0 0 1px rgba(148, 163, 184, 0.28), inset 0 8px 16px rgba(15, 23, 42, 0.08)',
+            'inset 0 0 0 1px color-mix(in srgb, var(--aeon-presence-rail-border) 45%, rgba(148, 163, 184, 0.24)), inset 0 8px 16px rgba(15, 23, 42, 0.08)',
         }}
       >
         {density.map((value, index) => {
@@ -1059,7 +1191,7 @@ export function CollaborativePresenceScrollContainer({
                 right: 0,
                 top: `${top.toFixed(3)}%`,
                 height: `${segmentHeight.toFixed(3)}%`,
-                background: `color-mix(in srgb, ${accentColor} ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
+                background: `color-mix(in srgb, var(--aeon-presence-rail-accent) ${(12 + value * 42).toFixed(2)}%, #dbe4f4)`,
                 opacity: (0.12 + value * 0.62).toFixed(3),
                 pointerEvents: 'none',
               }}
@@ -1075,11 +1207,14 @@ export function CollaborativePresenceScrollContainer({
             top: `${(localDepth * 100).toFixed(3)}%`,
             transform: 'translate(-50%, -50%)',
             borderRadius: 999,
-            background: `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 62%, #ffffff), ${accentColor})`,
-            boxShadow:
-              '0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px rgba(59, 130, 246, 0.35)',
+            background:
+              'linear-gradient(180deg, color-mix(in srgb, var(--aeon-presence-rail-accent) 62%, #ffffff), var(--aeon-presence-rail-accent))',
+            boxShadow: prefersReducedMotion
+              ? '0 0 0 1px rgba(15, 23, 42, 0.36)'
+              : '0 0 0 1px rgba(15, 23, 42, 0.36), 0 0 10px color-mix(in srgb, var(--aeon-presence-rail-accent) 35%, transparent)',
           }}
           title={localUserId ? `${displayPresenceUser(localUserId)} (you)` : 'you'}
+          aria-hidden="true"
         />
 
         {markers.map((signal) => {
@@ -1087,6 +1222,7 @@ export function CollaborativePresenceScrollContainer({
           const glowColor = `color-mix(in srgb, ${signal.color} ${(40 + signal.activity * 42).toFixed(1)}%, transparent)`;
           return (
             <span
+              className="aeon-collab-scroll-marker"
               key={signal.userId}
               title={`${signal.label}: ${Math.round(signal.depth * 100)}% · ${signal.socialSignal}`}
               style={{
@@ -1099,8 +1235,11 @@ export function CollaborativePresenceScrollContainer({
                 borderRadius: 999,
                 border: '1px solid rgba(255,255,255,0.7)',
                 background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${signal.color} 38%, #ffffff), ${signal.color})`,
-                boxShadow: `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`,
+                boxShadow: prefersReducedMotion
+                  ? '0 0 0 1px rgba(15,23,42,0.32)'
+                  : `0 0 0 1px rgba(15,23,42,0.32), 0 0 ${(8 + signal.activity * 12).toFixed(1)}px ${glowColor}`,
               }}
+              aria-hidden="true"
             />
           );
         })}
