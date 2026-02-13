@@ -47,6 +47,11 @@ export declare class AeonPageSession {
     private handleWebSocket;
     private handleMessage;
     private broadcast;
+    private broadcastPresenceUpdate;
+    private broadcastPresenceSnapshot;
+    private resolveObjectPayload;
+    private resolveCursorPayload;
+    private resolveEditingPayload;
     private applyEdit;
     private propagateToD1;
     /**

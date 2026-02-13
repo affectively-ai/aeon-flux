@@ -70,8 +70,24 @@ export interface PresenceOptions {
     enabled: boolean;
     /** Track cursor positions */
     cursorTracking?: boolean;
+    /** Track focused node/element paths */
+    focusTracking?: boolean;
+    /** Track text selection ranges */
+    selectionTracking?: boolean;
+    /** Track typing activity */
+    typingTracking?: boolean;
+    /** Track scroll depth and scroll coordinates */
+    scrollTracking?: boolean;
+    /** Track viewport size changes */
+    viewportTracking?: boolean;
+    /** Track input state (focus, caret, length) */
+    inputTracking?: boolean;
+    /** Track optional emotional state channel */
+    emotionTracking?: boolean;
     /** Inactivity timeout in milliseconds */
     inactivityTimeout?: number;
+    /** Throttle frequency for high-churn presence signals */
+    eventThrottleMs?: number;
 }
 export interface OfflineOptions {
     /** Enable offline support */
@@ -287,6 +303,50 @@ export interface WebhookPayload {
     triggeredBy?: string;
 }
 /** Presence info for a user/agent */
+export interface PresenceSelection {
+    start: number;
+    end: number;
+    direction?: 'forward' | 'backward' | 'none';
+    path?: string;
+}
+export interface PresenceTyping {
+    isTyping: boolean;
+    field?: string;
+    isComposing?: boolean;
+    startedAt?: string;
+    stoppedAt?: string;
+}
+export interface PresenceScroll {
+    depth: number;
+    y?: number;
+    viewportHeight?: number;
+    documentHeight?: number;
+    path?: string;
+}
+export interface PresenceViewport {
+    width: number;
+    height: number;
+}
+export interface PresenceInputState {
+    field: string;
+    hasFocus: boolean;
+    valueLength?: number;
+    selectionStart?: number;
+    selectionEnd?: number;
+    isComposing?: boolean;
+    inputMode?: string;
+}
+export interface PresenceEmotion {
+    primary?: string;
+    secondary?: string;
+    confidence?: number;
+    intensity?: number;
+    valence?: number;
+    arousal?: number;
+    dominance?: number;
+    source?: 'self-report' | 'inferred' | 'sensor' | 'hybrid';
+    updatedAt?: string;
+}
 export interface PresenceInfo {
     /** User or agent ID */
     userId: string;
@@ -297,6 +357,20 @@ export interface PresenceInfo {
         x: number;
         y: number;
     };
+    /** Focused node path */
+    focusNode?: string;
+    /** Text selection */
+    selection?: PresenceSelection;
+    /** Typing state */
+    typing?: PresenceTyping;
+    /** Scroll state */
+    scroll?: PresenceScroll;
+    /** Viewport dimensions */
+    viewport?: PresenceViewport;
+    /** Input state */
+    inputState?: PresenceInputState;
+    /** Optional emotional state */
+    emotion?: PresenceEmotion;
     /** Currently editing element path */
     editing?: string;
     /** Online/away/offline status */

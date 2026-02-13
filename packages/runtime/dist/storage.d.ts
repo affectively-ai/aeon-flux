@@ -330,6 +330,51 @@ interface PresenceRecord {
         x: number;
         y: number;
     };
+    focusNode?: string;
+    selection?: {
+        start: number;
+        end: number;
+        direction?: 'forward' | 'backward' | 'none';
+        path?: string;
+    };
+    typing?: {
+        isTyping: boolean;
+        field?: string;
+        isComposing?: boolean;
+        startedAt?: string;
+        stoppedAt?: string;
+    };
+    scroll?: {
+        depth: number;
+        y?: number;
+        viewportHeight?: number;
+        documentHeight?: number;
+        path?: string;
+    };
+    viewport?: {
+        width: number;
+        height: number;
+    };
+    inputState?: {
+        field: string;
+        hasFocus: boolean;
+        valueLength?: number;
+        selectionStart?: number;
+        selectionEnd?: number;
+        isComposing?: boolean;
+        inputMode?: string;
+    };
+    emotion?: {
+        primary?: string;
+        secondary?: string;
+        confidence?: number;
+        intensity?: number;
+        valence?: number;
+        arousal?: number;
+        dominance?: number;
+        source?: 'self-report' | 'inferred' | 'sensor' | 'hybrid';
+        updatedAt?: string;
+    };
     editing?: string;
     status: 'online' | 'away' | 'offline';
     lastActivity: string;

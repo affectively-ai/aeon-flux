@@ -117,24 +117,22 @@ export function handleNotificationClick(
   event.waitUntil(
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
+      .then(async (clientList) => {
         // Check if there's already a window open
         for (const client of clientList) {
           if ('focus' in client && client.url.includes(self.location.origin)) {
-            return client.focus().then((focusedClient) => {
-              if ('navigate' in focusedClient) {
-                return (focusedClient as WindowClient).navigate(targetUrl);
-              }
-              return Promise.resolve(); // Ensure a return even if navigate is not available
-            });
+            const focusedClient = await client.focus();
+            if ('navigate' in focusedClient) {
+              await (focusedClient as WindowClient).navigate(targetUrl);
+            }
+            return;
           }
         }
 
         // Open a new window if no existing window found
         if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
+          await clients.openWindow(targetUrl);
         }
-        return Promise.resolve(); // Ensure a return if openWindow is not available
       }),
   );
 }

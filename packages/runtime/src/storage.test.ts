@@ -876,6 +876,16 @@ describe('DashStorageAdapter', () => {
               userId: 'user1',
               role: 'user',
               cursor: { x: 10, y: 20 },
+              focusNode: '/hero/title',
+              typing: { isTyping: true, field: 'title' },
+              scroll: { depth: 0.25, y: 100 },
+              viewport: { width: 1280, height: 720 },
+              inputState: { field: 'title', hasFocus: true, valueLength: 8 },
+              emotion: {
+                primary: 'focused',
+                confidence: 0.88,
+                source: 'self-report',
+              },
               editing: 'header',
               status: 'online',
               lastActivity: '2024-01-01',
@@ -913,6 +923,12 @@ describe('DashStorageAdapter', () => {
     expect(session!.presence).toHaveLength(1);
     expect(session!.presence[0].userId).toBe('user1');
     expect(session!.presence[0].cursor).toEqual({ x: 10, y: 20 });
+    expect(session!.presence[0].focusNode).toBe('/hero/title');
+    expect(session!.presence[0].typing?.isTyping).toBe(true);
+    expect(session!.presence[0].scroll?.depth).toBe(0.25);
+    expect(session!.presence[0].viewport).toEqual({ width: 1280, height: 720 });
+    expect(session!.presence[0].inputState?.field).toBe('title');
+    expect(session!.presence[0].emotion?.primary).toBe('focused');
   });
 
   test('saves and retrieves tree', async () => {
@@ -1040,6 +1056,39 @@ describe('D1StorageAdapter - advanced', () => {
         role: 'user',
         cursor_x: 100,
         cursor_y: 200,
+        focus_node: '/hero/title',
+        selection_start: 3,
+        selection_end: 9,
+        selection_direction: 'forward',
+        selection_path: 'title',
+        typing: 1,
+        typing_field: 'title',
+        typing_composing: 0,
+        typing_started_at: '2024-01-01T00:00:00Z',
+        typing_stopped_at: null,
+        scroll_depth: 0.65,
+        scroll_y: 780,
+        scroll_viewport_height: 900,
+        scroll_document_height: 1200,
+        scroll_path: '/test',
+        viewport_width: 1440,
+        viewport_height: 900,
+        input_field: 'title',
+        input_has_focus: 1,
+        input_value_length: 11,
+        input_selection_start: 9,
+        input_selection_end: 11,
+        input_composing: 0,
+        input_mode: 'text',
+        emotion_primary: 'focused',
+        emotion_secondary: 'curious',
+        emotion_confidence: 0.9,
+        emotion_intensity: 0.6,
+        emotion_valence: 0.2,
+        emotion_arousal: 0.7,
+        emotion_dominance: 0.55,
+        emotion_source: 'self-report',
+        emotion_updated_at: '2024-01-01T00:00:05Z',
         editing: 'title',
         status: 'online',
         last_activity: '2024-01-01T00:00:00Z',
@@ -1049,6 +1098,39 @@ describe('D1StorageAdapter - advanced', () => {
         role: 'admin',
         cursor_x: null,
         cursor_y: null,
+        focus_node: null,
+        selection_start: null,
+        selection_end: null,
+        selection_direction: null,
+        selection_path: null,
+        typing: null,
+        typing_field: null,
+        typing_composing: null,
+        typing_started_at: null,
+        typing_stopped_at: null,
+        scroll_depth: null,
+        scroll_y: null,
+        scroll_viewport_height: null,
+        scroll_document_height: null,
+        scroll_path: null,
+        viewport_width: null,
+        viewport_height: null,
+        input_field: null,
+        input_has_focus: null,
+        input_value_length: null,
+        input_selection_start: null,
+        input_selection_end: null,
+        input_composing: null,
+        input_mode: null,
+        emotion_primary: null,
+        emotion_secondary: null,
+        emotion_confidence: null,
+        emotion_intensity: null,
+        emotion_valence: null,
+        emotion_arousal: null,
+        emotion_dominance: null,
+        emotion_source: null,
+        emotion_updated_at: null,
         editing: null,
         status: 'away',
         last_activity: '2024-01-01T00:01:00Z',
@@ -1081,8 +1163,55 @@ describe('D1StorageAdapter - advanced', () => {
     expect(session!.presence).toHaveLength(2);
     expect(session!.presence[0].userId).toBe('user1');
     expect(session!.presence[0].cursor).toEqual({ x: 100, y: 200 });
+    expect(session!.presence[0].focusNode).toBe('/hero/title');
+    expect(session!.presence[0].selection).toEqual({
+      start: 3,
+      end: 9,
+      direction: 'forward',
+      path: 'title',
+    });
+    expect(session!.presence[0].typing).toEqual({
+      isTyping: true,
+      field: 'title',
+      isComposing: false,
+      startedAt: '2024-01-01T00:00:00Z',
+      stoppedAt: undefined,
+    });
+    expect(session!.presence[0].scroll).toEqual({
+      depth: 0.65,
+      y: 780,
+      viewportHeight: 900,
+      documentHeight: 1200,
+      path: '/test',
+    });
+    expect(session!.presence[0].viewport).toEqual({
+      width: 1440,
+      height: 900,
+    });
+    expect(session!.presence[0].inputState).toEqual({
+      field: 'title',
+      hasFocus: true,
+      valueLength: 11,
+      selectionStart: 9,
+      selectionEnd: 11,
+      isComposing: false,
+      inputMode: 'text',
+    });
+    expect(session!.presence[0].emotion).toEqual({
+      primary: 'focused',
+      secondary: 'curious',
+      confidence: 0.9,
+      intensity: 0.6,
+      valence: 0.2,
+      arousal: 0.7,
+      dominance: 0.55,
+      source: 'self-report',
+      updatedAt: '2024-01-01T00:00:05Z',
+    });
     expect(session!.presence[0].editing).toBe('title');
     expect(session!.presence[1].cursor).toBeUndefined();
+    expect(session!.presence[1].typing).toBeUndefined();
+    expect(session!.presence[1].scroll).toBeUndefined();
   });
 });
 

@@ -38,8 +38,9 @@
  * ```
  */
 export { Link, type LinkProps, type TransitionType, type PrefetchStrategy, type PresenceRenderProps, } from './Link';
-export { AeonPageProvider, useAeonPage, type AeonPageProviderProps, type AeonPageContextValue, type PresenceUser, type SyncState, type VersionInfo, } from './provider';
+export { AeonPageProvider, useAeonPage, type AeonPageProviderProps, type AeonPageContextValue, type PresenceUser, type PresenceSelection, type PresenceTyping, type PresenceScroll, type PresenceViewport, type PresenceInputState, type PresenceEmotion, type SyncState, type VersionInfo, } from './provider';
 export { usePresence, useAeonSync, useAeonData } from './provider';
+export { useAeonVersion, useAeonTree, useCursorTracking, useEditableElement, useOtherCursors, useOfflineStatus, useEmotionPresence, useCollaborativeInput, useScrollPresenceTracking, useViewportPresenceTracking, useAeonEffect, useSessionId, useRoute, } from './hooks';
 export { useAeonNavigation, useNavigationPrediction, useLinkObserver, useTotalPreload, useRoutePresence, AeonNavigationContext, type AeonNavigationContextValue, } from './hooks/useAeonNavigation';
 export { useAeonServiceWorker, usePreloadProgress, useCacheStatus, useManualPreload, usePrefetchRoute, useClearCache, type PreloadProgress, type CacheStatus, } from './hooks/useServiceWorker';
 export { usePilotNavigation, parseNavigationTags, stripNavigationTags, type PilotNavigationIntent, type PilotNavigationOptions, type PilotNavigationState, } from './hooks/usePilotNavigation';
@@ -48,3 +49,4 @@ export { useConflicts, addConflict, getAllConflicts, clearAllConflicts, type Con
 export { InstallPrompt, useInstallPrompt, type InstallPromptProps, type InstallPromptState, } from './components/InstallPrompt';
 export { PushNotifications, usePushNotifications, type PushNotificationsProps, type PushSubscriptionData, type PushNotificationState, type UsePushNotificationsConfig, } from './components/PushNotifications';
 export { OfflineDiagnostics, NetworkStatusPanel, ServiceWorkerPanel, CacheManagementPanel, QueueStatsPanel, ConflictsPanel, type OfflineDiagnosticsProps, type ServiceWorkerState, type CacheInfo, type QueueStats, } from './components/OfflineDiagnostics';
+export { PresenceCursorLayer, PresenceFocusList, PresenceTypingList, PresenceSelectionList, PresenceScrollBar, PresenceViewportList, PresenceInputStateList, PresenceEmotionList, PresenceEditingList, PresenceStatusList, PresenceElementsPanel, CollaborativePresenceScrollContainer, type PresenceCursorLayerProps, type PresenceFocusListProps, type PresenceTypingListProps, type PresenceSelectionListProps, type PresenceScrollBarProps, type PresenceViewportListProps, type PresenceInputStateListProps, type PresenceEmotionListProps, type PresenceEditingListProps, type PresenceStatusListProps, type PresenceElementsPanelProps, type CollaborativePresenceScrollContainerProps, } from './components/PresenceKit';

@@ -3,11 +3,55 @@
  *
  * Provides:
  * - Real-time sync via Aeon SyncCoordinator
- * - Presence tracking via AgentPresenceManager
+ * - Presence tracking via WebSocket channel
  * - Offline support via OfflineOperationQueue
  * - Schema versioning via SchemaVersionManager
  */
 import { type ReactNode } from 'react';
+export interface PresenceSelection {
+    start: number;
+    end: number;
+    direction?: 'forward' | 'backward' | 'none';
+    path?: string;
+}
+export interface PresenceTyping {
+    isTyping: boolean;
+    field?: string;
+    isComposing?: boolean;
+    startedAt?: string;
+    stoppedAt?: string;
+}
+export interface PresenceScroll {
+    depth: number;
+    y?: number;
+    viewportHeight?: number;
+    documentHeight?: number;
+    path?: string;
+}
+export interface PresenceViewport {
+    width: number;
+    height: number;
+}
+export interface PresenceInputState {
+    field: string;
+    hasFocus: boolean;
+    valueLength?: number;
+    selectionStart?: number;
+    selectionEnd?: number;
+    isComposing?: boolean;
+    inputMode?: string;
+}
+export interface PresenceEmotion {
+    primary?: string;
+    secondary?: string;
+    confidence?: number;
+    intensity?: number;
+    valence?: number;
+    arousal?: number;
+    dominance?: number;
+    source?: 'self-report' | 'inferred' | 'sensor' | 'hybrid';
+    updatedAt?: string;
+}
 export interface PresenceUser {
     userId: string;
     role: 'user' | 'assistant' | 'monitor' | 'admin';
@@ -15,6 +59,13 @@ export interface PresenceUser {
         x: number;
         y: number;
     };
+    focusNode?: string;
+    selection?: PresenceSelection;
+    typing?: PresenceTyping;
+    scroll?: PresenceScroll;
+    viewport?: PresenceViewport;
+    inputState?: PresenceInputState;
+    emotion?: PresenceEmotion;
     editing?: string;
     status: 'online' | 'away' | 'offline';
     lastActivity: string;
@@ -38,10 +89,18 @@ export interface AeonPageContextValue {
     updateCursor: (position: {
         x: number;
         y: number;
-    }) => void;
+    }, path?: string) => void;
     updateEditing: (elementPath: string | null) => void;
+    updateFocusNode: (nodePath: string) => void;
+    updateSelection: (selection: PresenceSelection) => void;
+    updateTyping: (isTyping: boolean, field?: string, isComposing?: boolean) => void;
+    updateScroll: (scroll: PresenceScroll) => void;
+    updateViewport: (viewport: PresenceViewport) => void;
+    updateInputState: (inputState: PresenceInputState) => void;
+    updateEmotionState: (emotion: PresenceEmotion) => void;
     sync: SyncState;
     forcSync: () => Promise<void>;
+    forceSync: () => Promise<void>;
     version: VersionInfo;
     migrate: (toVersion: string) => Promise<void>;
     data: Record<string, unknown>;
@@ -71,8 +130,15 @@ export declare function usePresence(): {
     updateCursor: (position: {
         x: number;
         y: number;
-    }) => void;
+    }, path?: string) => void;
     updateEditing: (elementPath: string | null) => void;
+    updateFocusNode: (nodePath: string) => void;
+    updateSelection: (selection: PresenceSelection) => void;
+    updateTyping: (isTyping: boolean, field?: string, isComposing?: boolean) => void;
+    updateScroll: (scroll: PresenceScroll) => void;
+    updateViewport: (viewport: PresenceViewport) => void;
+    updateInputState: (inputState: PresenceInputState) => void;
+    updateEmotionState: (emotion: PresenceEmotion) => void;
 };
 /**
  * useAeonSync - Just the sync state

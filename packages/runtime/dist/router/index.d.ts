@@ -16,13 +16,13 @@ export type { ESIProviderProps, ESIInferProps, ESIEmbedProps, ESIEmotionProps, E
 export { ESITranslate, TranslationProvider, TranslationContext, useTranslation, useTranslationOptional, } from './esi-translate-react';
 export type { ESITranslateProps, TranslationProviderProps, TranslationContextValue, } from './esi-translate-react';
 export { TranslationObserver, useTranslationObserver, initTranslationObserver, } from './esi-translate-observer';
-export type { TranslationObserverConfig, } from './esi-translate-observer';
+export type { TranslationObserverConfig } from './esi-translate-observer';
 export { HeuristicAdapter } from './heuristic-adapter';
 export type { HeuristicAdapterConfig, TierFeatures, SignalProcessor, } from './heuristic-adapter';
 export { extractUserContext, createContextMiddleware, setContextCookies, addSpeculationHeaders, serializeToESIState, generateESIStateScript, generateESIStateScriptFromContext, } from './context-extractor';
-export type { ContextExtractorOptions, ESIState, } from './context-extractor';
+export type { ContextExtractorOptions, ESIState } from './context-extractor';
 export { SpeculationManager, supportsSpeculationRules, supportsLinkPrefetch, autoInitSpeculation, createSpeculationHook, } from './speculation';
-export type { SpeculationOptions, SpeculationState, } from './speculation';
+export type { SpeculationOptions, SpeculationState } from './speculation';
 export { parseWithSchema, generateSchemaPrompt, createControlProcessor, esiIf, esiMatch, } from './esi-control';
 export type { ESICondition, ESIIfDirective, ESIMatchDirective, ESIControlResult, ESISchemaParams, ESISchemaResult, ESIControlProcessor, } from './esi-control';
 export { ESIControl, ESIStructured, ESIIf, ESIShow, ESIHide, ESIWhen, ESIUnless, ESIMatch, ESICase, ESIDefault, ESIFirst, ESITierGate, ESIEmotionGate, ESITimeGate, ESIForEach, ESISelect, ESIABTest, ESIClamp, ESIScore, ESICollaborative, ESIReflect, ESIOptimize, ESIAuto, } from './esi-control-react';
@@ -30,4 +30,4 @@ export type { ESIStructuredProps, ESIIfProps, ESIShowProps, ESIHideProps, ESIWhe
 export { esiContext, esiCyrano, esiHalo, evaluateTrigger, createExhaustEntry, getToolSuggestions, CYRANO_TOOL_SUGGESTIONS, } from './esi-cyrano';
 export type { SessionContext, EmotionContext, BehaviorContext, EnvironmentContext, BiometricContext, CyranoWhisperConfig, CyranoIntent, CyranoTone, CyranoTrigger, HaloInsightConfig, HaloObservation, HaloAction, ChatExhaustType, ChatExhaustEntry, ESIWhisperResult, } from './esi-cyrano';
 export { parseResource, formatResource, capabilityGrantsAccess, createNodeCapabilityVerifier, createNodeReadCapability, createNodeWriteCapability, createTreeCapability, createPathCapability, createWildcardNodeCapability, checkNodeAccess, filterAccessibleNodes, getMostSpecificCapability, } from './merkle-capability';
-export type { NodeCapabilityVerifier, NodeVerifierOptions } from './merkle-capability';
+export type { NodeCapabilityVerifier, NodeVerifierOptions, } from './merkle-capability';

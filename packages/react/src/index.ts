@@ -54,12 +54,33 @@ export {
   type AeonPageProviderProps,
   type AeonPageContextValue,
   type PresenceUser,
+  type PresenceSelection,
+  type PresenceTyping,
+  type PresenceScroll,
+  type PresenceViewport,
+  type PresenceInputState,
+  type PresenceEmotion,
   type SyncState,
   type VersionInfo,
 } from './provider';
 
 // Convenience hooks (page-level editing)
 export { usePresence, useAeonSync, useAeonData } from './provider';
+export {
+  useAeonVersion,
+  useAeonTree,
+  useCursorTracking,
+  useEditableElement,
+  useOtherCursors,
+  useOfflineStatus,
+  useEmotionPresence,
+  useCollaborativeInput,
+  useScrollPresenceTracking,
+  useViewportPresenceTracking,
+  useAeonEffect,
+  useSessionId,
+  useRoute,
+} from './hooks';
 
 // Navigation hooks (route-level navigation)
 export {
@@ -149,3 +170,31 @@ export {
   type CacheInfo,
   type QueueStats,
 } from './components/OfflineDiagnostics';
+
+// Presence UI kit components
+export {
+  PresenceCursorLayer,
+  PresenceFocusList,
+  PresenceTypingList,
+  PresenceSelectionList,
+  PresenceScrollBar,
+  PresenceViewportList,
+  PresenceInputStateList,
+  PresenceEmotionList,
+  PresenceEditingList,
+  PresenceStatusList,
+  PresenceElementsPanel,
+  CollaborativePresenceScrollContainer,
+  type PresenceCursorLayerProps,
+  type PresenceFocusListProps,
+  type PresenceTypingListProps,
+  type PresenceSelectionListProps,
+  type PresenceScrollBarProps,
+  type PresenceViewportListProps,
+  type PresenceInputStateListProps,
+  type PresenceEmotionListProps,
+  type PresenceEditingListProps,
+  type PresenceStatusListProps,
+  type PresenceElementsPanelProps,
+  type CollaborativePresenceScrollContainerProps,
+} from './components/PresenceKit';

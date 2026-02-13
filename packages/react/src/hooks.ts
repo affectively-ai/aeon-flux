@@ -26,7 +26,9 @@ export function useAeonTree() {
  */
 export function useCursorTracking(enabled = true) {
   const { updateCursor } = useAeonPage();
-  const throttleRef = useRef<number | null>(null);
+  const throttleRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -55,13 +57,14 @@ export function useCursorTracking(enabled = true) {
  * useEditableElement - Make an element collaboratively editable
  */
 export function useEditableElement(elementPath: string) {
-  const { updateEditing, updateTree, localUser } = useAeonPage();
+  const { updateEditing, updateFocusNode, updateTree } = useAeonPage();
   const [isFocused, setIsFocused] = useState(false);
 
   const onFocus = useCallback(() => {
     setIsFocused(true);
     updateEditing(elementPath);
-  }, [elementPath, updateEditing]);
+    updateFocusNode(elementPath);
+  }, [elementPath, updateEditing, updateFocusNode]);
 
   const onBlur = useCallback(() => {
     setIsFocused(false);
@@ -106,6 +109,20 @@ export function useOfflineStatus() {
 }
 
 /**
+ * useEmotionPresence - Local + remote optional emotional state channel
+ */
+export function useEmotionPresence() {
+  const { presence, localUser, updateEmotionState } = useAeonPage();
+  const others = presence.filter((user) => user.userId !== localUser?.userId);
+
+  return {
+    localEmotion: localUser?.emotion,
+    others,
+    updateEmotionState,
+  };
+}
+
+/**
  * useCollaborativeInput - Hook for collaborative text input
  *
  * @example
@@ -126,7 +143,17 @@ export function useOfflineStatus() {
  * ```
  */
 export function useCollaborativeInput(key: string) {
-  const { data, setData, presence, localUser, updateEditing } = useAeonPage();
+  const {
+    data,
+    setData,
+    presence,
+    localUser,
+    updateEditing,
+    updateFocusNode,
+    updateSelection,
+    updateTyping,
+    updateInputState,
+  } = useAeonPage();
   const [isEditing, setIsEditing] = useState(false);
 
   const value = (data[key] as string) ?? '';
@@ -139,28 +166,183 @@ export function useCollaborativeInput(key: string) {
   const onChange = useCallback(
     (newValue: string) => {
       setData(key, newValue);
+      updateTyping(true, key, false);
+      updateInputState({
+        field: key,
+        hasFocus: true,
+        valueLength: newValue.length,
+      });
     },
-    [key, setData],
+    [key, setData, updateInputState, updateTyping],
   );
 
   const onFocus = useCallback(() => {
     setIsEditing(true);
     updateEditing(key);
-  }, [key, updateEditing]);
+    updateFocusNode(key);
+    updateTyping(true, key, false);
+  }, [key, updateEditing, updateFocusNode, updateTyping]);
 
   const onBlur = useCallback(() => {
     setIsEditing(false);
+    updateTyping(false, key, false);
+    updateInputState({
+      field: key,
+      hasFocus: false,
+      valueLength: value.length,
+    });
     updateEditing(null);
-  }, [updateEditing]);
+  }, [key, updateEditing, updateInputState, updateTyping, value.length]);
+
+  const onSelect = useCallback(
+    (
+      eventOrTarget:
+        | {
+            currentTarget: {
+              selectionStart: number | null;
+              selectionEnd: number | null;
+              selectionDirection?: 'forward' | 'backward' | 'none' | null;
+              value?: string;
+            };
+          }
+        | {
+            selectionStart: number | null;
+            selectionEnd: number | null;
+            selectionDirection?: 'forward' | 'backward' | 'none' | null;
+            value?: string;
+          },
+    ) => {
+      const target =
+        'currentTarget' in eventOrTarget
+          ? eventOrTarget.currentTarget
+          : eventOrTarget;
+
+      if (
+        typeof target.selectionStart !== 'number' ||
+        typeof target.selectionEnd !== 'number'
+      ) {
+        return;
+      }
+
+      updateSelection({
+        start: target.selectionStart,
+        end: target.selectionEnd,
+        direction: target.selectionDirection ?? undefined,
+        path: key,
+      });
+      updateInputState({
+        field: key,
+        hasFocus: true,
+        valueLength: target.value?.length ?? value.length,
+        selectionStart: target.selectionStart,
+        selectionEnd: target.selectionEnd,
+      });
+    },
+    [key, updateInputState, updateSelection, value.length],
+  );
+
+  const onCompositionStart = useCallback(() => {
+    updateTyping(true, key, true);
+    updateInputState({
+      field: key,
+      hasFocus: true,
+      valueLength: value.length,
+      isComposing: true,
+    });
+  }, [key, updateInputState, updateTyping, value.length]);
+
+  const onCompositionEnd = useCallback(() => {
+    updateTyping(true, key, false);
+    updateInputState({
+      field: key,
+      hasFocus: true,
+      valueLength: value.length,
+      isComposing: false,
+    });
+  }, [key, updateInputState, updateTyping, value.length]);
 
   return {
     value,
     onChange,
     onFocus,
     onBlur,
+    onSelect,
+    onCompositionStart,
+    onCompositionEnd,
     isEditing,
     editingBy,
   };
+}
+
+/**
+ * useScrollPresenceTracking - Track scroll depth and position
+ */
+export function useScrollPresenceTracking(enabled = true) {
+  const { updateScroll } = useAeonPage();
+  const rafRef = useRef<ReturnType<typeof requestAnimationFrame> | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const emitScroll = () => {
+      const viewportHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const y = window.scrollY;
+      const denominator = Math.max(1, documentHeight - viewportHeight);
+      const depth = Math.max(0, Math.min(1, y / denominator));
+
+      updateScroll({
+        depth,
+        y,
+        viewportHeight,
+        documentHeight,
+      });
+    };
+
+    const handleScroll = () => {
+      if (rafRef.current) return;
+
+      rafRef.current = window.requestAnimationFrame(() => {
+        emitScroll();
+        rafRef.current = null;
+      });
+    };
+
+    emitScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafRef.current) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [enabled, updateScroll]);
+}
+
+/**
+ * useViewportPresenceTracking - Track viewport changes
+ */
+export function useViewportPresenceTracking(enabled = true) {
+  const { updateViewport } = useAeonPage();
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const emitViewport = () => {
+      updateViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    emitViewport();
+    window.addEventListener('resize', emitViewport);
+
+    return () => {
+      window.removeEventListener('resize', emitViewport);
+    };
+  }, [enabled, updateViewport]);
 }
 
 /**

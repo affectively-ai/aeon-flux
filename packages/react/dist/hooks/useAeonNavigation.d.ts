@@ -10,8 +10,7 @@
  * - Site = Aeon of sessions (routes are collaborative)
  * - Federation = Aeon of Aeons (cross-site sync)
  */
-import type { AeonNavigationEngine, NavigationOptions, PrefetchOptions } from '@affectively/aeon-pages-runtime/navigation';
-import type { PresenceInfo as RoutePresenceInfo } from '@affectively/aeon-pages-runtime/navigation';
+import { type AeonNavigationEngine, type NavigationOptions, type PrefetchOptions, type RoutePresenceInfo } from '@affectively/aeon-pages-runtime';
 export interface NavigationPrediction {
     route: string;
     probability: number;
@@ -25,16 +24,16 @@ export declare const AeonNavigationContext: import("react").Context<AeonNavigati
  * Main navigation hook - provides navigation, prefetch, and state
  */
 export declare function useAeonNavigation(): {
-    current: any;
-    previous: any;
-    history: any;
-    isNavigating: any;
+    current: string;
+    previous: string | null;
+    history: string[];
+    isNavigating: boolean;
     navigate: (href: string, options?: NavigationOptions) => Promise<void>;
     prefetch: (href: string, options?: PrefetchOptions) => Promise<void>;
     back: () => Promise<void>;
     preloadAll: (onProgress?: (loaded: number, total: number) => void) => Promise<void>;
     isPreloaded: (href: string) => boolean;
-    getCacheStats: () => any;
+    getCacheStats: () => import("@affectively/aeon-pages-runtime").CacheStats;
 };
 /**
  * Route Presence hook - subscribe to who's viewing/editing routes
@@ -62,12 +61,12 @@ export declare function useNavigationPrediction(): {
  * Hook for observing links and auto-prefetching
  */
 export declare function useLinkObserver(containerRef: React.RefObject<Element>): {
-    observe: () => any;
+    observe: () => () => void;
 };
 /**
  * Hook for total preload progress
  */
 export declare function useTotalPreload(): {
     startPreload: (onProgress?: (loaded: number, total: number) => void) => Promise<void>;
-    getStats: () => any;
+    getStats: () => import("@affectively/aeon-pages-runtime").CacheStats;
 };

@@ -113,7 +113,7 @@ export class FileStorageAdapter implements StorageAdapter {
   async deleteRoute(path: string): Promise<void> {
     const fs = await import('fs/promises');
     const filePath = `${this.dataDir}/routes/${this.pathToKey(path)}.json`;
-    await fs.unlink(filePath).catch(() => {});
+    await fs.unlink(filePath).catch(() => undefined);
   }
 
   async getSession(sessionId: string): Promise<PageSession | null> {
@@ -194,6 +194,39 @@ export class D1StorageAdapter implements StorageAdapter {
         role TEXT DEFAULT 'user',
         cursor_x INTEGER,
         cursor_y INTEGER,
+        focus_node TEXT,
+        selection_start INTEGER,
+        selection_end INTEGER,
+        selection_direction TEXT,
+        selection_path TEXT,
+        typing INTEGER,
+        typing_field TEXT,
+        typing_composing INTEGER,
+        typing_started_at TEXT,
+        typing_stopped_at TEXT,
+        scroll_depth REAL,
+        scroll_y INTEGER,
+        scroll_viewport_height INTEGER,
+        scroll_document_height INTEGER,
+        scroll_path TEXT,
+        viewport_width INTEGER,
+        viewport_height INTEGER,
+        input_field TEXT,
+        input_has_focus INTEGER,
+        input_value_length INTEGER,
+        input_selection_start INTEGER,
+        input_selection_end INTEGER,
+        input_composing INTEGER,
+        input_mode TEXT,
+        emotion_primary TEXT,
+        emotion_secondary TEXT,
+        emotion_confidence REAL,
+        emotion_intensity REAL,
+        emotion_valence REAL,
+        emotion_arousal REAL,
+        emotion_dominance REAL,
+        emotion_source TEXT,
+        emotion_updated_at TEXT,
         editing TEXT,
         status TEXT DEFAULT 'online',
         last_activity TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -284,6 +317,101 @@ export class D1StorageAdapter implements StorageAdapter {
         cursor:
           p.cursor_x !== null
             ? { x: p.cursor_x as number, y: p.cursor_y as number }
+            : undefined,
+        focusNode: (p.focus_node as string | null) ?? undefined,
+        selection:
+          p.selection_start != null && p.selection_end != null
+            ? {
+                start: p.selection_start as number,
+                end: p.selection_end as number,
+                direction: (p.selection_direction as
+                  | 'forward'
+                  | 'backward'
+                  | 'none'
+                  | null) ?? undefined,
+                path: (p.selection_path as string | null) ?? undefined,
+              }
+            : undefined,
+        typing:
+          p.typing != null
+            ? {
+                isTyping: Boolean(p.typing),
+                field: (p.typing_field as string | null) ?? undefined,
+                isComposing:
+                  p.typing_composing != null
+                    ? Boolean(p.typing_composing)
+                    : undefined,
+                startedAt:
+                  (p.typing_started_at as string | null) ?? undefined,
+                stoppedAt:
+                  (p.typing_stopped_at as string | null) ?? undefined,
+              }
+            : undefined,
+        scroll:
+          p.scroll_depth != null
+            ? {
+                depth: p.scroll_depth as number,
+                y: (p.scroll_y as number | null) ?? undefined,
+                viewportHeight:
+                  (p.scroll_viewport_height as number | null) ?? undefined,
+                documentHeight:
+                  (p.scroll_document_height as number | null) ?? undefined,
+                path: (p.scroll_path as string | null) ?? undefined,
+              }
+            : undefined,
+        viewport:
+          p.viewport_width != null && p.viewport_height != null
+            ? {
+                width: p.viewport_width as number,
+                height: p.viewport_height as number,
+              }
+            : undefined,
+        inputState:
+          p.input_field != null
+            ? {
+                field: p.input_field as string,
+                hasFocus: Boolean(p.input_has_focus),
+                valueLength:
+                  (p.input_value_length as number | null) ?? undefined,
+                selectionStart:
+                  (p.input_selection_start as number | null) ?? undefined,
+                selectionEnd:
+                  (p.input_selection_end as number | null) ?? undefined,
+                isComposing:
+                  p.input_composing != null
+                    ? Boolean(p.input_composing)
+                    : undefined,
+                inputMode: (p.input_mode as string | null) ?? undefined,
+              }
+            : undefined,
+        emotion:
+          p.emotion_primary != null ||
+          p.emotion_secondary != null ||
+          p.emotion_confidence != null ||
+          p.emotion_intensity != null ||
+          p.emotion_valence != null ||
+          p.emotion_arousal != null ||
+          p.emotion_dominance != null ||
+          p.emotion_source != null
+            ? {
+                primary: (p.emotion_primary as string | null) ?? undefined,
+                secondary: (p.emotion_secondary as string | null) ?? undefined,
+                confidence:
+                  (p.emotion_confidence as number | null) ?? undefined,
+                intensity: (p.emotion_intensity as number | null) ?? undefined,
+                valence: (p.emotion_valence as number | null) ?? undefined,
+                arousal: (p.emotion_arousal as number | null) ?? undefined,
+                dominance: (p.emotion_dominance as number | null) ?? undefined,
+                source:
+                  (p.emotion_source as
+                    | 'self-report'
+                    | 'inferred'
+                    | 'sensor'
+                    | 'hybrid'
+                    | null) ?? undefined,
+                updatedAt:
+                  (p.emotion_updated_at as string | null) ?? undefined,
+              }
             : undefined,
         editing: p.editing as string | undefined,
         status: p.status as 'online' | 'away' | 'offline',
@@ -414,7 +542,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
   }
 
   async init(): Promise<void> {
-    // Durable Objects are created on-demand, no initialization needed
+    return Promise.resolve();
   }
 
   async getRoute(path: string): Promise<RouteDefinition | null> {
@@ -560,7 +688,7 @@ export class DurableObjectStorageAdapter implements StorageAdapter {
 
 /** Fire-and-forget async operation (errors are silently ignored) */
 const propagate = (promise: Promise<unknown>): void => {
-  void promise.catch(() => {});
+  void promise.catch(() => undefined);
 };
 
 /**
@@ -855,6 +983,13 @@ export class DashStorageAdapter implements StorageAdapter {
         userId: p.userId,
         role: p.role,
         cursor: p.cursor,
+        focusNode: p.focusNode,
+        selection: p.selection,
+        typing: p.typing,
+        scroll: p.scroll,
+        viewport: p.viewport,
+        inputState: p.inputState,
+        emotion: p.emotion,
         editing: p.editing,
         status: p.status,
         lastActivity: p.lastActivity,
@@ -972,6 +1107,48 @@ interface PresenceRecord {
   userId: string;
   role: 'user' | 'assistant' | 'monitor' | 'admin';
   cursor?: { x: number; y: number };
+  focusNode?: string;
+  selection?: {
+    start: number;
+    end: number;
+    direction?: 'forward' | 'backward' | 'none';
+    path?: string;
+  };
+  typing?: {
+    isTyping: boolean;
+    field?: string;
+    isComposing?: boolean;
+    startedAt?: string;
+    stoppedAt?: string;
+  };
+  scroll?: {
+    depth: number;
+    y?: number;
+    viewportHeight?: number;
+    documentHeight?: number;
+    path?: string;
+  };
+  viewport?: { width: number; height: number };
+  inputState?: {
+    field: string;
+    hasFocus: boolean;
+    valueLength?: number;
+    selectionStart?: number;
+    selectionEnd?: number;
+    isComposing?: boolean;
+    inputMode?: string;
+  };
+  emotion?: {
+    primary?: string;
+    secondary?: string;
+    confidence?: number;
+    intensity?: number;
+    valence?: number;
+    arousal?: number;
+    dominance?: number;
+    source?: 'self-report' | 'inferred' | 'sensor' | 'hybrid';
+    updatedAt?: string;
+  };
   editing?: string;
   status: 'online' | 'away' | 'offline';
   lastActivity: string;

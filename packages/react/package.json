@@ -1,6 +1,6 @@
 {
   "name": "@affectively/aeon-pages-react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React bindings for @affectively/aeon-pages",
   "type": "module",
   "sideEffects": false,
@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --declaration --emitDeclarationOnly",
+    "build": "bun build ./src/index.ts --outfile ./dist/index.js --format esm --target browser --external react --external @affectively/aeon-pages-runtime && tsc --declaration --emitDeclarationOnly",
     "dev": "bun --watch ./src/index.ts",
     "test": "bun test",
     "prepublishOnly": "npm run build"
@@ -23,7 +23,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@affectively/aeon-pages-runtime": "^0.3.0"
+    "@affectively/aeon-pages-runtime": "^0.9.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

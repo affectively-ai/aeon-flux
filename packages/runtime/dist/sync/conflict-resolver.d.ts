@@ -30,16 +30,16 @@ export interface ConflictStats {
     resolvedConflicts: number;
     unresolvedConflicts: number;
     conflictsByType: {
-        'update_update': number;
-        'delete_update': number;
-        'update_delete': number;
-        'concurrent': number;
+        update_update: number;
+        delete_update: number;
+        update_delete: number;
+        concurrent: number;
     };
     resolutionsByStrategy: {
         'local-wins': number;
         'remote-wins': number;
-        'merge': number;
-        'manual': number;
+        merge: number;
+        manual: number;
         'last-modified': number;
     };
     averageResolutionTimeMs: number;

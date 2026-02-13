@@ -1,7 +1,7 @@
 import {
   AeonRouteRegistry,
   createAeonServer
-} from "./chunk-3f80ec8r.js";
+} from "./chunk-6qh4sn6x.js";
 import {
   AeonNavigationEngine,
   AeonRouter,
@@ -42,7 +42,7 @@ import {
   setNavigationCache,
   setNavigator,
   setSkeletonCache
-} from "./chunk-44xw2d01.js";
+} from "./chunk-z5fwmhew.js";
 import {
   __require
 } from "./chunk-pgbgfrym.js";
@@ -731,7 +731,9 @@ class FileStorageAdapter {
   async deleteRoute(path) {
     const fs = await import("fs/promises");
     const filePath = `${this.dataDir}/routes/${this.pathToKey(path)}.json`;
-    await fs.unlink(filePath).catch(() => {});
+    await fs.unlink(filePath).catch(() => {
+      return;
+    });
   }
   async getSession(sessionId) {
     try {
@@ -801,6 +803,39 @@ class D1StorageAdapter {
         role TEXT DEFAULT 'user',
         cursor_x INTEGER,
         cursor_y INTEGER,
+        focus_node TEXT,
+        selection_start INTEGER,
+        selection_end INTEGER,
+        selection_direction TEXT,
+        selection_path TEXT,
+        typing INTEGER,
+        typing_field TEXT,
+        typing_composing INTEGER,
+        typing_started_at TEXT,
+        typing_stopped_at TEXT,
+        scroll_depth REAL,
+        scroll_y INTEGER,
+        scroll_viewport_height INTEGER,
+        scroll_document_height INTEGER,
+        scroll_path TEXT,
+        viewport_width INTEGER,
+        viewport_height INTEGER,
+        input_field TEXT,
+        input_has_focus INTEGER,
+        input_value_length INTEGER,
+        input_selection_start INTEGER,
+        input_selection_end INTEGER,
+        input_composing INTEGER,
+        input_mode TEXT,
+        emotion_primary TEXT,
+        emotion_secondary TEXT,
+        emotion_confidence REAL,
+        emotion_intensity REAL,
+        emotion_valence REAL,
+        emotion_arousal REAL,
+        emotion_dominance REAL,
+        emotion_source TEXT,
+        emotion_updated_at TEXT,
         editing TEXT,
         status TEXT DEFAULT 'online',
         last_activity TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -856,6 +891,51 @@ class D1StorageAdapter {
         userId: p.user_id,
         role: p.role,
         cursor: p.cursor_x !== null ? { x: p.cursor_x, y: p.cursor_y } : undefined,
+        focusNode: p.focus_node ?? undefined,
+        selection: p.selection_start != null && p.selection_end != null ? {
+          start: p.selection_start,
+          end: p.selection_end,
+          direction: p.selection_direction ?? undefined,
+          path: p.selection_path ?? undefined
+        } : undefined,
+        typing: p.typing != null ? {
+          isTyping: Boolean(p.typing),
+          field: p.typing_field ?? undefined,
+          isComposing: p.typing_composing != null ? Boolean(p.typing_composing) : undefined,
+          startedAt: p.typing_started_at ?? undefined,
+          stoppedAt: p.typing_stopped_at ?? undefined
+        } : undefined,
+        scroll: p.scroll_depth != null ? {
+          depth: p.scroll_depth,
+          y: p.scroll_y ?? undefined,
+          viewportHeight: p.scroll_viewport_height ?? undefined,
+          documentHeight: p.scroll_document_height ?? undefined,
+          path: p.scroll_path ?? undefined
+        } : undefined,
+        viewport: p.viewport_width != null && p.viewport_height != null ? {
+          width: p.viewport_width,
+          height: p.viewport_height
+        } : undefined,
+        inputState: p.input_field != null ? {
+          field: p.input_field,
+          hasFocus: Boolean(p.input_has_focus),
+          valueLength: p.input_value_length ?? undefined,
+          selectionStart: p.input_selection_start ?? undefined,
+          selectionEnd: p.input_selection_end ?? undefined,
+          isComposing: p.input_composing != null ? Boolean(p.input_composing) : undefined,
+          inputMode: p.input_mode ?? undefined
+        } : undefined,
+        emotion: p.emotion_primary != null || p.emotion_secondary != null || p.emotion_confidence != null || p.emotion_intensity != null || p.emotion_valence != null || p.emotion_arousal != null || p.emotion_dominance != null || p.emotion_source != null ? {
+          primary: p.emotion_primary ?? undefined,
+          secondary: p.emotion_secondary ?? undefined,
+          confidence: p.emotion_confidence ?? undefined,
+          intensity: p.emotion_intensity ?? undefined,
+          valence: p.emotion_valence ?? undefined,
+          arousal: p.emotion_arousal ?? undefined,
+          dominance: p.emotion_dominance ?? undefined,
+          source: p.emotion_source ?? undefined,
+          updatedAt: p.emotion_updated_at ?? undefined
+        } : undefined,
         editing: p.editing,
         status: p.status,
         lastActivity: p.last_activity
@@ -892,7 +972,9 @@ class DurableObjectStorageAdapter {
   constructor(namespace) {
     this.namespace = namespace;
   }
-  async init() {}
+  async init() {
+    return Promise.resolve();
+  }
   async getRoute(path) {
     if (this.routeCache.has(path)) {
       return this.routeCache.get(path);
@@ -990,7 +1072,9 @@ class DurableObjectStorageAdapter {
   }
 }
 var propagate = (promise) => {
-  promise.catch(() => {});
+  promise.catch(() => {
+    return;
+  });
 };
 
 class HybridStorageAdapter {
@@ -1088,6 +1172,13 @@ class DashStorageAdapter {
         userId: p.userId,
         role: p.role,
         cursor: p.cursor,
+        focusNode: p.focusNode,
+        selection: p.selection,
+        typing: p.typing,
+        scroll: p.scroll,
+        viewport: p.viewport,
+        inputState: p.inputState,
+        emotion: p.emotion,
         editing: p.editing,
         status: p.status,
         lastActivity: p.lastActivity
@@ -1448,6 +1539,7 @@ class AeonPageSession {
         user: presence
       }
     }, server);
+    this.broadcastPresenceSnapshot();
     server.addEventListener("message", async (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -1467,9 +1559,13 @@ class AeonPageSession {
             userId: user.userId
           }
         });
+        this.broadcastPresenceSnapshot();
       }
     });
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, {
+      status: 101,
+      webSocket: client
+    });
   }
   async handleMessage(ws, message) {
     const user = this.sessions.get(ws);
@@ -1477,9 +1573,18 @@ class AeonPageSession {
       return;
     user.lastActivity = new Date().toISOString();
     switch (message.type) {
-      case "cursor": {
-        const payload = message.payload;
-        user.cursor = { x: payload.x, y: payload.y };
+      case "cursor":
+      case "cursor-update": {
+        const payload = this.resolveCursorPayload(message);
+        if (!payload)
+          break;
+        user.cursor = {
+          x: payload.x,
+          y: payload.y
+        };
+        if (payload.path) {
+          user.focusNode = payload.path;
+        }
         this.broadcast({
           type: "cursor",
           payload: {
@@ -1487,6 +1592,7 @@ class AeonPageSession {
             cursor: user.cursor
           }
         }, ws);
+        this.broadcastPresenceUpdate(user, ws);
         break;
       }
       case "edit": {
@@ -1502,16 +1608,189 @@ class AeonPageSession {
         break;
       }
       case "presence": {
-        const payload = message.payload;
-        user.status = payload.status;
-        user.editing = payload.editing;
+        const payload = this.resolveObjectPayload(message);
+        if (!payload)
+          break;
+        if (payload.status) {
+          user.status = payload.status;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, "editing")) {
+          user.editing = payload.editing;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, "focusNode")) {
+          user.focusNode = payload.focusNode;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, "emotion")) {
+          if (payload.emotion) {
+            user.emotion = {
+              ...payload.emotion,
+              updatedAt: new Date().toISOString()
+            };
+          } else {
+            user.emotion = undefined;
+          }
+        }
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "editing-update": {
+        const editingPayload = this.resolveEditingPayload(message);
+        if (editingPayload !== undefined) {
+          user.editing = editingPayload ?? undefined;
+          this.broadcastPresenceUpdate(user, ws);
+        }
+        break;
+      }
+      case "typing":
+      case "typing-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.isTyping !== "boolean")
+          break;
+        const now = new Date().toISOString();
+        const previous = user.typing;
+        const typingState = {
+          isTyping: payload.isTyping,
+          field: payload.field,
+          isComposing: payload.isComposing ?? false,
+          startedAt: payload.isTyping && !previous?.isTyping ? now : payload.isTyping ? previous?.startedAt : undefined,
+          stoppedAt: payload.isTyping ? undefined : now
+        };
+        user.typing = typingState;
         this.broadcast({
-          type: "presence",
+          type: "typing",
           payload: {
-            action: "update",
-            user
+            userId: user.userId,
+            typing: typingState
           }
         }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "focus":
+      case "focus-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.nodePath !== "string")
+          break;
+        user.focusNode = payload.nodePath;
+        this.broadcast({
+          type: "focus",
+          payload: {
+            userId: user.userId,
+            focusNode: user.focusNode
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "selection":
+      case "selection-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.start !== "number" || typeof payload.end !== "number") {
+          break;
+        }
+        user.selection = {
+          start: payload.start,
+          end: payload.end,
+          direction: payload.direction,
+          path: payload.path
+        };
+        this.broadcast({
+          type: "selection",
+          payload: {
+            userId: user.userId,
+            selection: user.selection
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "scroll":
+      case "scroll-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.depth !== "number")
+          break;
+        const scrollState = {
+          depth: Math.max(0, Math.min(1, payload.depth)),
+          y: payload.y,
+          viewportHeight: payload.viewportHeight,
+          documentHeight: payload.documentHeight,
+          path: payload.path
+        };
+        user.scroll = scrollState;
+        this.broadcast({
+          type: "scroll",
+          payload: {
+            userId: user.userId,
+            scroll: scrollState
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "viewport":
+      case "viewport-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.width !== "number" || typeof payload.height !== "number") {
+          break;
+        }
+        const viewport = {
+          width: payload.width,
+          height: payload.height
+        };
+        user.viewport = viewport;
+        this.broadcast({
+          type: "viewport",
+          payload: {
+            userId: user.userId,
+            viewport
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "input-state":
+      case "input-state-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload || typeof payload.field !== "string")
+          break;
+        const inputState = {
+          field: payload.field,
+          hasFocus: Boolean(payload.hasFocus),
+          valueLength: payload.valueLength,
+          selectionStart: payload.selectionStart,
+          selectionEnd: payload.selectionEnd,
+          isComposing: payload.isComposing,
+          inputMode: payload.inputMode
+        };
+        user.inputState = inputState;
+        this.broadcast({
+          type: "input-state",
+          payload: {
+            userId: user.userId,
+            inputState
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+      case "emotion":
+      case "emotion-update": {
+        const payload = this.resolveObjectPayload(message);
+        if (!payload)
+          break;
+        const emotion = {
+          ...payload,
+          updatedAt: new Date().toISOString()
+        };
+        user.emotion = emotion;
+        this.broadcast({
+          type: "emotion",
+          payload: {
+            userId: user.userId,
+            emotion
+          }
+        }, ws);
+        this.broadcastPresenceUpdate(user, ws);
         break;
       }
       case "ping": {
@@ -1523,8 +1802,25 @@ class AeonPageSession {
         if (session) {
           const prNumber = await this.createTreePR(session);
           const autoMerged = this.env.GITHUB_AUTO_MERGE === "true";
-          ws.send(JSON.stringify({ type: "publish", payload: { status: "created", route: session.route, prNumber, autoMerged } }));
-          this.broadcast({ type: "publish", payload: { status: "created", userId: user.userId, route: session.route, prNumber, autoMerged } }, ws);
+          ws.send(JSON.stringify({
+            type: "publish",
+            payload: {
+              status: "created",
+              route: session.route,
+              prNumber,
+              autoMerged
+            }
+          }));
+          this.broadcast({
+            type: "publish",
+            payload: {
+              status: "created",
+              userId: user.userId,
+              route: session.route,
+              prNumber,
+              autoMerged
+            }
+          }, ws);
           await this.fireWebhook("session.published", session, prNumber, user.userId);
         }
         break;
@@ -1533,9 +1829,22 @@ class AeonPageSession {
         const payload = message.payload;
         if (payload.prNumber) {
           const merged = await this.mergePR(payload.prNumber);
-          ws.send(JSON.stringify({ type: "merge", payload: { status: merged ? "merged" : "failed", prNumber: payload.prNumber } }));
+          ws.send(JSON.stringify({
+            type: "merge",
+            payload: {
+              status: merged ? "merged" : "failed",
+              prNumber: payload.prNumber
+            }
+          }));
           if (merged) {
-            this.broadcast({ type: "merge", payload: { status: "merged", userId: user.userId, prNumber: payload.prNumber } }, ws);
+            this.broadcast({
+              type: "merge",
+              payload: {
+                status: "merged",
+                userId: user.userId,
+                prNumber: payload.prNumber
+              }
+            }, ws);
             const session = await this.getSession();
             if (session) {
               await this.fireWebhook("session.merged", session, payload.prNumber, user.userId);
@@ -1553,6 +1862,66 @@ class AeonPageSession {
         ws.send(data);
       }
     }
+  }
+  broadcastPresenceUpdate(user, exclude) {
+    this.broadcast({
+      type: "presence",
+      payload: {
+        action: "update",
+        user
+      }
+    }, exclude);
+    this.broadcastPresenceSnapshot();
+  }
+  broadcastPresenceSnapshot() {
+    this.broadcast({
+      type: "presence-update",
+      users: Array.from(this.sessions.values())
+    });
+  }
+  resolveObjectPayload(message) {
+    if (typeof message.payload === "object" && message.payload !== null) {
+      return message.payload;
+    }
+    return null;
+  }
+  resolveCursorPayload(message) {
+    if (typeof message.payload === "object" && message.payload !== null) {
+      const payload = message.payload;
+      if (typeof payload.x === "number" && typeof payload.y === "number") {
+        return {
+          x: payload.x,
+          y: payload.y,
+          path: payload.path
+        };
+      }
+    }
+    if (typeof message.position === "object" && message.position !== null) {
+      const legacy = message.position;
+      if (typeof legacy.x === "number" && typeof legacy.y === "number") {
+        return {
+          x: legacy.x,
+          y: legacy.y,
+          path: legacy.path
+        };
+      }
+    }
+    return null;
+  }
+  resolveEditingPayload(message) {
+    if (typeof message.payload === "object" && message.payload !== null) {
+      const payload = message.payload;
+      if (Object.prototype.hasOwnProperty.call(payload, "editing")) {
+        return payload.editing ?? null;
+      }
+    }
+    if (typeof message.elementPath === "string") {
+      return message.elementPath;
+    }
+    if (message.elementPath === null) {
+      return null;
+    }
+    return;
   }
   async applyEdit(edit, userId) {
     const session = await this.getSession();
@@ -1601,7 +1970,10 @@ class AeonPageSession {
     });
     const content = btoa(tsx);
     try {
-      const headers = { Authorization: `token ${this.env.GITHUB_TOKEN}`, "User-Agent": "aeon-flux" };
+      const headers = {
+        Authorization: `token ${this.env.GITHUB_TOKEN}`,
+        "User-Agent": "aeon-flux"
+      };
       const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
       const repoData = await repoRes.json();
       const baseBranch = this.env.GITHUB_BASE_BRANCH || repoData.default_branch;
@@ -1611,18 +1983,25 @@ class AeonPageSession {
       await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: refData.object.sha })
+        body: JSON.stringify({
+          ref: `refs/heads/${branch}`,
+          sha: refData.object.sha
+        })
       });
       await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         method: "PUT",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Update tree: ${session.route}`, content, branch })
+        body: JSON.stringify({
+          message: `Update tree: ${session.route}`,
+          content,
+          branch
+        })
       });
       const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: `\uD83C\uDF33 Tree update: ${session.route}`,
+          title: `Tree update: ${session.route}`,
           head: branch,
           base: baseBranch,
           body: `Automated PR from aeon-flux collaborative editing.
@@ -1646,13 +2025,16 @@ class AeonPageSession {
     if (!this.env.GITHUB_TOKEN || !this.env.GITHUB_REPO)
       return false;
     const [owner, repo] = this.env.GITHUB_REPO.split("/");
-    const headers = { Authorization: `token ${this.env.GITHUB_TOKEN}`, "User-Agent": "aeon-flux" };
+    const headers = {
+      Authorization: `token ${this.env.GITHUB_TOKEN}`,
+      "User-Agent": "aeon-flux"
+    };
     try {
       const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`, {
         method: "PUT",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          commit_title: `\uD83C\uDF33 Merge tree update #${prNumber}`,
+          commit_title: `Merge tree update #${prNumber}`,
           merge_method: "squash"
         })
       });
@@ -1806,7 +2188,9 @@ class AeonPageSession {
           "X-Aeon-Session": this.state.id.toString()
         },
         body: JSON.stringify(payload)
-      }).then(() => {}).catch((err) => console.error("Failed to fire sync webhook:", err)));
+      }).then(() => {
+        return;
+      }).catch((err) => console.error("Failed to fire sync webhook:", err)));
     }
     this.state.waitUntil(Promise.all(webhookPromises));
   }
@@ -1851,7 +2235,10 @@ class AeonPageSession {
       return Response.json({ status: "created", session });
     } catch (err) {
       console.error("Failed to initialize session:", err);
-      return new Response(JSON.stringify({ error: "Failed to initialize session", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        error: "Failed to initialize session",
+        message: err instanceof Error ? err.message : "Unknown error"
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
   }
   async handleTreeRequest(request) {
@@ -1914,7 +2301,10 @@ class AeonPageSession {
             if (opVersion < currentVersion) {
               conflicts.push({
                 operationId: op.operationId,
-                remoteVersion: { version: currentVersion, updatedAt: session.updatedAt || "" },
+                remoteVersion: {
+                  version: currentVersion,
+                  updatedAt: session.updatedAt || ""
+                },
                 strategy: "remote-wins"
               });
               continue;
@@ -1961,7 +2351,10 @@ class AeonPageSession {
       });
     } catch (err) {
       console.error("Failed to process sync queue:", err);
-      return new Response(JSON.stringify({ error: "Failed to process sync queue", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        error: "Failed to process sync queue",
+        message: err instanceof Error ? err.message : "Unknown error"
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
   }
   async handleQueueStatusRequest(request) {
@@ -1991,7 +2384,10 @@ class AeonPageSession {
       const { conflictId, strategy, resolvedData, resolvedBy } = await request.json();
       const conflict = await this.state.storage.get(`conflict:${conflictId}`);
       if (!conflict) {
-        return new Response(JSON.stringify({ error: "Conflict not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Conflict not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" }
+        });
       }
       let finalData;
       switch (strategy) {
@@ -2006,7 +2402,9 @@ class AeonPageSession {
           break;
         case "manual":
           if (!resolvedData) {
-            return new Response(JSON.stringify({ error: "resolvedData required for manual strategy" }), { status: 400, headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({
+              error: "resolvedData required for manual strategy"
+            }), { status: 400, headers: { "Content-Type": "application/json" } });
           }
           finalData = resolvedData;
           break;
@@ -2042,7 +2440,10 @@ class AeonPageSession {
       });
     } catch (err) {
       console.error("Failed to resolve conflict:", err);
-      return new Response(JSON.stringify({ error: "Failed to resolve conflict", message: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        error: "Failed to resolve conflict",
+        message: err instanceof Error ? err.message : "Unknown error"
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
   }
 }
@@ -2434,7 +2835,10 @@ function createAeonWorker(options = {}) {
         return new Response(JSON.stringify({
           error: "Internal server error",
           message: error2 instanceof Error ? error2.message : "Unknown error"
-        }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
       }
     }
   };
@@ -2458,7 +2862,10 @@ async function handleSessionRequest(request, env, corsHeaders) {
   const pathParts = url.pathname.split("/").filter(Boolean);
   const sessionId = pathParts[1];
   if (!sessionId) {
-    return new Response("Session ID required", { status: 400, headers: corsHeaders });
+    return new Response("Session ID required", {
+      status: 400,
+      headers: corsHeaders
+    });
   }
   const id = env.PAGE_SESSIONS.idFromName(sessionId);
   const stub = env.PAGE_SESSIONS.get(id);
@@ -2519,7 +2926,10 @@ function adaptRequest(request, params) {
         return value ? { value } : undefined;
       },
       getAll() {
-        return Object.entries(cookies).map(([name, value]) => ({ name, value }));
+        return Object.entries(cookies).map(([name, value]) => ({
+          name,
+          value
+        }));
       }
     },
     writable: false
@@ -2578,7 +2988,15 @@ function adaptHandler(handler) {
 }
 function adaptRouteModule(module) {
   const adapted = {};
-  const methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+  const methods = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "HEAD",
+    "OPTIONS"
+  ];
   for (const method of methods) {
     const handler = module[method];
     if (handler) {
@@ -3519,7 +3937,11 @@ class SyncCoordinator extends EventEmitter2 {
       totalSize += opSize;
       sizedOps.push(op);
     }
-    const priorityOrder = { high: 0, normal: 1, low: 2 };
+    const priorityOrder = {
+      high: 0,
+      normal: 1,
+      low: 2
+    };
     const highestPriority = sizedOps.reduce((highest, op) => priorityOrder[op.priority] < priorityOrder[highest] ? op.priority : highest, "low");
     const batch = {
       batchId: `batch-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -3710,18 +4132,18 @@ function handleNotificationClick(event, config = {}) {
       targetUrl = customUrl;
     }
   }
-  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clientList) => {
     for (const client of clientList) {
       if ("focus" in client && client.url.includes(self.location.origin)) {
-        return client.focus().then((focusedClient) => {
-          if ("navigate" in focusedClient) {
-            return focusedClient.navigate(targetUrl);
-          }
-        });
+        const focusedClient = await client.focus();
+        if ("navigate" in focusedClient) {
+          await focusedClient.navigate(targetUrl);
+        }
+        return;
       }
     }
     if (clients.openWindow) {
-      return clients.openWindow(targetUrl);
+      await clients.openWindow(targetUrl);
     }
   }));
 }

@@ -519,6 +519,62 @@ export interface PresenceUser {
   /** Cursor position */
   cursor?: { x: number; y: number };
 
+  /** Focused node path */
+  focusNode?: string;
+
+  /** Current text selection */
+  selection?: {
+    start: number;
+    end: number;
+    direction?: 'forward' | 'backward' | 'none';
+    path?: string;
+  };
+
+  /** Typing activity */
+  typing?: {
+    isTyping: boolean;
+    field?: string;
+    isComposing?: boolean;
+    startedAt?: string;
+    stoppedAt?: string;
+  };
+
+  /** Scroll signal */
+  scroll?: {
+    depth: number;
+    y?: number;
+    viewportHeight?: number;
+    documentHeight?: number;
+    path?: string;
+  };
+
+  /** Viewport dimensions */
+  viewport?: { width: number; height: number };
+
+  /** Input field state */
+  inputState?: {
+    field: string;
+    hasFocus: boolean;
+    valueLength?: number;
+    selectionStart?: number;
+    selectionEnd?: number;
+    isComposing?: boolean;
+    inputMode?: string;
+  };
+
+  /** Optional emotional state */
+  emotion?: {
+    primary?: string;
+    secondary?: string;
+    confidence?: number;
+    intensity?: number;
+    valence?: number;
+    arousal?: number;
+    dominance?: number;
+    source?: 'self-report' | 'inferred' | 'sensor' | 'hybrid';
+    updatedAt?: string;
+  };
+
   /** Currently editing element path */
   editingPath?: string;
 

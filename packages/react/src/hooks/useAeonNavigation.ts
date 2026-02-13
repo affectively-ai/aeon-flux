@@ -17,14 +17,14 @@ import {
   useSyncExternalStore,
   createContext,
 } from 'react';
-import type {
-  AeonNavigationEngine,
-  NavigationOptions,
-  PrefetchOptions,
-  NavigationState,
-} from '@affectively/aeon-pages-runtime/navigation';
-import { getNavigator } from '@affectively/aeon-pages-runtime/navigation';
-import type { PresenceInfo as RoutePresenceInfo } from '@affectively/aeon-pages-runtime/navigation';
+import {
+  getNavigator,
+  type AeonNavigationEngine,
+  type NavigationOptions,
+  type PrefetchOptions,
+  type NavigationState,
+  type RoutePresenceInfo,
+} from '@affectively/aeon-pages-runtime';
 
 // Navigation-level predicted route (simpler than ML predictor's version)
 export interface NavigationPrediction {
@@ -190,7 +190,7 @@ export function useLinkObserver(containerRef: React.RefObject<Element>) {
 
   // Set up observation on mount
   const observe = useCallback(() => {
-    if (!containerRef.current) return () => {};
+    if (!containerRef.current) return () => undefined;
     return navigator.observeLinks(containerRef.current);
   }, [navigator, containerRef]);
 
@@ -216,4 +216,3 @@ export function useTotalPreload() {
     getStats: getCacheStats,
   };
 }
-

@@ -14,6 +14,12 @@ import type {
   PageSession,
   SerializedComponent,
   PresenceUser,
+  PresenceSelection,
+  PresenceTyping,
+  PresenceScroll,
+  PresenceViewport,
+  PresenceInputState,
+  PresenceEmotion,
   WebhookConfig,
   WebhookPayload,
 } from './types';
@@ -47,8 +53,24 @@ interface D1PreparedStatement {
 interface WebSocketMessage {
   type:
     | 'cursor'
+    | 'cursor-update'
     | 'edit'
     | 'presence'
+    | 'editing-update'
+    | 'typing'
+    | 'typing-update'
+    | 'focus'
+    | 'focus-update'
+    | 'selection'
+    | 'selection-update'
+    | 'scroll'
+    | 'scroll-update'
+    | 'viewport'
+    | 'viewport-update'
+    | 'input-state'
+    | 'input-state-update'
+    | 'emotion'
+    | 'emotion-update'
     | 'sync'
     | 'ping'
     | 'publish'
@@ -56,7 +78,9 @@ interface WebSocketMessage {
     | 'queue-sync'
     | 'conflict'
     | 'conflict-resolved';
-  payload: unknown;
+  payload?: unknown;
+  position?: unknown;
+  elementPath?: unknown;
 }
 
 interface PublishPayload {
@@ -66,6 +90,7 @@ interface PublishPayload {
 interface CursorPayload {
   x: number;
   y: number;
+  path?: string;
 }
 
 interface EditPayload {
@@ -75,9 +100,36 @@ interface EditPayload {
 }
 
 interface PresencePayload {
-  status: 'online' | 'away' | 'offline';
+  status?: 'online' | 'away' | 'offline';
   editing?: string;
+  focusNode?: string;
+  emotion?: PresenceEmotion;
 }
+
+interface TypingPayload {
+  isTyping: boolean;
+  field?: string;
+  isComposing?: boolean;
+}
+
+interface FocusPayload {
+  nodePath: string;
+}
+
+interface ScrollPayload {
+  depth: number;
+  y?: number;
+  viewportHeight?: number;
+  documentHeight?: number;
+  path?: string;
+}
+
+interface ViewportPayload {
+  width: number;
+  height: number;
+}
+
+type EmotionPayload = Omit<PresenceEmotion, 'updatedAt'>;
 
 /**
  * Aeon Page Session Durable Object
@@ -190,6 +242,7 @@ export class AeonPageSession {
       },
       server,
     );
+    this.broadcastPresenceSnapshot();
 
     // Handle messages
     server.addEventListener('message', async (event: MessageEvent) => {
@@ -214,11 +267,15 @@ export class AeonPageSession {
             userId: user.userId,
           },
         });
+        this.broadcastPresenceSnapshot();
       }
     });
 
 
-    return new Response(null, { status: 101, webSocket: client });
+    return new Response(null, {
+      status: 101,
+      webSocket: client,
+    } as ResponseInit & { webSocket: WebSocket });
   }
 
   private async handleMessage(
@@ -232,9 +289,19 @@ export class AeonPageSession {
     user.lastActivity = new Date().toISOString();
 
     switch (message.type) {
-      case 'cursor': {
-        const payload = message.payload as CursorPayload;
-        user.cursor = { x: payload.x, y: payload.y };
+      case 'cursor':
+      case 'cursor-update': {
+        const payload = this.resolveCursorPayload(message);
+        if (!payload) break;
+
+        user.cursor = {
+          x: payload.x,
+          y: payload.y,
+        };
+        if (payload.path) {
+          user.focusNode = payload.path;
+        }
+
         this.broadcast(
           {
             type: 'cursor',
@@ -245,6 +312,7 @@ export class AeonPageSession {
           },
           ws,
         );
+        this.broadcastPresenceUpdate(user, ws);
         break;
       }
 
@@ -265,19 +333,241 @@ export class AeonPageSession {
       }
 
       case 'presence': {
-        const payload = message.payload as PresencePayload;
-        user.status = payload.status;
-        user.editing = payload.editing;
+        const payload = this.resolveObjectPayload<PresencePayload>(message);
+        if (!payload) break;
+
+        if (payload.status) {
+          user.status = payload.status;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'editing')) {
+          user.editing = payload.editing;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'focusNode')) {
+          user.focusNode = payload.focusNode;
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'emotion')) {
+          if (payload.emotion) {
+            user.emotion = {
+              ...payload.emotion,
+              updatedAt: new Date().toISOString(),
+            };
+          } else {
+            user.emotion = undefined;
+          }
+        }
+
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'editing-update': {
+        const editingPayload = this.resolveEditingPayload(message);
+        if (editingPayload !== undefined) {
+          user.editing = editingPayload ?? undefined;
+          this.broadcastPresenceUpdate(user, ws);
+        }
+        break;
+      }
+
+      case 'typing':
+      case 'typing-update': {
+        const payload = this.resolveObjectPayload<TypingPayload>(message);
+        if (!payload || typeof payload.isTyping !== 'boolean') break;
+
+        const now = new Date().toISOString();
+        const previous = user.typing;
+        const typingState: PresenceTyping = {
+          isTyping: payload.isTyping,
+          field: payload.field,
+          isComposing: payload.isComposing ?? false,
+          startedAt:
+            payload.isTyping && !previous?.isTyping
+              ? now
+              : payload.isTyping
+                ? previous?.startedAt
+                : undefined,
+          stoppedAt: payload.isTyping ? undefined : now,
+        };
+        user.typing = typingState;
+
         this.broadcast(
           {
-            type: 'presence',
+            type: 'typing',
             payload: {
-              action: 'update',
-              user,
+              userId: user.userId,
+              typing: typingState,
             },
           },
           ws,
         );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'focus':
+      case 'focus-update': {
+        const payload = this.resolveObjectPayload<FocusPayload>(message);
+        if (!payload || typeof payload.nodePath !== 'string') break;
+
+        user.focusNode = payload.nodePath;
+
+        this.broadcast(
+          {
+            type: 'focus',
+            payload: {
+              userId: user.userId,
+              focusNode: user.focusNode,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'selection':
+      case 'selection-update': {
+        const payload = this.resolveObjectPayload<PresenceSelection>(message);
+        if (
+          !payload ||
+          typeof payload.start !== 'number' ||
+          typeof payload.end !== 'number'
+        ) {
+          break;
+        }
+
+        user.selection = {
+          start: payload.start,
+          end: payload.end,
+          direction: payload.direction,
+          path: payload.path,
+        };
+
+        this.broadcast(
+          {
+            type: 'selection',
+            payload: {
+              userId: user.userId,
+              selection: user.selection,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'scroll':
+      case 'scroll-update': {
+        const payload = this.resolveObjectPayload<ScrollPayload>(message);
+        if (!payload || typeof payload.depth !== 'number') break;
+
+        const scrollState: PresenceScroll = {
+          depth: Math.max(0, Math.min(1, payload.depth)),
+          y: payload.y,
+          viewportHeight: payload.viewportHeight,
+          documentHeight: payload.documentHeight,
+          path: payload.path,
+        };
+        user.scroll = scrollState;
+
+        this.broadcast(
+          {
+            type: 'scroll',
+            payload: {
+              userId: user.userId,
+              scroll: scrollState,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'viewport':
+      case 'viewport-update': {
+        const payload = this.resolveObjectPayload<ViewportPayload>(message);
+        if (
+          !payload ||
+          typeof payload.width !== 'number' ||
+          typeof payload.height !== 'number'
+        ) {
+          break;
+        }
+
+        const viewport: PresenceViewport = {
+          width: payload.width,
+          height: payload.height,
+        };
+        user.viewport = viewport;
+
+        this.broadcast(
+          {
+            type: 'viewport',
+            payload: {
+              userId: user.userId,
+              viewport,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'input-state':
+      case 'input-state-update': {
+        const payload = this.resolveObjectPayload<PresenceInputState>(message);
+        if (!payload || typeof payload.field !== 'string') break;
+
+        const inputState: PresenceInputState = {
+          field: payload.field,
+          hasFocus: Boolean(payload.hasFocus),
+          valueLength: payload.valueLength,
+          selectionStart: payload.selectionStart,
+          selectionEnd: payload.selectionEnd,
+          isComposing: payload.isComposing,
+          inputMode: payload.inputMode,
+        };
+        user.inputState = inputState;
+
+        this.broadcast(
+          {
+            type: 'input-state',
+            payload: {
+              userId: user.userId,
+              inputState,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
+        break;
+      }
+
+      case 'emotion':
+      case 'emotion-update': {
+        const payload = this.resolveObjectPayload<EmotionPayload>(message);
+        if (!payload) break;
+
+        const emotion: PresenceEmotion = {
+          ...payload,
+          updatedAt: new Date().toISOString(),
+        };
+        user.emotion = emotion;
+
+        this.broadcast(
+          {
+            type: 'emotion',
+            payload: {
+              userId: user.userId,
+              emotion,
+            },
+          },
+          ws,
+        );
+        this.broadcastPresenceUpdate(user, ws);
         break;
       }
 
@@ -381,6 +671,83 @@ export class AeonPageSession {
         ws.send(data);
       }
     }
+  }
+
+  private broadcastPresenceUpdate(user: PresenceUser, exclude?: WebSocket): void {
+    this.broadcast(
+      {
+        type: 'presence',
+        payload: {
+          action: 'update',
+          user,
+        },
+      },
+      exclude,
+    );
+    this.broadcastPresenceSnapshot();
+  }
+
+  private broadcastPresenceSnapshot(): void {
+    this.broadcast({
+      type: 'presence-update',
+      users: Array.from(this.sessions.values()),
+    });
+  }
+
+  private resolveObjectPayload<T extends object>(
+    message: WebSocketMessage,
+  ): Partial<T> | null {
+    if (typeof message.payload === 'object' && message.payload !== null) {
+      return message.payload as Partial<T>;
+    }
+    return null;
+  }
+
+  private resolveCursorPayload(message: WebSocketMessage): CursorPayload | null {
+    if (typeof message.payload === 'object' && message.payload !== null) {
+      const payload = message.payload as Partial<CursorPayload>;
+      if (typeof payload.x === 'number' && typeof payload.y === 'number') {
+        return {
+          x: payload.x,
+          y: payload.y,
+          path: payload.path,
+        };
+      }
+    }
+
+    if (typeof message.position === 'object' && message.position !== null) {
+      const legacy = message.position as Partial<CursorPayload>;
+      if (typeof legacy.x === 'number' && typeof legacy.y === 'number') {
+        return {
+          x: legacy.x,
+          y: legacy.y,
+          path: legacy.path,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private resolveEditingPayload(
+    message: WebSocketMessage,
+  ): string | null | undefined {
+    if (typeof message.payload === 'object' && message.payload !== null) {
+      const payload = message.payload as Partial<{ editing: string | null }>;
+      if (Object.prototype.hasOwnProperty.call(payload, 'editing')) {
+        return payload.editing ?? null;
+      }
+    }
+
+    if (typeof message.elementPath === 'string') {
+      return message.elementPath;
+    }
+
+    if (message.elementPath === null) {
+      return null;
+    }
+
+    return undefined;
   }
 
   private async applyEdit(edit: EditPayload, userId?: string): Promise<void> {
@@ -511,7 +878,7 @@ export class AeonPageSession {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: `🌳 Tree update: ${session.route}`,
+            title: `Tree update: ${session.route}`,
             head: branch,
             base: baseBranch,
             body: `Automated PR from aeon-flux collaborative editing.\n\n**Route:** \`${session.route}\`\n**Session:** \`${this.state.id.toString()}\`\n**From:** \`${devBranch}\` → \`${baseBranch}\``,
@@ -551,7 +918,7 @@ export class AeonPageSession {
           method: 'PUT',
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            commit_title: `🌳 Merge tree update #${prNumber}`,
+            commit_title: `Merge tree update #${prNumber}`,
             merge_method: 'squash',
           }),
         },
@@ -825,7 +1192,7 @@ export class AeonPageSession {
           },
           body: JSON.stringify(payload),
         })
-          .then(() => {})
+          .then(() => undefined)
           .catch((err) => console.error('Failed to fire sync webhook:', err)),
       );
     }

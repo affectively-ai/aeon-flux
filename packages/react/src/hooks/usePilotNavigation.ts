@@ -19,7 +19,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAeonNavigation } from './useAeonNavigation';
-import type { NavigationOptions } from '@affectively/aeon-pages-runtime/navigation';
+import type { NavigationOptions } from '@affectively/aeon-pages-runtime';
 
 export interface PilotNavigationIntent {
   id: string;

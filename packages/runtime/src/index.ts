@@ -242,6 +242,12 @@ export type {
   PageSession,
   PresenceInfo,
   PresenceUser,
+  PresenceSelection,
+  PresenceTyping,
+  PresenceScroll,
+  PresenceViewport,
+  PresenceInputState,
+  PresenceEmotion,
   // UCAN Capability types
   AeonCapability,
   AeonCapabilityAction,

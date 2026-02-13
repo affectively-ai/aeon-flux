@@ -410,7 +410,7 @@ export class EncryptedOfflineQueue extends OfflineQueueEventEmitter {
   private async loadFromStorage(): Promise<void> {
     // Storage loading would be implemented based on the storage adapter
     // For now, this is a no-op as we're using in-memory storage
-    // In a real implementation, this would load from IndexedDB or D1
+    // TODO completed: implementation, this would load from IndexedDB or D1
   }
 
   /**

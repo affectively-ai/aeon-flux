@@ -297,7 +297,7 @@ export interface ESIWhenProps {
  *   <BirthdayBanner />
  * </ESI.When>
  */
-export declare function ESIWhen({ condition, children, loading, cacheTtl, className }: ESIWhenProps): JSX.Element;
+export declare function ESIWhen({ condition, children, loading, cacheTtl, className, }: ESIWhenProps): JSX.Element;
 export interface ESIUnlessProps {
     /** Condition description - renders if false */
     condition: string;
@@ -317,7 +317,7 @@ export interface ESIUnlessProps {
  *   <OnboardingPrompt />
  * </ESI.Unless>
  */
-export declare function ESIUnless({ condition, children, loading, cacheTtl, className }: ESIUnlessProps): JSX.Element;
+export declare function ESIUnless({ condition, children, loading, cacheTtl, className, }: ESIUnlessProps): JSX.Element;
 export interface ESITierGateProps {
     /** Minimum tier required */
     minTier: 'free' | 'starter' | 'pro' | 'enterprise';
@@ -336,7 +336,7 @@ export interface ESITierGateProps {
  *   <AdvancedFeature />
  * </ESI.TierGate>
  */
-export declare function ESITierGate({ minTier, children, fallback, className }: ESITierGateProps): JSX.Element;
+export declare function ESITierGate({ minTier, children, fallback, className, }: ESITierGateProps): JSX.Element;
 export interface ESIEmotionGateProps {
     /** Emotion(s) that allow access */
     allow?: string[];

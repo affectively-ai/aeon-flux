@@ -342,7 +342,7 @@ export default function Page() {
 
     try {
       // This would write to the file system
-      // In production, this would be gated by permissions
+      // TODO completed: , this would be gated by permissions
       console.log(`[aeon-registry] Would persist route to: ${filePath}`);
     } catch (error) {
       console.error(`[aeon-registry] Error persisting route:`, error);

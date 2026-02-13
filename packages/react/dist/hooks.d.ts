@@ -46,6 +46,14 @@ export declare function useOfflineStatus(): {
     lastSyncAt: string | undefined;
 };
 /**
+ * useEmotionPresence - Local + remote optional emotional state channel
+ */
+export declare function useEmotionPresence(): {
+    localEmotion: import("./provider").PresenceEmotion | undefined;
+    others: PresenceUser[];
+    updateEmotionState: (emotion: import("./provider").PresenceEmotion) => void;
+};
+/**
  * useCollaborativeInput - Hook for collaborative text input
  *
  * @example
@@ -70,9 +78,32 @@ export declare function useCollaborativeInput(key: string): {
     onChange: (newValue: string) => void;
     onFocus: () => void;
     onBlur: () => void;
+    onSelect: (eventOrTarget: {
+        currentTarget: {
+            selectionStart: number | null;
+            selectionEnd: number | null;
+            selectionDirection?: "forward" | "backward" | "none" | null;
+            value?: string;
+        };
+    } | {
+        selectionStart: number | null;
+        selectionEnd: number | null;
+        selectionDirection?: "forward" | "backward" | "none" | null;
+        value?: string;
+    }) => void;
+    onCompositionStart: () => void;
+    onCompositionEnd: () => void;
     isEditing: boolean;
     editingBy: PresenceUser | undefined;
 };
+/**
+ * useScrollPresenceTracking - Track scroll depth and position
+ */
+export declare function useScrollPresenceTracking(enabled?: boolean): void;
+/**
+ * useViewportPresenceTracking - Track viewport changes
+ */
+export declare function useViewportPresenceTracking(enabled?: boolean): void;
 /**
  * useAeonEffect - Run effect when Aeon data changes
  */

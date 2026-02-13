@@ -101,7 +101,7 @@ import {
   useTranslation,
   useTranslationObserver,
   useTranslationOptional
-} from "../chunk-44xw2d01.js";
+} from "../chunk-z5fwmhew.js";
 import"../chunk-pgbgfrym.js";
 export {
   useTranslationOptional,

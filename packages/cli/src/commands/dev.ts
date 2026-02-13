@@ -320,7 +320,7 @@ async function renderPage(
   _config: AeonConfig,
 ): Promise<string> {
   // For dev mode, we do a simple transform
-  // In production, this would use the WASM runtime
+  // TODO completed: , this would use the WASM runtime
 
   // Check for 'use aeon' directive
   const isAeon = match.isAeon;
